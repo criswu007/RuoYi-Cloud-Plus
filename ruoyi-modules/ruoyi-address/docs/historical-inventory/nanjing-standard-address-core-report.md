@@ -243,11 +243,11 @@
 
 ### 8.3 主数据/字典依赖（`spc_station`、`spc_region`、`segm_addr_type`、`pub_restriction`、`spc_regional_company`、`staff`）
 
-- `spc_station`、`spc_region`：用于将 `station_id`、`region_id` 转为可读名称与层级信息（字段级口径待补证据）。
+- `spc_station`、`spc_region`：当前仅确认已纳入本批次盘点，且与主事实表的关联一致性检查相关；具体字段级用途、连接键与映射规则待补证据。
 - `segm_addr_type`：用于解释类型/层级（已知存在 `level_id` 分布证据，但映射字段与含义待补）。
 - `pub_restriction`：用于解释限制/字典项（已知 `code` 值域复杂且大量空值，接口侧需谨慎使用）。
 - `spc_regional_company`：用于组织/权限口径辅助（已知 `segm_type_priv=180013` 的分布证据）。
-- `staff`：用于将 `modify_op`、`create_op`、`boss_op` 等人员字段映射为人员信息（匹配规则与缺失率待补证据）。
+- `staff`：当前仅确认已纳入本批次盘点，且主/关联事实表存在人员相关字段；是否以及如何映射到 `staff`（匹配规则、连接键、缺失率）仍待补证据。
 
 ## 9. 暂不下结论事项
 

@@ -95,53 +95,77 @@ void runTableRowCounts(Connection conn) {
     }
 }
 
+QueryDef schemaColumnsQuery(String prefix, String labelSuffix, String table) {
+    return new QueryDef(prefix + ":" + labelSuffix,
+            "SELECT column_name, column_type, is_nullable, column_default FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = '%s' ORDER BY ordinal_position".formatted(table),
+            table);
+}
+
+QueryDef groupDistributionQuery(String prefix, String labelSuffix, String table, String groupColumn, int limit) {
+    String limitClause = limit > 0 ? " LIMIT " + limit : "";
+    return new QueryDef(prefix + ":" + labelSuffix,
+            "SELECT %s, COUNT(*) AS total FROM %s GROUP BY %s ORDER BY total DESC".formatted(groupColumn, table, groupColumn) + limitClause,
+            table);
+}
+
+QueryDef duplicateTopQuery(String prefix, String labelSuffix, String table, String keyColumn, int limit) {
+    String limitClause = limit > 0 ? " LIMIT " + limit : "";
+    return new QueryDef(prefix + ":" + labelSuffix,
+            "SELECT %s, COUNT(*) AS total FROM %s GROUP BY %s HAVING total > 1 ORDER BY total DESC".formatted(keyColumn, table, keyColumn) + limitClause,
+            table);
+}
+
+QueryDef missingRelationCountQuery(String prefix, String labelSuffix,
+                                   String leftTable, String rightTable,
+                                   String leftAlias, String rightAlias,
+                                   String joinCondition, String whereCondition) {
+    String sql = "SELECT COUNT(*) AS missing FROM %s %s LEFT JOIN %s %s ON %s WHERE %s".formatted(
+            leftTable, leftAlias, rightTable, rightAlias, joinCondition, whereCondition);
+    return new QueryDef(prefix + ":" + labelSuffix, sql, leftTable, rightTable);
+}
+
+QueryDef missingRelationGroupQuery(String prefix, String labelSuffix,
+                                   String leftTable, String rightTable,
+                                   String leftAlias, String rightAlias,
+                                   String joinCondition, String whereCondition,
+                                   String groupColumn, int limit) {
+    String limitClause = limit > 0 ? " LIMIT " + limit : "";
+    String columnRef = leftAlias + "." + groupColumn;
+    String sql = "SELECT %s, COUNT(*) AS total FROM %s %s LEFT JOIN %s %s ON %s WHERE %s GROUP BY %s ORDER BY total DESC".formatted(
+            columnRef, leftTable, leftAlias, rightTable, rightAlias, joinCondition, whereCondition, columnRef) + limitClause;
+    return new QueryDef(prefix + ":" + labelSuffix, sql, leftTable, rightTable);
+}
+
 List<QueryDef> buildQueries() {
     return Arrays.asList(
-            new QueryDef("ADDR_MAIN_COLUMNS:tmp_addr_segm_columns",
-                    "SELECT column_name, column_type, is_nullable, column_default FROM information_schema.columns WHERE table_schema='ftth_cloud_address' AND table_name='%s' ORDER BY ordinal_position".formatted(TMP_ADDR_SEGM_TABLE),
-                    TMP_ADDR_SEGM_TABLE),
-            new QueryDef("ADDR_MAIN_COLUMNS:tmp_addr_segm_segm_type_distribution",
-                    "SELECT segm_type, COUNT(*) AS total FROM %s GROUP BY segm_type ORDER BY total DESC".formatted(TMP_ADDR_SEGM_TABLE),
-                    TMP_ADDR_SEGM_TABLE),
-            new QueryDef("INSTALL_ADDR_MAIN_COLUMNS:tmp_addr_set_segm_columns",
-                    "SELECT column_name, column_type, is_nullable, column_default FROM information_schema.columns WHERE table_schema='ftth_cloud_address' AND table_name='%s' ORDER BY ordinal_position".formatted(TMP_ADDR_SET_SEGM_TABLE),
-                    TMP_ADDR_SET_SEGM_TABLE),
-            new QueryDef("INSTALL_ADDR_MAIN_COLUMNS:tmp_addr_set_segm_set_type_distribution",
-                    "SELECT set_type, COUNT(*) AS total FROM %s GROUP BY set_type ORDER BY total DESC".formatted(TMP_ADDR_SET_SEGM_TABLE),
-                    TMP_ADDR_SET_SEGM_TABLE),
-            new QueryDef("NULL_CHECKS:tmp_addr_segm_missing_parent_count",
-                    "SELECT COUNT(*) AS missing_parent FROM %s t LEFT JOIN %s p ON t.parent_segm_id = p.segm_id WHERE t.parent_segm_id IS NOT NULL AND p.segm_id IS NULL".formatted(TMP_ADDR_SEGM_TABLE, TMP_ADDR_SEGM_TABLE),
-                    TMP_ADDR_SEGM_TABLE),
-            new QueryDef("DUPLICATE_CHECKS:tmp_addr_segm_duplicate_segm_id_top20",
-                    "SELECT segm_id, COUNT(*) AS total FROM %s GROUP BY segm_id HAVING total > 1 ORDER BY total DESC LIMIT 20".formatted(TMP_ADDR_SEGM_TABLE),
-                    TMP_ADDR_SEGM_TABLE),
-            new QueryDef("DUPLICATE_CHECKS:tmp_addr_set_segm_duplicate_set_addr_id_top20",
-                    "SELECT set_addr_id, COUNT(*) AS total FROM %s GROUP BY set_addr_id HAVING total > 1 ORDER BY total DESC LIMIT 20".formatted(TMP_ADDR_SET_SEGM_TABLE),
-                    TMP_ADDR_SET_SEGM_TABLE),
-            new QueryDef("RELATION_CHECKS:tmp_addr_set_segm_missing_standard_count",
-                    "SELECT COUNT(*) AS missing_standard FROM %s s LEFT JOIN %s t ON s.segm_id = t.segm_id WHERE s.segm_id IS NOT NULL AND t.segm_id IS NULL".formatted(TMP_ADDR_SET_SEGM_TABLE, TMP_ADDR_SEGM_TABLE),
-                    TMP_ADDR_SET_SEGM_TABLE, TMP_ADDR_SEGM_TABLE),
-            new QueryDef("RELATION_CHECKS:tmp_addr_segm_missing_region_link_count",
-                    "SELECT t.region_id, COUNT(*) AS total FROM %s t LEFT JOIN %s r ON t.region_id = r.region_id WHERE t.region_id IS NOT NULL AND r.region_id IS NULL GROUP BY t.region_id ORDER BY total DESC LIMIT 20".formatted(TMP_ADDR_SEGM_TABLE, SPC_REGION_TABLE),
-                    TMP_ADDR_SEGM_TABLE, SPC_REGION_TABLE),
-            new QueryDef("RELATION_CHECKS:tmp_addr_segm_missing_station_id_count",
-                    "SELECT COUNT(*) AS missing_station FROM %s t LEFT JOIN %s s ON t.station_id = s.station_id WHERE t.station_id IS NOT NULL AND s.station_id IS NULL".formatted(TMP_ADDR_SEGM_TABLE, SPC_STATION_TABLE),
-                    TMP_ADDR_SEGM_TABLE, SPC_STATION_TABLE),
-            new QueryDef("RELATION_CHECKS:tmp_addr_segm_missing_installstation_id_count",
-                    "SELECT COUNT(*) AS missing_installstation FROM %s t LEFT JOIN %s s ON t.installstation_id = s.station_id WHERE t.installstation_id IS NOT NULL AND s.station_id IS NULL".formatted(TMP_ADDR_SEGM_TABLE, SPC_STATION_TABLE),
-                    TMP_ADDR_SEGM_TABLE, SPC_STATION_TABLE),
-            new QueryDef("RELATION_CHECKS:tmp_addr_segm_missing_busstation_id_count",
-                    "SELECT COUNT(*) AS missing_busstation FROM %s t LEFT JOIN %s s ON t.busstation_id = s.station_id WHERE t.busstation_id IS NOT NULL AND s.station_id IS NULL".formatted(TMP_ADDR_SEGM_TABLE, SPC_STATION_TABLE),
-                    TMP_ADDR_SEGM_TABLE, SPC_STATION_TABLE),
-            new QueryDef("DICTIONARY_CHECKS:segm_addr_type_level_distribution",
-                    "SELECT level_id, COUNT(*) AS total FROM %s GROUP BY level_id ORDER BY total DESC LIMIT 20".formatted(SEGM_ADDR_TYPE_TABLE),
-                    SEGM_ADDR_TYPE_TABLE),
-            new QueryDef("DICTIONARY_CHECKS:pub_restriction_code_distribution",
-                    "SELECT code, COUNT(*) AS total FROM %s GROUP BY code ORDER BY total DESC LIMIT 20".formatted(PUB_RESTRICTION_TABLE),
-                    PUB_RESTRICTION_TABLE),
-            new QueryDef("DICTIONARY_CHECKS:spc_regional_company_seg_type_priv_distribution",
-                    "SELECT segm_type_priv, COUNT(*) AS total FROM %s GROUP BY segm_type_priv ORDER BY total DESC LIMIT 20".formatted(SPC_REGIONAL_COMPANY_TABLE),
-                    SPC_REGIONAL_COMPANY_TABLE)
+            schemaColumnsQuery("ADDR_MAIN_COLUMNS", "tmp_addr_segm_columns", TMP_ADDR_SEGM_TABLE),
+            groupDistributionQuery("ADDR_MAIN_COLUMNS", "tmp_addr_segm_segm_type_distribution", TMP_ADDR_SEGM_TABLE, "segm_type", 0),
+            schemaColumnsQuery("INSTALL_ADDR_MAIN_COLUMNS", "tmp_addr_set_segm_columns", TMP_ADDR_SET_SEGM_TABLE),
+            groupDistributionQuery("INSTALL_ADDR_MAIN_COLUMNS", "tmp_addr_set_segm_set_type_distribution", TMP_ADDR_SET_SEGM_TABLE, "set_type", 0),
+            missingRelationCountQuery("NULL_CHECKS", "tmp_addr_segm_missing_parent_count",
+                    TMP_ADDR_SEGM_TABLE, TMP_ADDR_SEGM_TABLE, "t", "p",
+                    "t.parent_segm_id = p.segm_id", "t.parent_segm_id IS NOT NULL AND p.segm_id IS NULL"),
+            duplicateTopQuery("DUPLICATE_CHECKS", "tmp_addr_segm_duplicate_segm_id_top20", TMP_ADDR_SEGM_TABLE, "segm_id", 20),
+            duplicateTopQuery("DUPLICATE_CHECKS", "tmp_addr_set_segm_duplicate_set_addr_id_top20", TMP_ADDR_SET_SEGM_TABLE, "set_addr_id", 20),
+            missingRelationCountQuery("RELATION_CHECKS", "tmp_addr_set_segm_missing_standard_count",
+                    TMP_ADDR_SET_SEGM_TABLE, TMP_ADDR_SEGM_TABLE, "s", "t",
+                    "s.segm_id = t.segm_id", "s.segm_id IS NOT NULL AND t.segm_id IS NULL"),
+            missingRelationGroupQuery("RELATION_CHECKS", "tmp_addr_segm_missing_region_link_count",
+                    TMP_ADDR_SEGM_TABLE, SPC_REGION_TABLE, "t", "r",
+                    "t.region_id = r.region_id", "t.region_id IS NOT NULL AND r.region_id IS NULL",
+                    "region_id", 20),
+            missingRelationCountQuery("RELATION_CHECKS", "tmp_addr_segm_missing_station_id_count",
+                    TMP_ADDR_SEGM_TABLE, SPC_STATION_TABLE, "t", "s",
+                    "t.station_id = s.station_id", "t.station_id IS NOT NULL AND s.station_id IS NULL"),
+            missingRelationCountQuery("RELATION_CHECKS", "tmp_addr_segm_missing_installstation_id_count",
+                    TMP_ADDR_SEGM_TABLE, SPC_STATION_TABLE, "t", "s",
+                    "t.installstation_id = s.station_id", "t.installstation_id IS NOT NULL AND s.station_id IS NULL"),
+            missingRelationCountQuery("RELATION_CHECKS", "tmp_addr_segm_missing_busstation_id_count",
+                    TMP_ADDR_SEGM_TABLE, SPC_STATION_TABLE, "t", "s",
+                    "t.busstation_id = s.station_id", "t.busstation_id IS NOT NULL AND s.station_id IS NULL"),
+            groupDistributionQuery("DICTIONARY_CHECKS", "segm_addr_type_level_distribution", SEGM_ADDR_TYPE_TABLE, "level_id", 20),
+            groupDistributionQuery("DICTIONARY_CHECKS", "pub_restriction_code_distribution", PUB_RESTRICTION_TABLE, "code", 20),
+            groupDistributionQuery("DICTIONARY_CHECKS", "spc_regional_company_seg_type_priv_distribution", SPC_REGIONAL_COMPANY_TABLE, "segm_type_priv", 20)
     );
 }
 

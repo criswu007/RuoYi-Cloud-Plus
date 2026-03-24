@@ -142,7 +142,7 @@
 
 - 行数：891
 - 字段口径：证据材料仅提供行数，未提供字段清单/主键/工号口径。本报告不对字段作结论。
-- 关联位置：`tmp_addr_segm_nj_20260317` 与 `tmp_addr_set_segm_nj_20260317` 均存在 `modify_op`、`create_op`、`boss_op` 等人员相关字段（已在字段清单中出现），但尚未采集其与 `staff` 的匹配规则与缺失率。
+- 关联位置：`tmp_addr_segm_nj_20260317` 已采集到 `modify_op`、`create_op`；`tmp_addr_set_segm_nj_20260317` 已采集到 `boss_op`、`modify_op`。人员字段与 `staff` 的匹配规则与缺失率尚未采集证据。
 
 ## 5. 数据质量结论
 
@@ -259,4 +259,3 @@
 - `segm_addr_type.level_id` 的业务含义，以及其与标准地址字段（`segm_type`/`addr_type`）的映射规则与主键口径。
 - `pub_restriction.code` 的业务含义，及 `NULL`、`UNKNOW`、`O`、数字/长数字等混合值的统一解释与取值规范。
 - `spc_station`、`spc_region`、`staff` 的字段清单、主键/业务编码口径、有效性规则与与主事实表的连接键说明（本批次证据未覆盖字段级信息）。
-

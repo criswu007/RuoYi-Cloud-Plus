@@ -1,7 +1,10 @@
 # 南京标准地址核心盘点证据
 
 ## 1. 基础连接信息
-- 通过 `ADDRESS_DB_URL`/`ADDRESS_DB_USERNAME`（账户 `address`，密码未记录）向历史地址数据库建立连接，执行期间发现 `Current catalog: ftth_cloud_address`，说明目标实例就是 ftth_cloud_address。
+```
+## CONNECTED
+Current catalog: ftth_cloud_address
+```
 
 ## 2. 表数量与数据量
 - `TABLE_ROW_COUNTS:tmp_addr_segm_nj_20260317_row_count` row_count=364000
@@ -219,14 +222,43 @@ segm_type_priv=180013, total=79
 - `TABLE_ROW_COUNTS:spc_regional_company_row_count` row_count=79
 
 ## 6. 关键关联一致性检查
-- `RELATION_CHECKS:tmp_addr_segm_missing_region_link_count` 输出为 `[EMPTY RESULT]`，表明 `region_id` 关联的区域记录都存在。
-- `RELATION_CHECKS:tmp_addr_segm_missing_station_id_count` missing=1，说明有 1 条标准地址记录无法在 `spc_station` 中找到对应 `station_id`。
-- `RELATION_CHECKS:tmp_addr_segm_missing_installstation_id_count` missing=0，`installstation_id` 均在 `spc_station` 中匹配。
-- `RELATION_CHECKS:tmp_addr_segm_missing_busstation_id_count` missing=0，`busstation_id` 也均有落库记录。
-- `NULL_CHECKS:tmp_addr_segm_missing_parent_count` missing=74661，表明仍有大量上级地址缺失，需要进一步核实。
+### RELATION_CHECKS:tmp_addr_segm_missing_region_link_count
+```
+[EMPTY RESULT]
+```
+### RELATION_CHECKS:tmp_addr_segm_missing_station_id_count
+```
+missing=1
+```
+### RELATION_CHECKS:tmp_addr_segm_missing_installstation_id_count
+```
+missing=0
+```
+### RELATION_CHECKS:tmp_addr_segm_missing_busstation_id_count
+```
+missing=0
+```
+### NULL_CHECKS:tmp_addr_segm_missing_parent_count
+```
+missing=74661
+```
 
 ## 7. 原始异常与待确认项
-- 安装地址表中 `INSTALL_ADDR_MAIN_COLUMNS:tmp_addr_set_segm_set_type_distribution` 结果显示 `set_type=NULL` 约 1,562,375 条，`set_type=0` 仅 3,625 条，说明绝大多数安装地址缺少类型标识。
-- `RELATION_CHECKS:tmp_addr_set_segm_missing_standard_count` missing=1290542，表示近 1.29M 条安装地址未关联到 `tmp_addr_segm`，需要对接入数据源或识别策略给出解释。
-- `NULL_CHECKS:tmp_addr_segm_missing_parent_count` missing=74661 仍属于重复出现的异常节点。
-- `RELATION_CHECKS:tmp_addr_segm_missing_station_id_count` missing=1，属于极少数但仍需人工确认字段值和站点表能否补录。
+以下结果保留原始输出，待后续规则澄清。
+### INSTALL_ADDR_MAIN_COLUMNS:tmp_addr_set_segm_set_type_distribution
+```
+set_type=NULL, total=1562375
+set_type=0, total=3625
+```
+### RELATION_CHECKS:tmp_addr_set_segm_missing_standard_count
+```
+missing=1290542
+```
+### NULL_CHECKS:tmp_addr_segm_missing_parent_count
+```
+missing=74661
+```
+### RELATION_CHECKS:tmp_addr_segm_missing_station_id_count
+```
+missing=1
+```

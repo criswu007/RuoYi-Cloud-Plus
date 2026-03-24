@@ -3,9 +3,9 @@
 > 本清单用于将“南京标准地址核心”历史盘点的**已采集事实**提炼为后续接口设计的输入边界与字段口径，不引入证据材料与正式报告之外的臆断字段与能力。
 >
 > 允许引用来源仅限：
-> - `/docs/superpowers/specs/2026-03-24-historical-schema-inventory-design.md`
-> - `ruoyi-modules/ruoyi-address/docs/historical-inventory/evidence/nanjing-standard-address-core-evidence.md`
-> - `ruoyi-modules/ruoyi-address/docs/historical-inventory/nanjing-standard-address-core-report.md`
+> - [2026-03-24-historical-schema-inventory-design.md](../../../../docs/superpowers/specs/2026-03-24-historical-schema-inventory-design.md)
+> - [nanjing-standard-address-core-evidence.md](./evidence/nanjing-standard-address-core-evidence.md)
+> - [nanjing-standard-address-core-report.md](./nanjing-standard-address-core-report.md)
 
 ## 1. 使用原则
 
@@ -48,7 +48,7 @@
 | 来源表 | 来源字段 | 历史语义 | 建议接口位置 | 是否可直接使用 | 备注 |
 |---|---|---|---|---|---|
 | `tmp_addr_segm_nj_20260317` | `segm_type` | 标准地址类型编码字段，可空；存在分布统计，但枚举含义未在证据中给出（正式报告） | 列表字段 / 详情字段 / 查询条件 | 部分 | 可透出原始编码，但不宜直接承诺“类型可读含义”；需结合 `segm_addr_type` 或业务规则补充解释后再冻结筛选与展示口径（正式报告）。 |
-| `tmp_addr_segm_nj_20260317` | `parent_segm_id` | 父子层级自关联字段，可空；空值规模 `missing=74661`（证据/正式报告） | 树结构字段 / 查询条件 | 部分 | `parent_segm_id` 为空需区分“根节点”与“缺失父节点”两类语义；当前仅能确认空值规模，无法判定其合理性（正式报告）。接口侧需明确父子连接键口径（与 `id` 还是 `segm_id` 关联），避免树构建歧义。 |
+| `tmp_addr_segm_nj_20260317` | `parent_segm_id` | 父子层级自关联字段，可空；空值规模 `missing=74661`（证据/正式报告） | 树结构字段 / 查询条件 | 部分 | `parent_segm_id` 为空需区分“根节点”与“缺失父节点”两类语义；当前仅能确认空值规模，无法判定其合理性（正式报告）。接口侧需明确其实际父子连接键口径，当前证据尚不能冻结连接规则。 |
 | `tmp_addr_segm_nj_20260317` | `service_region_id` | 归属相关字段存在，类型为 `varchar(64)`，可空（证据字段清单）；在正式报告的“输出候选字段清单”中出现（归属类字段） | 列表字段 / 详情字段 | 部分 | 字段语义与口径在正式报告中未解释；在未澄清前，不建议将其冻结为查询条件或强校验口径。 |
 | `tmp_addr_segm_nj_20260317` | `addr_in_type` | 接入类型相关字段存在（证据字段清单） | 详情字段 / 查询条件 | 部分 | 仅确认字段存在与类型为 `varchar(64)`；枚举含义、值域与是否可用于强筛选，报告未给出解释。 |
 | `tmp_addr_segm_nj_20260317` | `addr_in_type_ftth` | FTTH 接入类型字段存在（证据字段清单） | 详情字段 / 查询条件 | 部分 | 同上，属于“编码存在但含义未冻结”的字段。 |
@@ -72,7 +72,7 @@
 > 本节为“字段存在但口径未冻结/歧义较大”的项；若不先澄清，接口设计阶段容易产生不可逆的入参/出参约束。
 
 - `segm_type`：枚举含义缺失，需明确其与 `segm_addr_type` 的映射关系，以及是否允许接口只暴露 code 而不提供可读解释（正式报告）。
-- `parent_segm_id`：空值语义需区分“根节点”与“缺失父节点”；同时需明确父子连接键口径（`parent_segm_id` 对 `id` 还是对 `segm_id`）（正式报告）。
+- `parent_segm_id`：空值语义需区分“根节点”与“缺失父节点”；同时需明确其实际父子连接键口径，当前证据尚不能冻结连接规则（正式报告）。
 - `region_id`：区域关联缺失检查“输出为空”不等价于缺失为 0；需要补充统一计数格式或 SQL 证据后才能冻结“强一致”结论（正式报告）。
 - `station_id`：已存在 `missing=1` 的关联缺失，需要明确接口层的返回策略（例如返回空、返回占位、或返回治理提示）与治理入口承载位置（正式报告）。
 - `service_region_id`：字段存在但未解释语义，需澄清与“区域/公司归属”的口径边界（证据字段清单仅证明存在）。

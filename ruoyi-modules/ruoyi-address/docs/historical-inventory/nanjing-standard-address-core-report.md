@@ -3,8 +3,8 @@
 > 报告定位：本报告为“历史库持续盘点-标准地址核心”领域包在南京范围的首版正式盘点结论，结论仅基于已采集的证据材料，不对未采集字段与未明确业务规则部分作推断。
 >
 > 事实依据：
-> - 证据材料：`docs/historical-inventory/evidence/nanjing-standard-address-core-evidence.md`
-> - 任务体系设计：`/docs/superpowers/specs/2026-03-24-historical-schema-inventory-design.md`
+> - 证据材料：[nanjing-standard-address-core-evidence.md](./evidence/nanjing-standard-address-core-evidence.md)
+> - 任务体系设计：[2026-03-24-historical-schema-inventory-design.md](../../../../docs/superpowers/specs/2026-03-24-historical-schema-inventory-design.md)
 >
 > 盘点批次标识：以表名后缀 `_nj_20260317` 为本批次历史基线标识。
 
@@ -227,6 +227,8 @@
   - `parent_segm_id` 大规模为空：树接口需定义根节点判定规则（仅基于证据暂不能下结论）。
 
 ### 8.2 安装地址到标准地址挂接（基于 `tmp_addr_set_segm_nj_20260317`）
+
+- 边界说明：本节仅作为“标准地址主链路闭环”所需的过渡性接口输入，供当前批次引用；其更完整的安装地址对象定义、资源关系口径与独立接口输入，需在后续“安装地址与资源关系”领域包中单独补盘并归档。
 
 - 列表/详情输出字段候选（已采集字段）：
   - 安装地址标识：`id`、`set_addr_id`

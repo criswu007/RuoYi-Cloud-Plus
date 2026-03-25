@@ -174,7 +174,7 @@ boolean isIdLikeName(String columnName) {
             || "code".equals(n);
 }
 
-boolean hasExplicitEnumHintInComment(String columnName, String comment) {
+boolean hasExplicitEnumHintInComment(String comment) {
     if (comment == null) {
         return false;
     }
@@ -183,7 +183,6 @@ boolean hasExplicitEnumHintInComment(String columnName, String comment) {
         return false;
     }
     String lowerComment = c.toLowerCase(Locale.ROOT);
-    String lowerName = columnName == null ? "" : columnName.toLowerCase(Locale.ROOT);
 
     // A. 显式映射提示：例如 "0:xxx" / "0：xxx" / "2017101维修,2017102安装"
     if (Pattern.compile("\\b\\d+\\s*[:：]").matcher(c).find()) {
@@ -199,12 +198,11 @@ boolean hasExplicitEnumHintInComment(String columnName, String comment) {
     }
 
     // B. 字典/来源显式提示（固定规则）
-    // - “字典”直接视为显式来源提示
-    // - “取...表...”视为显式来源提示（避免仅凭一个“取”误判）
+    // - 注释直接给出来源/字典提示即纳入（任务要求：显式“来源/枚举”需纳入）
     if (lowerComment.contains("字典")) {
         return true;
     }
-    if (lowerComment.contains("取") && lowerComment.contains("表")) {
+    if (lowerComment.contains("取") && (lowerComment.contains("表") || lowerComment.contains("对应") || lowerComment.contains("来源") || lowerComment.contains("字典"))) {
         return true;
     }
 
@@ -216,37 +214,13 @@ boolean hasExplicitEnumHintInComment(String columnName, String comment) {
         return true;
     }
 
-    // D. 状态/类型/来源/属性/能力提示：仅当字段名本身看起来是“状态/类型类”字段时触发，避免误判如“地址类型名称”
-    // 注意：若字段名是明显主数据标识（_id/_name/_no/_code），且注释又没有提供显式映射/字典/布尔/枚举信息，则不在此处视为“类型/状态”。
-    if (!isIdLikeName(columnName)) {
-        if (lowerComment.contains("状态")) {
-            if (lowerName.endsWith("_status") || "status".equals(lowerName) || lowerName.contains("status")
-                    || lowerName.endsWith("_state") || "state".equals(lowerName) || lowerName.contains("state")) {
-                return true;
-            }
-        }
-        if (lowerComment.contains("类型")) {
-            // 仅把 *_type / type 视为“类型字段”，避免 *_type_id 等 ID 字段误判
-            if ((lowerName.endsWith("_type") || "type".equals(lowerName) || lowerName.endsWith("type"))
-                    && !lowerName.endsWith("type_id") && !lowerName.endsWith("_type_id")) {
-                return true;
-            }
-        }
-        if (lowerComment.contains("来源")) {
-            if (lowerName.endsWith("_source") || "source".equals(lowerName) || lowerName.contains("source")) {
-                return true;
-            }
-        }
-        if (lowerComment.contains("属性")) {
-            if (lowerName.contains("attr") || lowerName.endsWith("_attr") || "attr".equals(lowerName)) {
-                return true;
-            }
-        }
-        if (lowerComment.contains("能力")) {
-            if (lowerName.contains("ability") || lowerName.endsWith("_ability") || "ability".equals(lowerName)) {
-                return true;
-            }
-        }
+    // D. 状态/类型/来源/属性/能力提示：按任务要求，不再额外要求字段名匹配
+    if (lowerComment.contains("状态")
+            || lowerComment.contains("类型")
+            || lowerComment.contains("来源")
+            || lowerComment.contains("属性")
+            || lowerComment.contains("能力")) {
+        return true;
     }
 
     return false;
@@ -310,7 +284,7 @@ int queryDistinctNonNullCount(Connection conn, String table, String column) thro
 class EnumCandidate {
     final ColumnMeta col;
     final String selectionRule; // COMMENT_HINT | SOURCE_HINT | LOW_CARDINALITY
-    final String valueSource;   // COMMENT | SOURCE_HINTS | CURRENT_TABLE_DISTINCT | UNRECOGNIZED
+    final String valueSource;   // 字段注释 | SOURCE_HINTS | 当前表实际值域 | 当前 8 表内未识别
     final String sourceHint;    // e.g. spc_region.region_id
     final Integer distinctNonNull; // may be null
 
@@ -339,7 +313,7 @@ List<EnumCandidate> buildEnumCandidates(Connection conn,
             String key = c.tableName + "." + c.columnName;
             String hint = sourceHints.get(key);
 
-            boolean commentHint = hasExplicitEnumHintInComment(c.columnName, c.comment);
+            boolean commentHint = hasExplicitEnumHintInComment(c.comment);
             boolean sourceHint = hint != null;
 
             // 取值来源判定优先级固定为：
@@ -349,11 +323,11 @@ List<EnumCandidate> buildEnumCandidates(Connection conn,
             // 4) 以上均不满足 -> 当前 8 表内未识别（此处输出为 UNRECOGNIZED）
             String valueSource;
             if (commentHint) {
-                valueSource = "COMMENT";
+                valueSource = "字段注释";
             } else if (sourceHint) {
                 valueSource = "SOURCE_HINTS";
             } else {
-                valueSource = "UNRECOGNIZED";
+                valueSource = "当前 8 表内未识别";
             }
 
             if (commentHint) {
@@ -366,42 +340,9 @@ List<EnumCandidate> buildEnumCandidates(Connection conn,
             }
 
             // 低值域候选：严格按规则判定
-            // - 非空 distinct <= 20
-            // - 且字段名不属于明显主数据标识字段
-            // - 且字段类型更像“枚举/布尔/状态类”字段（固定过滤：仅考虑 int/tinyint/char/varchar/enum/set；排除时间与大字段）
-            // - 且至少满足：字段名看起来像 is_* / *type* / *state* / *status* / *flag*，或字段已有注释（避免把大量“偶然低值域”的自由文本列误判）
-            if (!isIdLikeName(c.columnName)
-                    && (c.columnKey == null || (!"PRI".equalsIgnoreCase(c.columnKey) && !"UNI".equalsIgnoreCase(c.columnKey)))) {
-                String typeLower = c.columnType == null ? "" : c.columnType.toLowerCase(Locale.ROOT);
-                boolean allowedType = typeLower.startsWith("tinyint")
-                        || typeLower.startsWith("smallint")
-                        || typeLower.startsWith("mediumint")
-                        || typeLower.startsWith("int")
-                        || typeLower.startsWith("bigint")
-                        || typeLower.startsWith("char")
-                        || typeLower.startsWith("varchar")
-                        || typeLower.startsWith("enum")
-                        || typeLower.startsWith("set");
-                boolean excludedType = typeLower.startsWith("datetime")
-                        || typeLower.startsWith("timestamp")
-                        || typeLower.startsWith("date")
-                        || typeLower.startsWith("time")
-                        || typeLower.startsWith("text")
-                        || typeLower.contains("blob");
-                boolean nameSuggestsEnum = false;
-                if (c.columnName != null) {
-                    String n = c.columnName.toLowerCase(Locale.ROOT);
-                    nameSuggestsEnum = n.startsWith("is_") || n.contains("type") || n.contains("state") || n.contains("status") || n.contains("flag");
-                }
-                boolean hasAnyComment = c.comment != null && !c.comment.isBlank();
-
-                if (!allowedType || excludedType) {
-                    continue;
-                }
-                if (!nameSuggestsEnum && !hasAnyComment) {
-                    continue;
-                }
-
+            // - 非空 distinct 值 <= 20
+            // - 且不属于明显主数据标识字段（_id/_name/_no/_code 等）
+            if (!isIdLikeName(c.columnName)) {
                 Integer distinct = null;
                 try {
                     distinct = queryDistinctNonNullCount(conn, c.tableName, c.columnName);
@@ -409,8 +350,8 @@ List<EnumCandidate> buildEnumCandidates(Connection conn,
                     // 低值域判断失败不应阻断脚本；保持候选不纳入即可。
                     distinct = null;
                 }
-                if (distinct != null && distinct >= 1 && distinct <= 20) {
-                    candidates.add(new EnumCandidate(c, "LOW_CARDINALITY", "CURRENT_TABLE_DISTINCT", null, distinct));
+                if (distinct != null && distinct >= 0 && distinct <= 20) {
+                    candidates.add(new EnumCandidate(c, "LOW_CARDINALITY", "当前表实际值域", null, distinct));
                 }
             }
         }
@@ -534,19 +475,27 @@ void printEnumCandidates(List<EnumCandidate> candidates) {
         System.out.println("  [EMPTY RESULT]");
         return;
     }
+    Map<String, List<EnumCandidate>> byTable = new LinkedHashMap<>();
     for (EnumCandidate c : candidates) {
-        String comment = c.col.comment == null || c.col.comment.isBlank() ? "NULL" : c.col.comment;
-        System.out.println("  table_name=" + c.col.tableName
-                + ", ordinal=" + c.col.ordinal
-                + ", column_name=" + c.col.columnName
-                + ", column_type=" + c.col.columnType
-                + ", nullable=" + c.col.isNullable
-                + ", key=" + (c.col.columnKey == null || c.col.columnKey.isBlank() ? "NULL" : c.col.columnKey)
-                + ", comment=" + comment
-                + ", selection_rule=" + c.selectionRule
-                + ", value_source=" + c.valueSource
-                + ", source_hint=" + (c.sourceHint == null ? "NULL" : c.sourceHint)
-                + ", distinct_nonnull=" + (c.distinctNonNull == null ? "NULL" : c.distinctNonNull));
+        byTable.computeIfAbsent(c.col.tableName, t -> new ArrayList<>()).add(c);
+    }
+    for (Map.Entry<String, List<EnumCandidate>> e : byTable.entrySet()) {
+        String table = e.getKey();
+        List<String> items = new ArrayList<>();
+        for (EnumCandidate c : e.getValue()) {
+            String comment = c.col.comment == null || c.col.comment.isBlank() ? "NULL" : c.col.comment;
+            items.add("ordinal=" + c.col.ordinal
+                    + ", column_name=" + c.col.columnName
+                    + ", column_type=" + c.col.columnType
+                    + ", nullable=" + c.col.isNullable
+                    + ", key=" + (c.col.columnKey == null || c.col.columnKey.isBlank() ? "NULL" : c.col.columnKey)
+                    + ", comment=" + comment
+                    + ", selection_rule=" + c.selectionRule
+                    + ", value_source=" + c.valueSource
+                    + ", source_hint=" + (c.sourceHint == null ? "NULL" : c.sourceHint)
+                    + ", distinct_nonnull=" + (c.distinctNonNull == null ? "NULL" : c.distinctNonNull));
+        }
+        System.out.println("  table_name=" + table + ", candidates=" + String.join(" ; ", items));
     }
 }
 
@@ -557,49 +506,48 @@ void printEnumValueDistribution(Connection conn, List<EnumCandidate> candidates)
         return;
     }
 
-    // 为保证标签在 sed 截断范围内可见，分布以“每候选字段一行”输出；值对数量做固定上限。
-    final int MAX_VALUES_PER_COLUMN = 50;
+    // 为保证标签在 sed 截断范围内可见，分布以“每候选字段一行”输出；
+    // 但不对结果做截断，保留完整 distinct 值与数量（任务要求）。
+    Map<String, List<EnumCandidate>> byTable = new LinkedHashMap<>();
     for (EnumCandidate c : candidates) {
-        String table = c.col.tableName;
-        String col = c.col.columnName;
+        byTable.computeIfAbsent(c.col.tableName, t -> new ArrayList<>()).add(c);
+    }
+    for (Map.Entry<String, List<EnumCandidate>> e : byTable.entrySet()) {
+        String table = e.getKey();
+        List<String> cols = new ArrayList<>();
+        for (EnumCandidate c : e.getValue()) {
+            String col = c.col.columnName;
 
-        int distinctNonNull = -1;
-        try {
-            distinctNonNull = queryDistinctNonNullCount(conn, table, col);
-        } catch (SQLException e) {
-            System.out.println("  table_name=" + table + ", column_name=" + col + ", [QUERY ERROR] " + e.getMessage());
-            continue;
-        }
-
-        boolean truncated = distinctNonNull > MAX_VALUES_PER_COLUMN;
-        String sql = "SELECT " + col + " AS value, COUNT(*) AS total FROM " + table
-                + " WHERE " + col + " IS NOT NULL GROUP BY " + col
-                + " ORDER BY total DESC, value ASC"
-                + " LIMIT " + MAX_VALUES_PER_COLUMN;
-        List<String> pairs = new ArrayList<>();
-        try (Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            while (rs.next()) {
-                Object v = rs.getObject("value");
-                long total = rs.getLong("total");
-                String vs = v == null ? "NULL" : String.valueOf(v);
-                // 避免单个值过长导致输出不可读（固定截断规则：最多 160 字符）
-                if (vs.length() > 160) {
-                    vs = vs.substring(0, 160) + "...";
-                }
-                pairs.add(vs + ":" + total);
+            int distinctNonNull = -1;
+            try {
+                distinctNonNull = queryDistinctNonNullCount(conn, table, col);
+            } catch (SQLException ex) {
+                cols.add("column_name=" + col + ", [QUERY ERROR] " + ex.getMessage());
+                continue;
             }
-        } catch (SQLException e) {
-            System.out.println("  table_name=" + table + ", column_name=" + col + ", [QUERY ERROR] " + e.getMessage());
-            continue;
-        }
 
-        System.out.println("  table_name=" + table
-                + ", column_name=" + col
-                + ", distinct_nonnull=" + distinctNonNull
-                + ", truncated=" + truncated
-                + ", limit=" + MAX_VALUES_PER_COLUMN
-                + ", values=" + String.join(" | ", pairs));
+            String sql = "SELECT " + col + " AS value, COUNT(*) AS total FROM " + table
+                    + " WHERE " + col + " IS NOT NULL GROUP BY " + col
+                    + " ORDER BY total DESC, value ASC";
+            List<String> pairs = new ArrayList<>();
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery(sql)) {
+                while (rs.next()) {
+                    Object v = rs.getObject("value");
+                    long total = rs.getLong("total");
+                    String vs = v == null ? "NULL" : String.valueOf(v);
+                    pairs.add(vs + ":" + total);
+                }
+            } catch (SQLException ex) {
+                cols.add("column_name=" + col + ", [QUERY ERROR] " + ex.getMessage());
+                continue;
+            }
+
+            cols.add("column_name=" + col
+                    + ", distinct_nonnull=" + distinctNonNull
+                    + ", values=" + String.join(" | ", pairs));
+        }
+        System.out.println("  table_name=" + table + ", distributions=" + String.join(" ; ", cols));
     }
 }
 

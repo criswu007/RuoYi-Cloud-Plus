@@ -50,7 +50,7 @@ class ColumnMeta {
         this.columnType = columnType;
         this.isNullable = isNullable;
         this.columnKey = columnKey;
-        this.comment = comment == null ? "" : comment;
+        this.comment = (comment == null || comment.isBlank()) ? null : comment;
     }
 }
 
@@ -64,6 +64,104 @@ String resolveConfig(String key) {
 
 void printLabel(String label) {
     System.out.println("## " + label);
+}
+
+String jsonEscape(String s) {
+    if (s == null) {
+        return null;
+    }
+    StringBuilder out = new StringBuilder(s.length() + 16);
+    for (int i = 0; i < s.length(); i++) {
+        char ch = s.charAt(i);
+        switch (ch) {
+            case '\\' -> out.append("\\\\");
+            case '"' -> out.append("\\\"");
+            case '\n' -> out.append("\\n");
+            case '\r' -> out.append("\\r");
+            case '\t' -> out.append("\\t");
+            default -> {
+                if (ch < 0x20) {
+                    out.append(String.format("\\u%04x", (int) ch));
+                } else {
+                    out.append(ch);
+                }
+            }
+        }
+    }
+    return out.toString();
+}
+
+String toJson(Object v) {
+    if (v == null) {
+        return "null";
+    }
+    if (v instanceof String s) {
+        return "\"" + jsonEscape(s) + "\"";
+    }
+    if (v instanceof Number || v instanceof Boolean) {
+        return String.valueOf(v);
+    }
+    if (v instanceof Map<?, ?> m) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+        boolean first = true;
+        for (Map.Entry<?, ?> e : m.entrySet()) {
+            if (!first) {
+                sb.append(",");
+            }
+            first = false;
+            sb.append(toJson(String.valueOf(e.getKey())));
+            sb.append(":");
+            sb.append(toJson(e.getValue()));
+        }
+        sb.append("}");
+        return sb.toString();
+    }
+    if (v instanceof List<?> list) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        boolean first = true;
+        for (Object item : list) {
+            if (!first) {
+                sb.append(",");
+            }
+            first = false;
+            sb.append(toJson(item));
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+    return toJson(String.valueOf(v));
+}
+
+LinkedHashMap<String, Object> obj(Object... kv) {
+    LinkedHashMap<String, Object> m = new LinkedHashMap<>();
+    for (int i = 0; i + 1 < kv.length; i += 2) {
+        m.put(String.valueOf(kv[i]), kv[i + 1]);
+    }
+    return m;
+}
+
+void printObj(Map<String, Object> record) {
+    System.out.println(toJson(record));
+}
+
+void printError(String errorType, String message, Object... kv) {
+    LinkedHashMap<String, Object> m = new LinkedHashMap<>();
+    m.put("error", true);
+    m.put("error_type", errorType);
+    m.put("message", message);
+    for (int i = 0; i + 1 < kv.length; i += 2) {
+        m.put(String.valueOf(kv[i]), kv[i + 1]);
+    }
+    printObj(m);
+}
+
+String q(String ident) {
+    if (ident == null) {
+        return "``";
+    }
+    return "`" + ident.replace("`", "``") + "`";
 }
 
 void dumpResultSet(ResultSet rs) throws SQLException {
@@ -98,7 +196,7 @@ void executeQuery(Connection conn, String label, String sql) {
     }
 }
 
-List<String> loadAllTables(Connection conn) {
+List<String> loadAllTables(Connection conn) throws SQLException {
     List<String> tables = new ArrayList<>();
     String sql = "SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() ORDER BY table_name";
     try (Statement stmt = conn.createStatement();
@@ -106,10 +204,6 @@ List<String> loadAllTables(Connection conn) {
         while (rs.next()) {
             tables.add(rs.getString(1));
         }
-    } catch (SQLException e) {
-        // 这里若失败，会连带影响后续所有盘点；仍打印但不抛出。
-        printLabel("TABLE_INVENTORY");
-        System.out.println("  [QUERY ERROR] " + e.getMessage());
     }
     return tables;
 }
@@ -125,7 +219,7 @@ int loadTableCount(Connection conn) throws SQLException {
     return -1;
 }
 
-Map<String, String> buildSourceHints(Connection conn, Map<String, List<ColumnMeta>> columnsByTable) {
+Map<String, String> buildSourceHints(Map<String, List<ColumnMeta>> columnsByTable) {
     // SOURCE_HINTS 仅输出“当前 8 表内可直接识别的来源提示”
     Map<String, String> hints = new LinkedHashMap<>();
 
@@ -226,7 +320,7 @@ boolean hasExplicitEnumHintInComment(String comment) {
     return false;
 }
 
-Map<String, List<ColumnMeta>> loadAllColumns(Connection conn) {
+Map<String, List<ColumnMeta>> loadAllColumns(Connection conn) throws SQLException {
     Map<String, List<ColumnMeta>> byTable = new HashMap<>();
     String sql = """
             SELECT table_name,
@@ -252,15 +346,12 @@ Map<String, List<ColumnMeta>> loadAllColumns(Connection conn) {
             String comment = rs.getString("column_comment");
             byTable.computeIfAbsent(table, t -> new ArrayList<>()).add(new ColumnMeta(table, ordinal, name, type, nullable, key, comment));
         }
-    } catch (SQLException e) {
-        // 若这里失败，COLUMN_COMMENTS 等会受影响；但仍让脚本继续输出其它标签。
-        System.out.println("[COLUMNS LOAD ERROR] " + e.getMessage());
     }
     return byTable;
 }
 
 long queryRowCount(Connection conn, String table) throws SQLException {
-    String sql = "SELECT COUNT(*) AS row_count FROM " + table;
+    String sql = "SELECT COUNT(*) AS row_count FROM " + q(table);
     try (Statement stmt = conn.createStatement();
          ResultSet rs = stmt.executeQuery(sql)) {
         if (rs.next()) {
@@ -270,15 +361,33 @@ long queryRowCount(Connection conn, String table) throws SQLException {
     return -1L;
 }
 
-int queryDistinctNonNullCount(Connection conn, String table, String column) throws SQLException {
-    String sql = "SELECT COUNT(DISTINCT " + column + ") AS distinct_nonnull FROM " + table + " WHERE " + column + " IS NOT NULL";
+Map<String, Integer> queryDistinctNonNullCountsBatch(Connection conn, String table, List<String> columns) throws SQLException {
+    Map<String, Integer> out = new LinkedHashMap<>();
+    if (columns == null || columns.isEmpty()) {
+        return out;
+    }
+    StringBuilder sb = new StringBuilder();
+    Map<String, String> aliasToColumn = new LinkedHashMap<>();
+    sb.append("SELECT ");
+    for (int i = 0; i < columns.size(); i++) {
+        String col = columns.get(i);
+        String alias = "d" + i;
+        if (i > 0) {
+            sb.append(", ");
+        }
+        sb.append("COUNT(DISTINCT ").append(q(col)).append(") AS ").append(alias);
+        aliasToColumn.put(alias, col);
+    }
+    sb.append(" FROM ").append(q(table));
     try (Statement stmt = conn.createStatement();
-         ResultSet rs = stmt.executeQuery(sql)) {
+         ResultSet rs = stmt.executeQuery(sb.toString())) {
         if (rs.next()) {
-            return rs.getInt("distinct_nonnull");
+            for (Map.Entry<String, String> e : aliasToColumn.entrySet()) {
+                out.put(e.getValue(), rs.getInt(e.getKey()));
+            }
         }
     }
-    return -1;
+    return out;
 }
 
 class EnumCandidate {
@@ -297,263 +406,18 @@ class EnumCandidate {
     }
 }
 
-List<EnumCandidate> buildEnumCandidates(Connection conn,
-                                        Map<String, List<ColumnMeta>> columnsByTable,
-                                        Map<String, String> sourceHints) {
-    // 固定规则：
-    // - 字段注释包含显式枚举/布尔/状态/类型/来源/属性/能力提示时，必须纳入
-    // - 命中 SOURCE_HINTS 且来源为字典/依赖表的字段，必须纳入
-    // - 满足“非空 distinct 值 <= 20”的低值域字段，且不属于明显主数据标识字段时，可以纳入
-    List<EnumCandidate> candidates = new ArrayList<>();
-
-    for (Map.Entry<String, List<ColumnMeta>> e : columnsByTable.entrySet()) {
-        String table = e.getKey();
-        List<ColumnMeta> cols = e.getValue();
-        for (ColumnMeta c : cols) {
-            String key = c.tableName + "." + c.columnName;
-            String hint = sourceHints.get(key);
-
-            boolean commentHint = hasExplicitEnumHintInComment(c.comment);
-            boolean sourceHint = hint != null;
-
-            // 取值来源判定优先级固定为：
-            // 1) 字段注释直接给出来源或枚举
-            // 2) SOURCE_HINTS 明确识别到当前 8 表内依赖表
-            // 3) 当前表实际值域满足“非空 distinct 值 <= 20，且字段名不匹配 _id/_name/_no/_code（除非注释已明确为枚举）” -> 当前表实际值域
-            // 4) 以上均不满足 -> 当前 8 表内未识别（此处输出为 UNRECOGNIZED）
-            String valueSource;
-            if (commentHint) {
-                valueSource = "字段注释";
-            } else if (sourceHint) {
-                valueSource = "SOURCE_HINTS";
-            } else {
-                valueSource = "当前 8 表内未识别";
-            }
-
-            if (commentHint) {
-                candidates.add(new EnumCandidate(c, "COMMENT_HINT", valueSource, hint, null));
-                continue;
-            }
-            if (sourceHint) {
-                candidates.add(new EnumCandidate(c, "SOURCE_HINT", valueSource, hint, null));
-                continue;
-            }
-
-            // 低值域候选：严格按规则判定
-            // - 非空 distinct 值 <= 20
-            // - 且不属于明显主数据标识字段（_id/_name/_no/_code 等）
-            if (!isIdLikeName(c.columnName)) {
-                Integer distinct = null;
-                try {
-                    distinct = queryDistinctNonNullCount(conn, c.tableName, c.columnName);
-                } catch (SQLException ex) {
-                    // 低值域判断失败不应阻断脚本；保持候选不纳入即可。
-                    distinct = null;
-                }
-                if (distinct != null && distinct >= 0 && distinct <= 20) {
-                    candidates.add(new EnumCandidate(c, "LOW_CARDINALITY", "当前表实际值域", null, distinct));
-                }
-            }
+Map<String, String> loadTableComments(Connection conn) throws SQLException {
+    Map<String, String> out = new HashMap<>();
+    String sql = "SELECT table_name, table_comment FROM information_schema.tables WHERE table_schema = DATABASE()";
+    try (Statement stmt = conn.createStatement();
+         ResultSet rs = stmt.executeQuery(sql)) {
+        while (rs.next()) {
+            String table = rs.getString("table_name");
+            String comment = rs.getString("table_comment");
+            out.put(table, (comment == null || comment.isBlank()) ? null : comment);
         }
     }
-
-    candidates.sort(Comparator
-            .comparing((EnumCandidate x) -> x.col.tableName)
-            .thenComparingInt(x -> x.col.ordinal));
-    return candidates;
-}
-
-void printTableInventory(List<String> tables) {
-    printLabel("TABLE_INVENTORY");
-    if (tables.isEmpty()) {
-        System.out.println("  [EMPTY RESULT]");
-        return;
-    }
-    for (String t : tables) {
-        System.out.println("  table_name=" + t);
-    }
-}
-
-void printTableCountAssert(int tableCount) {
-    printLabel("TABLE_COUNT_ASSERT");
-    System.out.println("  table_count=" + tableCount + ", assert_eight_tables=" + (tableCount == EXPECTED_TABLE_COUNT));
-}
-
-void printTableComments(Connection conn, List<String> tables) {
-    printLabel("TABLE_COMMENTS");
-    if (tables.isEmpty()) {
-        System.out.println("  [EMPTY RESULT]");
-        return;
-    }
-    for (String t : tables) {
-        String comment = "";
-        try (PreparedStatement ps = conn.prepareStatement(
-                "SELECT table_comment FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?")) {
-            ps.setString(1, t);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    comment = rs.getString(1);
-                    if (comment == null) {
-                        comment = "";
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            comment = "";
-        }
-
-        long rowCount = -1L;
-        try {
-            rowCount = queryRowCount(conn, t);
-        } catch (SQLException e) {
-            rowCount = -1L;
-        }
-        System.out.println("  table_name=" + t + ", table_comment=" + (comment.isBlank() ? "NULL" : comment) + ", row_count=" + rowCount);
-    }
-}
-
-void printColumnComments(Map<String, List<ColumnMeta>> columnsByTable) {
-    printLabel("COLUMN_COMMENTS");
-    List<String> tables = new ArrayList<>(columnsByTable.keySet());
-    tables.sort(String::compareTo);
-    boolean any = false;
-    for (String t : tables) {
-        List<ColumnMeta> cols = columnsByTable.getOrDefault(t, Collections.emptyList());
-        for (ColumnMeta c : cols) {
-            any = true;
-            String comment = c.comment == null || c.comment.isBlank() ? "NULL" : c.comment;
-            System.out.println("  table_name=" + c.tableName
-                    + ", ordinal=" + c.ordinal
-                    + ", column_name=" + c.columnName
-                    + ", column_type=" + c.columnType
-                    + ", nullable=" + c.isNullable
-                    + ", key=" + (c.columnKey == null || c.columnKey.isBlank() ? "NULL" : c.columnKey)
-                    + ", comment=" + comment);
-        }
-    }
-    if (!any) {
-        System.out.println("  [EMPTY RESULT]");
-    }
-}
-
-void printCommentCoverage(Map<String, List<ColumnMeta>> columnsByTable) {
-    printLabel("COMMENT_COVERAGE");
-    List<String> tables = new ArrayList<>(columnsByTable.keySet());
-    tables.sort(String::compareTo);
-    if (tables.isEmpty()) {
-        System.out.println("  [EMPTY RESULT]");
-        return;
-    }
-    for (String t : tables) {
-        List<ColumnMeta> cols = columnsByTable.getOrDefault(t, Collections.emptyList());
-        int total = cols.size();
-        int withComment = 0;
-        for (ColumnMeta c : cols) {
-            if (c.comment != null && !c.comment.isBlank()) {
-                withComment++;
-            }
-        }
-        System.out.println("  table_name=" + t + ", column_total=" + total + ", column_with_comment=" + withComment);
-    }
-}
-
-void printSourceHints(Map<String, String> sourceHints) {
-    printLabel("SOURCE_HINTS");
-    if (sourceHints.isEmpty()) {
-        System.out.println("  [EMPTY RESULT]");
-        return;
-    }
-    for (Map.Entry<String, String> e : sourceHints.entrySet()) {
-        // 输出示例：region_id -> spc_region.region_id（按表名可追溯）
-        System.out.println("  hint=" + e.getKey() + " -> " + e.getValue());
-    }
-}
-
-void printEnumCandidates(List<EnumCandidate> candidates) {
-    printLabel("ENUM_CANDIDATES");
-    if (candidates.isEmpty()) {
-        System.out.println("  [EMPTY RESULT]");
-        return;
-    }
-    Map<String, List<EnumCandidate>> byTable = new LinkedHashMap<>();
-    for (EnumCandidate c : candidates) {
-        byTable.computeIfAbsent(c.col.tableName, t -> new ArrayList<>()).add(c);
-    }
-    for (Map.Entry<String, List<EnumCandidate>> e : byTable.entrySet()) {
-        String table = e.getKey();
-        List<String> items = new ArrayList<>();
-        for (EnumCandidate c : e.getValue()) {
-            String comment = c.col.comment == null || c.col.comment.isBlank() ? "NULL" : c.col.comment;
-            items.add("ordinal=" + c.col.ordinal
-                    + ", column_name=" + c.col.columnName
-                    + ", column_type=" + c.col.columnType
-                    + ", nullable=" + c.col.isNullable
-                    + ", key=" + (c.col.columnKey == null || c.col.columnKey.isBlank() ? "NULL" : c.col.columnKey)
-                    + ", comment=" + comment
-                    + ", selection_rule=" + c.selectionRule
-                    + ", value_source=" + c.valueSource
-                    + ", source_hint=" + (c.sourceHint == null ? "NULL" : c.sourceHint)
-                    + ", distinct_nonnull=" + (c.distinctNonNull == null ? "NULL" : c.distinctNonNull));
-        }
-        System.out.println("  table_name=" + table + ", candidates=" + String.join(" ; ", items));
-    }
-}
-
-void printEnumValueDistribution(Connection conn, List<EnumCandidate> candidates) {
-    printLabel("ENUM_VALUE_DISTRIBUTION");
-    if (candidates.isEmpty()) {
-        System.out.println("  [EMPTY RESULT]");
-        return;
-    }
-
-    // 为保证标签在 sed 截断范围内可见，分布以“每候选字段一行”输出；
-    // 但不对结果做截断，保留完整 distinct 值与数量（任务要求）。
-    Map<String, List<EnumCandidate>> byTable = new LinkedHashMap<>();
-    for (EnumCandidate c : candidates) {
-        byTable.computeIfAbsent(c.col.tableName, t -> new ArrayList<>()).add(c);
-    }
-    for (Map.Entry<String, List<EnumCandidate>> e : byTable.entrySet()) {
-        String table = e.getKey();
-        List<String> cols = new ArrayList<>();
-        for (EnumCandidate c : e.getValue()) {
-            String col = c.col.columnName;
-
-            int distinctNonNull = -1;
-            try {
-                distinctNonNull = queryDistinctNonNullCount(conn, table, col);
-            } catch (SQLException ex) {
-                cols.add("column_name=" + col + ", [QUERY ERROR] " + ex.getMessage());
-                continue;
-            }
-
-            String sql = "SELECT " + col + " AS value, COUNT(*) AS total FROM " + table
-                    + " WHERE " + col + " IS NOT NULL GROUP BY " + col
-                    + " ORDER BY total DESC, value ASC";
-            List<String> pairs = new ArrayList<>();
-            try (Statement stmt = conn.createStatement();
-                 ResultSet rs = stmt.executeQuery(sql)) {
-                while (rs.next()) {
-                    Object v = rs.getObject("value");
-                    long total = rs.getLong("total");
-                    String vs = v == null ? "NULL" : String.valueOf(v);
-                    pairs.add(vs + ":" + total);
-                }
-            } catch (SQLException ex) {
-                cols.add("column_name=" + col + ", [QUERY ERROR] " + ex.getMessage());
-                continue;
-            }
-
-            cols.add("column_name=" + col
-                    + ", distinct_nonnull=" + distinctNonNull
-                    + ", values=" + String.join(" | ", pairs));
-        }
-        System.out.println("  table_name=" + table + ", distributions=" + String.join(" ; ", cols));
-    }
-}
-
-void printCommentCoverageSummary(Connection conn, List<String> tables, Map<String, List<ColumnMeta>> columnsByTable) {
-    // 该 label 要求的是“每表字段总数与有注释字段数”，已在 printCommentCoverage 实现。
-    // 这里保留方法签名以便未来扩展，不输出额外 label。
+    return out;
 }
 
 List<String> missingConfigs = new ArrayList<>();
@@ -571,42 +435,344 @@ if (dbPassword == null) {
 }
 
 if (!missingConfigs.isEmpty()) {
-    System.out.println("[CONFIG ERROR] 缺失数据库连接配置: " + String.join(", ", missingConfigs));
+    printObj(obj(
+            "event", "CONFIG_ERROR",
+            "missing", missingConfigs
+    ));
 } else {
     Properties props = new Properties();
     props.setProperty("user", dbUser);
     props.setProperty("password", dbPassword);
     try (Connection conn = DriverManager.getConnection(dbUrl, props)) {
         System.out.println("## CONNECTED");
-        String catalog = conn.getCatalog();
-        System.out.println("Current catalog: " + catalog);
+        String actualCatalog = conn.getCatalog();
+        System.out.println("Current catalog: " + actualCatalog);
 
-        List<String> allTables = loadAllTables(conn);
-        printTableInventory(allTables);
-
-        int tableCount;
+        // TABLE_INVENTORY
+        printLabel("TABLE_INVENTORY");
+        List<String> allTables;
+        boolean tableInventoryOk = true;
         try {
-            tableCount = loadTableCount(conn);
+            allTables = loadAllTables(conn);
+            printObj(obj("table_names", allTables));
         } catch (SQLException e) {
-            tableCount = -1;
+            tableInventoryOk = false;
+            printError("TABLE_INVENTORY_QUERY_ERROR", e.getMessage());
+            allTables = new ArrayList<>(CORE_TABLES);
+            allTables.sort(String::compareTo);
+            printObj(obj("fallback_used", true, "fallback_table_names", allTables));
         }
-        printTableCountAssert(tableCount);
 
-        printTableComments(conn, allTables);
+        // TABLE_COUNT_ASSERT
+        printLabel("TABLE_COUNT_ASSERT");
+        boolean catalogMatch = EXPECTED_CATALOG.equals(actualCatalog);
+        printObj(obj(
+                "expected_catalog", EXPECTED_CATALOG,
+                "actual_catalog", actualCatalog,
+                "assert_catalog_match", catalogMatch
+        ));
+        if (!catalogMatch) {
+            printError("CATALOG_MISMATCH", "actual catalog does not match expected",
+                    "expected_catalog", EXPECTED_CATALOG,
+                    "actual_catalog", actualCatalog);
+        }
+        try {
+            int tableCount = loadTableCount(conn);
+            printObj(obj(
+                    "expected_table_count", EXPECTED_TABLE_COUNT,
+                    "actual_table_count", tableCount,
+                    "assert_eight_tables", tableCount == EXPECTED_TABLE_COUNT
+            ));
+        } catch (SQLException e) {
+            printError("TABLE_COUNT_QUERY_ERROR", e.getMessage());
+        }
 
-        Map<String, List<ColumnMeta>> columnsByTable = loadAllColumns(conn);
-        printCommentCoverage(columnsByTable);
+        // TABLE_COMMENTS
+        printLabel("TABLE_COMMENTS");
+        Map<String, String> tableComments = Collections.emptyMap();
+        String tableCommentsError = null;
+        try {
+            tableComments = loadTableComments(conn);
+        } catch (SQLException e) {
+            tableCommentsError = e.getMessage();
+            printError("TABLE_COMMENT_QUERY_ERROR", tableCommentsError);
+        }
+        if (allTables.isEmpty()) {
+            printObj(obj("empty", true));
+        }
+        for (String t : allTables) {
+            Long rowCount = null;
+            String rowCountError = null;
+            try {
+                rowCount = queryRowCount(conn, t);
+            } catch (SQLException e) {
+                rowCountError = e.getMessage();
+            }
+            LinkedHashMap<String, Object> rec = obj(
+                    "table_name", t,
+                    "table_comment", tableComments.get(t),
+                    "table_comment_collected", tableCommentsError == null,
+                    "row_count", rowCount,
+                    "row_count_collected", rowCountError == null
+            );
+            if (tableCommentsError != null) {
+                rec.put("table_comment_error", tableCommentsError);
+            }
+            if (rowCountError != null) {
+                rec.put("row_count_error", rowCountError);
+            }
+            printObj(rec);
+        }
 
-        Map<String, String> sourceHints = buildSourceHints(conn, columnsByTable);
-        printSourceHints(sourceHints);
+        // Load column metadata once (used by multiple labels)
+        Map<String, List<ColumnMeta>> columnsByTable = Collections.emptyMap();
+        String columnsError = null;
+        try {
+            columnsByTable = loadAllColumns(conn);
+        } catch (SQLException e) {
+            columnsError = e.getMessage();
+        }
 
-        List<EnumCandidate> enumCandidates = buildEnumCandidates(conn, columnsByTable, sourceHints);
-        printEnumCandidates(enumCandidates);
-        printEnumValueDistribution(conn, enumCandidates);
+        // COLUMN_COMMENTS
+        printLabel("COLUMN_COMMENTS");
+        if (columnsError != null) {
+            printError("COLUMN_METADATA_QUERY_ERROR", columnsError);
+        } else {
+            List<String> tableNames = new ArrayList<>(columnsByTable.keySet());
+            tableNames.sort(String::compareTo);
+            for (String table : tableNames) {
+                List<Map<String, Object>> cols = new ArrayList<>();
+                for (ColumnMeta c : columnsByTable.getOrDefault(table, Collections.emptyList())) {
+                    cols.add(obj(
+                            "ordinal", c.ordinal,
+                            "column_name", c.columnName,
+                            "column_type", c.columnType,
+                            "nullable", c.isNullable,
+                            "key", (c.columnKey == null || c.columnKey.isBlank()) ? null : c.columnKey,
+                            "comment", c.comment
+                    ));
+                }
+                printObj(obj(
+                        "table_name", table,
+                        "columns", cols
+                ));
+            }
+        }
 
-        // 放在最后，避免 COLUMN_COMMENTS 的大量输出把其它固定 label 推出 sed 截取范围。
-        printColumnComments(columnsByTable);
+        // COMMENT_COVERAGE
+        printLabel("COMMENT_COVERAGE");
+        if (columnsError != null) {
+            printError("COMMENT_COVERAGE_DEPENDS_ON_COLUMN_METADATA", columnsError);
+        } else {
+            List<String> tableNames = new ArrayList<>(columnsByTable.keySet());
+            tableNames.sort(String::compareTo);
+            for (String table : tableNames) {
+                List<ColumnMeta> cols = columnsByTable.getOrDefault(table, Collections.emptyList());
+                int total = cols.size();
+                int withComment = 0;
+                for (ColumnMeta c : cols) {
+                    if (c.comment != null) {
+                        withComment++;
+                    }
+                }
+                printObj(obj(
+                        "table_name", table,
+                        "column_total", total,
+                        "column_with_comment", withComment
+                ));
+            }
+        }
+
+        // SOURCE_HINTS
+        printLabel("SOURCE_HINTS");
+        Map<String, String> sourceHints = Collections.emptyMap();
+        if (columnsError != null) {
+            printError("SOURCE_HINTS_DEPENDS_ON_COLUMN_METADATA", columnsError);
+        } else {
+            sourceHints = buildSourceHints(columnsByTable);
+            if (sourceHints.isEmpty()) {
+                printObj(obj("empty", true));
+            } else {
+                for (Map.Entry<String, String> e : sourceHints.entrySet()) {
+                    String key = e.getKey(); // table.column
+                    int dot = key.indexOf('.');
+                    String table = dot > 0 ? key.substring(0, dot) : null;
+                    String column = dot > 0 ? key.substring(dot + 1) : key;
+                    printObj(obj(
+                            "table_name", table,
+                            "column_name", column,
+                            "source", e.getValue()
+                    ));
+                }
+            }
+        }
+
+        // ENUM_CANDIDATES
+        printLabel("ENUM_CANDIDATES");
+        List<EnumCandidate> enumCandidates = new ArrayList<>();
+        Map<String, String> lowCardinalityErrorsByTable = new HashMap<>();
+        Map<String, Map<String, Integer>> lowCardinalityDistinctByTable = new HashMap<>();
+        if (columnsError != null) {
+            printError("ENUM_CANDIDATES_DEPENDS_ON_COLUMN_METADATA", columnsError);
+        } else {
+            List<String> tableNames = new ArrayList<>(columnsByTable.keySet());
+            tableNames.sort(String::compareTo);
+
+            // 1) 批量计算“低值域候选判定”所需 distinct 计数：每表 1 次查询（避免逐列 COUNT(DISTINCT) 放大）
+            for (String table : tableNames) {
+                List<String> needDistinctCols = new ArrayList<>();
+                for (ColumnMeta c : columnsByTable.getOrDefault(table, Collections.emptyList())) {
+                    String colKey = c.tableName + "." + c.columnName;
+                    boolean commentHint = hasExplicitEnumHintInComment(c.comment);
+                    boolean sourceHint = sourceHints.containsKey(colKey);
+                    if (!commentHint && !sourceHint && !isIdLikeName(c.columnName)) {
+                        needDistinctCols.add(c.columnName);
+                    }
+                }
+                try {
+                    lowCardinalityDistinctByTable.put(table, queryDistinctNonNullCountsBatch(conn, table, needDistinctCols));
+                } catch (SQLException e) {
+                    lowCardinalityErrorsByTable.put(table, e.getMessage());
+                }
+            }
+
+            // 2) 生成候选（严格按计划规则，不额外收窄）
+            for (String table : tableNames) {
+                List<Map<String, Object>> tableCandidates = new ArrayList<>();
+                Map<String, Integer> distinctMap = lowCardinalityDistinctByTable.getOrDefault(table, Collections.emptyMap());
+                for (ColumnMeta c : columnsByTable.getOrDefault(table, Collections.emptyList())) {
+                    String colKey = c.tableName + "." + c.columnName;
+                    String hint = sourceHints.get(colKey);
+                    boolean commentHint = hasExplicitEnumHintInComment(c.comment);
+                    boolean sourceHint = hint != null;
+
+                    if (commentHint) {
+                        EnumCandidate cand = new EnumCandidate(c, "COMMENT_HINT", "字段注释", hint, null);
+                        enumCandidates.add(cand);
+                        tableCandidates.add(obj(
+                                "ordinal", c.ordinal,
+                                "column_name", c.columnName,
+                                "column_type", c.columnType,
+                                "nullable", c.isNullable,
+                                "key", (c.columnKey == null || c.columnKey.isBlank()) ? null : c.columnKey,
+                                "comment", c.comment,
+                                "selection_rule", cand.selectionRule,
+                                "value_source", cand.valueSource,
+                                "source_hint", cand.sourceHint,
+                                "distinct_nonnull", cand.distinctNonNull
+                        ));
+                        continue;
+                    }
+                    if (sourceHint) {
+                        EnumCandidate cand = new EnumCandidate(c, "SOURCE_HINT", "SOURCE_HINTS", hint, null);
+                        enumCandidates.add(cand);
+                        tableCandidates.add(obj(
+                                "ordinal", c.ordinal,
+                                "column_name", c.columnName,
+                                "column_type", c.columnType,
+                                "nullable", c.isNullable,
+                                "key", (c.columnKey == null || c.columnKey.isBlank()) ? null : c.columnKey,
+                                "comment", c.comment,
+                                "selection_rule", cand.selectionRule,
+                                "value_source", cand.valueSource,
+                                "source_hint", cand.sourceHint,
+                                "distinct_nonnull", cand.distinctNonNull
+                        ));
+                        continue;
+                    }
+
+                    if (!isIdLikeName(c.columnName)) {
+                        Integer distinct = distinctMap.get(c.columnName);
+                        if (distinct == null) {
+                            // 若批量 distinct 失败，这里不应静默吞掉；在本 label 下交由错误记录体现。
+                            continue;
+                        }
+                        if (distinct <= 20) {
+                            EnumCandidate cand = new EnumCandidate(c, "LOW_CARDINALITY", "当前表实际值域", null, distinct);
+                            enumCandidates.add(cand);
+                            tableCandidates.add(obj(
+                                    "ordinal", c.ordinal,
+                                    "column_name", c.columnName,
+                                    "column_type", c.columnType,
+                                    "nullable", c.isNullable,
+                                    "key", (c.columnKey == null || c.columnKey.isBlank()) ? null : c.columnKey,
+                                    "comment", c.comment,
+                                    "selection_rule", cand.selectionRule,
+                                    "value_source", cand.valueSource,
+                                    "source_hint", cand.sourceHint,
+                                    "distinct_nonnull", cand.distinctNonNull
+                            ));
+                        }
+                    }
+                }
+
+                printObj(obj(
+                        "table_name", table,
+                        "candidate_count", tableCandidates.size(),
+                        "candidates", tableCandidates
+                ));
+                if (lowCardinalityErrorsByTable.containsKey(table)) {
+                    printError("LOW_CARDINALITY_DISTINCT_BATCH_ERROR", lowCardinalityErrorsByTable.get(table),
+                            "table_name", table);
+                }
+            }
+        }
+
+        // ENUM_VALUE_DISTRIBUTION
+        printLabel("ENUM_VALUE_DISTRIBUTION");
+        if (columnsError != null) {
+            printError("ENUM_VALUE_DISTRIBUTION_DEPENDS_ON_COLUMN_METADATA", columnsError);
+        } else {
+            enumCandidates.sort(Comparator
+                    .comparing((EnumCandidate x) -> x.col.tableName)
+                    .thenComparingInt(x -> x.col.ordinal));
+
+            for (EnumCandidate cand : enumCandidates) {
+                String table = cand.col.tableName;
+                String col = cand.col.columnName;
+
+                // 合并/复用：低值域候选的 distinct 来自批量查询；distinct==0 可直接输出空分布，避免额外 GROUP BY 扫描
+                if ("LOW_CARDINALITY".equals(cand.selectionRule) && cand.distinctNonNull != null && cand.distinctNonNull == 0) {
+                    printObj(obj(
+                            "table_name", table,
+                            "column_name", col,
+                            "distinct_nonnull", 0,
+                            "values", Collections.emptyList()
+                    ));
+                    continue;
+                }
+
+                String sql = "SELECT " + q(col) + " AS value, COUNT(*) AS total FROM " + q(table)
+                        + " WHERE " + q(col) + " IS NOT NULL GROUP BY " + q(col)
+                        + " ORDER BY total DESC, value ASC";
+                List<Map<String, Object>> values = new ArrayList<>();
+                try (Statement stmt = conn.createStatement();
+                     ResultSet rs = stmt.executeQuery(sql)) {
+                    while (rs.next()) {
+                        Object v = rs.getObject("value");
+                        long total = rs.getLong("total");
+                        values.add(obj(
+                                "value", v == null ? null : String.valueOf(v),
+                                "total", total
+                        ));
+                    }
+                } catch (SQLException e) {
+                    printError("ENUM_VALUE_DISTRIBUTION_QUERY_ERROR", e.getMessage(),
+                            "table_name", table,
+                            "column_name", col,
+                            "sql", sql);
+                    continue;
+                }
+
+                printObj(obj(
+                        "table_name", table,
+                        "column_name", col,
+                        "distinct_nonnull", values.size(),
+                        "values", values
+                ));
+            }
+        }
     } catch (SQLException e) {
-        System.out.println("[CONNECT ERROR] " + e.getMessage());
+        printObj(obj("event", "CONNECT_ERROR", "message", e.getMessage()));
     }
 }

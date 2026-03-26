@@ -279,21 +279,17 @@ Current catalog: ftth_cloud_address
 ## 8. 缺口与异常保留项
 
 ```text
-## TABLE_COUNT_ASSERT
-{"expected_catalog":"ftth_cloud_address","actual_catalog":"ftth_cloud_address","assert_catalog_match":true}
-{"expected_table_count":8,"actual_table_count":8,"assert_eight_tables":true}
-
 ## COMMENT_COVERAGE
 {"table_name":"pub_restriction","column_total":15,"column_with_comment":7}
-{"table_name":"segm_addr_type","column_total":11,"column_with_comment":11}
 {"table_name":"spc_region","column_total":29,"column_with_comment":15}
-{"table_name":"spc_regional_company","column_total":8,"column_with_comment":8}
 {"table_name":"spc_station","column_total":86,"column_with_comment":5}
 {"table_name":"staff","column_total":49,"column_with_comment":13}
-{"table_name":"tmp_addr_segm_nj_20260317","column_total":83,"column_with_comment":52}
-{"table_name":"tmp_addr_set_segm_nj_20260317","column_total":21,"column_with_comment":19}
 
 ## ENUM_VALUE_DISTRIBUTION
+{"table_name":"segm_addr_type","column_name":"version","distinct_nonnull":0,"values":[]}
+{"table_name":"spc_region","column_name":"address","distinct_nonnull":0,"values":[]}
+{"table_name":"spc_region","column_name":"notes","distinct_nonnull":0,"values":[]}
+{"table_name":"spc_region","column_name":"china_name_ab","distinct_nonnull":0,"values":[]}
 {"table_name":"tmp_addr_segm_nj_20260317","column_name":"time","distinct_nonnull":0,"values":[]}
 {"table_name":"tmp_addr_segm_nj_20260317","column_name":"outregion","distinct_nonnull":0,"values":[]}
 {"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_city","distinct_nonnull":0,"values":[]}

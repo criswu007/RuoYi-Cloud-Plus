@@ -279,8 +279,51 @@ Current catalog: ftth_cloud_address
 ## 8. 缺口与异常保留项
 
 ```text
-|  欢迎使用 JShell -- 版本 17.0.2
-|  要大致了解该版本, 请键入: /help intro
+## TABLE_COUNT_ASSERT
+{"expected_catalog":"ftth_cloud_address","actual_catalog":"ftth_cloud_address","assert_catalog_match":true}
+{"expected_table_count":8,"actual_table_count":8,"assert_eight_tables":true}
 
-jshell> 
+## COMMENT_COVERAGE
+{"table_name":"pub_restriction","column_total":15,"column_with_comment":7}
+{"table_name":"segm_addr_type","column_total":11,"column_with_comment":11}
+{"table_name":"spc_region","column_total":29,"column_with_comment":15}
+{"table_name":"spc_regional_company","column_total":8,"column_with_comment":8}
+{"table_name":"spc_station","column_total":86,"column_with_comment":5}
+{"table_name":"staff","column_total":49,"column_with_comment":13}
+{"table_name":"tmp_addr_segm_nj_20260317","column_total":83,"column_with_comment":52}
+{"table_name":"tmp_addr_set_segm_nj_20260317","column_total":21,"column_with_comment":19}
+
+## ENUM_VALUE_DISTRIBUTION
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"time","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"outregion","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_city","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_band","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_user","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"sync_date","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"old_sp","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_highclass_area","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"border_address","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"x","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"y","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"exp_date","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_compete_region","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_compete_modify_op","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_compete_modify_date","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"build_units","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"build_floors","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"floor_height","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"optic_node","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_key","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_instead_indoor_devices","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_support_cm","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_support_eoc","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_support_ipqqm","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"line_extension_fee","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_line_install","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"citycom_flag","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"segm_name_fif","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"busstation_id","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_segm_nj_20260317","column_name":"addr_def","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_set_segm_nj_20260317","column_name":"alias","distinct_nonnull":0,"values":[]}
+{"table_name":"tmp_addr_set_segm_nj_20260317","column_name":"synchronous_date","distinct_nonnull":0,"values":[]}
 ```

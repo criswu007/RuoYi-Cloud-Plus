@@ -1,390 +1,378 @@
-# 线上库字段注释补盘证据
+# 线上最新非备份表结构盘点证据
 
-## 1. 基础连接信息
+## 1. 范围规则
+
+- 当前线上盘点范围以 `ftth_cloud_address` catalog 下 `table_name not like 'bak%'` 的非备份表为准。
+- `ADDR_SEGM` 与 `ADDR_SET_SEGM` 的表结构按全量 `information_schema` 盘点，数据观测按 `crc32(主键) % 100 = 0` 的 1% hash sample 统计。
+- 抽样盘点仅用于值域/空值/分布观察，不替代全量数据质量结论。
+
+## 2. 非备份表清单与总数
 
 ```text
-## CONNECTED
-Current catalog: ftth_cloud_address
+TABLE_COUNT	10
+TABLE	ADDR_SEGM
+TABLE	ADDR_SET_SEGM
+TABLE	getpageVol
+TABLE	pub_restriction
+TABLE	segm_addr_type
+TABLE	spc_region
+TABLE	spc_regional_company
+TABLE	spc_station
+TABLE	staff
+TABLE	sync_set_addr_info
 ```
 
-## 2. 当前 catalog 全部表清单与总数
+## 3. 表级结构摘要
 
 ```text
-## TABLE_INVENTORY
-{"table_names":["pub_restriction","segm_addr_type","spc_region","spc_regional_company","spc_station","staff","tmp_addr_segm_nj_20260317","tmp_addr_set_segm_nj_20260317"]}
-## TABLE_COUNT_ASSERT
-{"expected_catalog":"ftth_cloud_address","actual_catalog":"ftth_cloud_address","assert_catalog_match":true}
-{"expected_table_count":8,"actual_table_count":8,"assert_eight_tables":true}
+table_name	row_count	table_comment	column_total	comment_total
+ADDR_SEGM	2318000	标准分段地址	82	82
+ADDR_SET_SEGM	100000	安装地址表	20	20
+getpageVol	0	选址信息表	7	7
+pub_restriction	6344	约束关系	14	14
+segm_addr_type	19	地址类型表	10	10
+spc_region	103	分公司	28	28
+spc_regional_company	80	组织映射表	7	7
+spc_station	1230	管理站表	85	85
+staff	892	员工	48	5
+sync_set_addr_info	0	地址变更同步表	8	8
 ```
 
-## 3. 表注释与行数
+## 4. 字段注释清单
 
 ```text
-## TABLE_COMMENTS
-{"table_name":"pub_restriction","table_comment":"约束关系","table_comment_collected":true,"row_count":6361,"row_count_collected":true}
-{"table_name":"segm_addr_type","table_comment":"地址类型表","table_comment_collected":true,"row_count":18,"row_count_collected":true}
-{"table_name":"spc_region","table_comment":"分公司","table_comment_collected":true,"row_count":102,"row_count_collected":true}
-{"table_name":"spc_regional_company","table_comment":"组织映射表","table_comment_collected":true,"row_count":79,"row_count_collected":true}
-{"table_name":"spc_station","table_comment":"管理站表","table_comment_collected":true,"row_count":1229,"row_count_collected":true}
-{"table_name":"staff","table_comment":"员工","table_comment_collected":true,"row_count":891,"row_count_collected":true}
-{"table_name":"tmp_addr_segm_nj_20260317","table_comment":"标准地址表（南京地区）","table_comment_collected":true,"row_count":364000,"row_count_collected":true}
-{"table_name":"tmp_addr_set_segm_nj_20260317","table_comment":"安装地址表（南京地区）","table_comment_collected":true,"row_count":1566000,"row_count_collected":true}
+table_name	ordinal	column_name	column_type	is_nullable	column_key	column_comment
+ADDR_SEGM	1	segm_id	varchar(24)	NO	PRI	分段地址 ID 即标准地址 ID（主键）
+ADDR_SEGM	2	segm_type	int(11)	YES	MUL	分段地址级别
+ADDR_SEGM	3	segm_name	varchar(200)	YES	MUL	分段地址名称
+ADDR_SEGM	4	segm_no	varchar(120)	YES	MUL	分段地址简拼
+ADDR_SEGM	5	parent_segm_id	varchar(24)	YES	MUL	上级分段地址
+ADDR_SEGM	6	outside	int(11)	YES		是否展示给前台 0 为是 1 为否
+ADDR_SEGM	7	status	int(11)	YES		状态
+ADDR_SEGM	8	time	datetime	YES		变动时间
+ADDR_SEGM	9	outregion	int(11)	YES		区外
+ADDR_SEGM	10	post_code	varchar(255)	YES		单项工程编号
+ADDR_SEGM	11	is_city	char(1)	YES		是否城市
+ADDR_SEGM	12	is_band	char(1)	YES		是否宽带到户
+ADDR_SEGM	13	is_user	char(1)	YES		是否为户线
+ADDR_SEGM	14	stand_name	varchar(400)	YES	MUL	标准地址全称
+ADDR_SEGM	15	stand_no	varchar(300)	YES		标准地址简拼
+ADDR_SEGM	16	region_id	varchar(24)	YES	MUL	所属管理区域
+ADDR_SEGM	17	template_id	int(11)	YES		模板 ID
+ADDR_SEGM	18	notes	varchar(255)	YES		备注
+ADDR_SEGM	19	delete_state	char(1)	YES	MUL	删除状态 0 = 未删除 1 = 已删除
+ADDR_SEGM	20	delete_time	datetime	YES	MUL	删除时间
+ADDR_SEGM	21	old_data	decimal(20,0)	YES		是否旧数据
+ADDR_SEGM	22	modify_op	bigint(20)	YES		录入人员
+ADDR_SEGM	23	modiry_date	datetime	YES	MUL	录入时间
+ADDR_SEGM	24	alias	varchar(80)	YES		别名
+ADDR_SEGM	25	sync_date	datetime	YES		同步时间
+ADDR_SEGM	26	create_time	datetime	YES		创建时间
+ADDR_SEGM	27	is4gis	char(1)	YES		是否 GIS 专用
+ADDR_SEGM	28	service_region_id	varchar(24)	YES		所属社区
+ADDR_SEGM	29	lan_id	decimal(20,0)	YES		所属本地网
+ADDR_SEGM	30	ppdom_id	decimal(20,0)	YES		域 ID
+ADDR_SEGM	31	old_id_eqp	bigint(20)	YES		旧设备 ID
+ADDR_SEGM	32	old_sp	varchar(8)	YES		旧系统标识
+ADDR_SEGM	33	addr_from	varchar(200)	YES		地址来源
+ADDR_SEGM	34	is_highclass_area	char(1)	YES		是否高档住宅或政府小区
+ADDR_SEGM	35	create_date	datetime	NO	MUL	创建日期
+ADDR_SEGM	36	create_op	bigint(20)	YES		创建人
+ADDR_SEGM	37	border_address	varchar(24)	YES		边界地址
+ADDR_SEGM	38	x	decimal(20,10)	YES		坐标 X
+ADDR_SEGM	39	y	decimal(20,10)	YES		坐标 Y
+ADDR_SEGM	40	exp_date	datetime	YES		到期时间
+ADDR_SEGM	41	addr_type	int(11)	YES		地址类型
+ADDR_SEGM	42	is_compete_region	char(1)	YES		是否竞争区域
+ADDR_SEGM	43	is_compete_modify_op	int(11)	YES		修改竞争区域的操作人
+ADDR_SEGM	44	is_compete_modify_date	datetime	YES		竞争区域的修改时间
+ADDR_SEGM	45	build_units	decimal(20,0)	YES		单元数
+ADDR_SEGM	46	build_floors	decimal(20,0)	YES		层数
+ADDR_SEGM	47	floor_height	decimal(4,1)	YES		层高
+ADDR_SEGM	48	isbuilding	char(1)	NO		是否为楼宇 0 = 否 1 = 是
+ADDR_SEGM	49	is_normal_addr	char(1)	YES		是否标准地址
+ADDR_SEGM	50	is_instal_addr	char(1)	YES		是否可安装地址
+ADDR_SEGM	51	mnt_type_id	int(11)	YES		维护方式：自维、代维
+ADDR_SEGM	52	optic_node	varchar(200)	YES		光节点
+ADDR_SEGM	53	district_id	varchar(24)	YES		行政区域
+ADDR_SEGM	54	location_id	varchar(24)	YES	MUL	地块 ID
+ADDR_SEGM	55	is_key	int(11)	YES		是否主用名：0 - 否，1 - 是
+ADDR_SEGM	56	is_instead_indoor_devices	char(1)	YES		是否代装室内设备
+ADDR_SEGM	57	is_support_cm	char(1)	YES		是否支持 CM
+ADDR_SEGM	58	is_support_eoc	char(1)	YES		是否支持 EOC
+ADDR_SEGM	59	net_struct_id	int(11)	YES		网络结构 ID
+ADDR_SEGM	60	is_support_ipqqm	char(1)	YES		是否支持 IP 机顶盒
+ADDR_SEGM	61	line_extension_fee	decimal(10,2)	YES		线路扩容费
+ADDR_SEGM	62	is_line_install	char(1)	YES		是否线路安装
+ADDR_SEGM	63	net_area_type_id	int(11)	YES		网络区域类型 ID
+ADDR_SEGM	64	build_grade_id	int(11)	YES		建筑等级 ID
+ADDR_SEGM	65	build_type_id	int(11)	YES		建筑类型 ID
+ADDR_SEGM	66	citycom_flag	int(11)	YES		城域标识
+ADDR_SEGM	67	segm_name_fif	varchar(24)	YES		地址名称扩展
+ADDR_SEGM	68	segm_name_fir	char(1)	YES		是否配套费小区
+ADDR_SEGM	69	station_id	varchar(24)	YES		地址所属维修管理站
+ADDR_SEGM	70	addr_in_type	bigint(20)	YES		地址接入方式（旧）
+ADDR_SEGM	71	place_type	int(11)	YES		场所性质
+ADDR_SEGM	72	opr_state	bigint(20)	YES		审核状态
+ADDR_SEGM	73	cover_num	int(11)	YES		楼栋覆盖户数
+ADDR_SEGM	74	area_manager	varchar(60)	YES		片区经理
+ADDR_SEGM	75	installstation_id	varchar(24)	YES		地址所属安装管理站
+ADDR_SEGM	76	busstation_id	varchar(24)	YES		地址所属营业管理站
+ADDR_SEGM	77	addr_in_type_ftth	int(11)	YES		光纤接入方式
+ADDR_SEGM	78	ftth_pon_type	int(11)	YES		光纤接入能力
+ADDR_SEGM	79	addr_in_type_lan	int(11)	YES		电缆接入方式
+ADDR_SEGM	80	area_type	int(11)	YES		城乡属性
+ADDR_SEGM	81	addr_unit_type	int(11)	YES		房屋属性
+ADDR_SEGM	82	addr_def	varchar(255)	YES		房屋定义
+ADDR_SET_SEGM	1	set_addr_id	varchar(24)	NO	PRI	安装地址 ID（主键）
+ADDR_SET_SEGM	2	set_addr_name	varchar(400)	YES	MUL	安装地址名称
+ADDR_SET_SEGM	3	set_type	int(11)	YES	MUL	地址类型：0 = 伪地址，2 = 到户地址
+ADDR_SET_SEGM	4	segm_id	varchar(24)	YES	MUL	标准地址分段 ID
+ADDR_SET_SEGM	5	status	int(11)	YES	MUL	状态
+ADDR_SET_SEGM	6	region_id	varchar(24)	YES	MUL	所属区域 ID
+ADDR_SET_SEGM	7	notes	varchar(2000)	YES		备注
+ADDR_SET_SEGM	8	delete_state	char(1)	YES	MUL	删除状态（0 = 未删除，1 = 已删除）
+ADDR_SET_SEGM	9	delete_time	datetime	YES		删除时间
+ADDR_SET_SEGM	10	modiry_date	datetime	YES	MUL	修改时间
+ADDR_SET_SEGM	11	alias	varchar(80)	YES		别名
+ADDR_SET_SEGM	12	create_date	datetime	YES	MUL	创建日期
+ADDR_SET_SEGM	13	boss_op	varchar(80)	YES		BOSS 操作人
+ADDR_SET_SEGM	14	segm_type	int(11)	YES	MUL	地址分段类型
+ADDR_SET_SEGM	15	area_id	bigint(20)	YES		片区 ID
+ADDR_SET_SEGM	16	set_addr_no	varchar(120)	YES	MUL	安装地址编号
+ADDR_SET_SEGM	17	synchronous_date	datetime	YES		同步时间
+ADDR_SET_SEGM	18	old_segm_id	varchar(24)	YES		旧标准地址 ID
+ADDR_SET_SEGM	19	modify_op	int(11)	YES		修改人
+ADDR_SET_SEGM	20	org_id	varchar(80)	YES		组织机构 ID
+getpageVol	1	uuid	varchar(64)	NO	PRI	主键，唯一标识 ID
+getpageVol	2	returnval	varchar(3000)	YES		返回值 / 选址结果信息
+getpageVol	3	systemsource	varchar(10)	YES		系统来源
+getpageVol	4	flag	varchar(4)	YES		状态标识
+getpageVol	5	createdate	datetime	YES		创建时间
+getpageVol	6	enddate	datetime	YES		结束时间 / 失效时间
+getpageVol	7	notes	varchar(2000)	YES		备注信息
+pub_restriction	1	serial_no	int(11)	NO	PRI	流水号（主键）
+pub_restriction	2	desc_id	bigint(20)	NO		描述字段 ID
+pub_restriction	3	desc_china	varchar(120)	NO	MUL	描述字段
+pub_restriction	4	code	varchar(10)	YES	MUL	代码
+pub_restriction	5	keyword	varchar(40)	NO	MUL	关键字
+pub_restriction	6	is_display	char(1)	YES		是否显示（0/1/2）
+pub_restriction	7	keyword_desc	varchar(80)	YES	MUL	关键字描述
+pub_restriction	8	delete_state	char(1)	YES		删除状态（0 = 未删除，1 = 已删除）
+pub_restriction	9	delete_time	datetime	YES		删除时间
+pub_restriction	10	old_id_eqp	int(11)	YES		旧设备 ID
+pub_restriction	11	old_sp	varchar(8)	YES		旧系统标识
+pub_restriction	12	lan_id	varchar(10)	YES		本地网 ID
+pub_restriction	13	create_date	datetime	YES		创建日期
+pub_restriction	14	old_id	varchar(24)	YES		旧 ID
+segm_addr_type	1	addr_type_id	int(11)	NO	PRI	地址类型 ID（主键）
+segm_addr_type	2	name	varchar(255)	NO		地址类型名称
+segm_addr_type	3	no	varchar(255)	YES		地址类型编号
+segm_addr_type	4	level_id	int(11)	NO		级别 ID
+segm_addr_type	5	score	int(11)	NO		权重分值
+segm_addr_type	6	create_date	datetime	NO		创建日期
+segm_addr_type	7	notes	varchar(255)	YES		备注
+segm_addr_type	8	rule	char(1)	YES		规则标识
+segm_addr_type	9	expression	varchar(255)	YES		规则表达式
+segm_addr_type	10	version	bigint(20)	YES		版本号
+spc_region	1	region_id	varchar(24)	NO	PRI	主键，关键字
+spc_region	2	region_no	varchar(80)	NO	MUL	分公司编码
+spc_region	3	region_name	varchar(80)	NO	MUL	分公司名称
+spc_region	4	alias	varchar(80)	YES		管理区域别名
+spc_region	5	grade_id	int(11)	YES		区域等级
+spc_region	6	type_id	int(11)	YES		区域类型
+spc_region	7	address	varchar(100)	YES		区域中心地址
+spc_region	8	super_region_id	varchar(24)	YES	MUL	上级管理区域
+spc_region	9	parent_id	varchar(24)	YES		父级 ID
+spc_region	10	delete_state	char(1)	YES		删除状态（0 = 未删除，1 = 已删除）
+spc_region	11	delete_time	datetime	YES		删除时间
+spc_region	12	notes	varchar(255)	YES		备注
+spc_region	13	name_ab	varchar(20)	YES		拼音缩写
+spc_region	14	res_type_id	int(11)	NO	MUL	资源类型
+spc_region	15	china_name_ab	varchar(40)	YES		中文名称缩写
+spc_region	16	modify_op	int(11)	YES		录入人员
+spc_region	17	modiry_date	datetime	YES		录入时间
+spc_region	18	create_time	datetime	YES		创建时间
+spc_region	19	sync_date	datetime	YES		同步时间
+spc_region	20	old_id_eqp	bigint(20)	YES		旧设备 ID
+spc_region	21	old_sp	varchar(8)	YES		旧系统标识
+spc_region	22	lan_id	int(11)	YES	MUL	本地网 ID
+spc_region	23	ppdom_id	int(11)	YES	MUL	域名 ID
+spc_region	24	create_date	datetime	YES		创建日期
+spc_region	25	create_op	int(11)	YES		创建人
+spc_region	26	crm_region	int(11)	YES		CRM 区域
+spc_region	27	crm_lan	int(11)	YES		CRM 本地网
+spc_region	28	sp_region_id	varchar(80)	YES		对应服保分公司 id
+spc_regional_company	1	organize_id	varchar(250)	NO	PRI	组织ID
+spc_regional_company	2	organize_name	varchar(500)	YES		组织名称
+spc_regional_company	3	area_code	varchar(250)	YES	UNI	组织编码
+spc_regional_company	4	source	varchar(250)	YES		来源系统
+spc_regional_company	5	district_id	varchar(24)	YES		地区编码
+spc_regional_company	6	region_id	varchar(24)	YES		关联区域ID
+spc_regional_company	7	segm_type_priv	int(11)	YES		分段类型权限编码
+spc_station	1	station_id	varchar(24)	NO	PRI	主键，管理站唯一 ID
+spc_station	2	station_no	varchar(80)	NO	MUL	管理站编号
+spc_station	3	china_name	varchar(80)	YES		中文名称
+spc_station	4	china_name_ab	varchar(40)	YES		中文名称缩写
+spc_station	5	alias	varchar(80)	YES		别名
+spc_station	6	name_ab	varchar(80)	YES		名称缩写
+spc_station	7	code	varchar(20)	YES		编码
+spc_station	8	authority	varchar(20)	YES		权限 / 管辖范围
+spc_station	9	type_id	int(11)	YES		类型 ID
+spc_station	10	district_id	varchar(24)	YES	MUL	区域 ID（关联行政区）
+spc_station	11	region_id	varchar(24)	NO	MUL	片区 ID
+spc_station	12	grade_id	int(11)	YES		等级 ID
+spc_station	13	super_station_id	varchar(24)	YES	MUL	上级管理站 ID
+spc_station	14	street_id	varchar(24)	YES	MUL	街道 ID
+spc_station	15	doorplate	varchar(200)	YES		门牌号
+spc_station	16	parent_id	varchar(24)	YES		父级 ID
+spc_station	17	delete_state	char(1)	YES	MUL	删除状态（0 = 未删除，1 = 已删除）
+spc_station	18	delete_time	datetime	YES	MUL	删除时间
+spc_station	19	notes	varchar(255)	YES		备注
+spc_station	20	opr_state_id	int(11)	YES		运营状态 ID
+spc_station	21	mnt_state_id	int(11)	YES		维护状态 ID
+spc_station	22	pos_x	decimal(8,4)	YES		坐标 X
+spc_station	23	pos_y	decimal(8,4)	YES		坐标 Y
+spc_station	24	graph_width	decimal(8,4)	YES		图形宽度
+spc_station	25	graph_height	decimal(8,4)	YES		图形高度
+spc_station	26	isoffset	char(1)	YES		是否偏移（0 = 否，1 = 是）
+spc_station	27	graph_id	bigint(20)	YES		图形 ID
+spc_station	28	childregion_id	varchar(24)	YES	MUL	子片区 ID
+spc_station	29	location	varchar(200)	YES		位置描述
+spc_station	30	builddate	datetime	YES		建造日期
+spc_station	31	china_name_full	varchar(80)	YES		中文全称
+spc_station	32	modify_op	int(11)	YES		修改人 ID
+spc_station	33	modiry_date	datetime	YES	MUL	修改时间
+spc_station	34	principal	varchar(20)	YES		负责人
+spc_station	35	building_kind	int(11)	YES		建筑类型
+spc_station	36	management_kind	int(11)	YES		管理类型
+spc_station	37	prop_char_id	int(11)	YES		属性特征 ID
+spc_station	38	building_area	decimal(8,2)	YES		建筑面积
+spc_station	39	use_area	decimal(8,2)	YES		使用面积
+spc_station	40	x	decimal(20,10)	YES		空间坐标 X
+spc_station	41	y	decimal(20,10)	YES		空间坐标 Y
+spc_station	42	z	decimal(20,10)	YES		空间坐标 Z
+spc_station	43	floor	varchar(10)	YES		楼层
+spc_station	44	create_time	datetime	YES	MUL	创建时间
+spc_station	45	create_date	datetime	YES		创建日期
+spc_station	46	old_id	varchar(100)	YES	MUL	旧系统 ID
+spc_station	47	old_sp	varchar(100)	YES		旧系统标识
+spc_station	48	link_man	varchar(100)	YES		联系人
+spc_station	49	link_tele	varchar(100)	YES		联系电话
+spc_station	50	imp_level	int(11)	YES		重要等级
+spc_station	51	bus_level	int(11)	YES		业务等级
+spc_station	52	mnt_dept	varchar(100)	YES		维护部门
+spc_station	53	check_cycle	varchar(100)	YES		检查周期
+spc_station	54	pow_support	varchar(100)	YES		供电支持
+spc_station	55	asset_code	varchar(100)	YES		资产编码
+spc_station	56	rent	varchar(100)	YES		租金
+spc_station	57	mapx	decimal(20,10)	YES		地图坐标 X
+spc_station	58	mapy	decimal(20,10)	YES		地图坐标 Y
+spc_station	59	old_id_eqp	int(11)	YES		旧设备 ID
+spc_station	60	resource_from	int(11)	YES		资源来源
+spc_station	61	serial_no	int(11)	YES		序号
+spc_station	62	zd_street	varchar(60)	YES		重点字段 - 街道
+spc_station	63	zd_zqybm	varchar(20)	YES		重点字段 - 区域编码
+spc_station	64	zd_mphm	varchar(30)	YES		重点字段 - 门牌号
+spc_station	65	zd_lc	int(11)	YES		重点字段 - 楼层
+spc_station	66	zd_lg	decimal(6,2)	YES		重点字段 - 量纲
+spc_station	67	zd_zdmj	decimal(8,2)	YES		重点字段 - 占地面积
+spc_station	68	zd_cjdw	varchar(30)	YES		重点字段 - 创建单位
+spc_station	69	zd_cjr	varchar(20)	YES		重点字段 - 创建人
+spc_station	70	zd_cjrq	datetime	YES		重点字段 - 创建日期
+spc_station	71	zd_jgrq	datetime	YES		重点字段 - 竣工日期
+spc_station	72	zd_jqbm	varchar(50)	YES		重点字段 - 交接部门
+spc_station	73	zd_jqmm	varchar(50)	YES		重点字段 - 交接密码
+spc_station	74	zd_gcbh	varchar(64)	YES		重点字段 - 工程编号
+spc_station	75	zd_gcmc	varchar(64)	YES		重点字段 - 工程名称
+spc_station	76	zd_ygcbh	varchar(64)	YES		重点字段 - 原工程编号
+spc_station	77	zd_ygcmc	varchar(64)	YES		重点字段 - 原工程名称
+spc_station	78	zd_sfcl	int(11)	YES		重点字段 - 是否存量
+spc_station	79	isoutsh	char(1)	YES		是否审核
+spc_station	80	mnt_region_id	varchar(24)	YES		维护片区 ID
+spc_station	81	res_picture	varchar(400)	YES		资源图片
+spc_station	82	res_type_id	int(11)	YES		资源类型 ID
+spc_station	83	coverhouseholds	int(11)	YES		覆盖户数
+spc_station	84	create_op	int(11)	YES		录入人员
+spc_station	85	manage_type	int(11)	YES		管理站类型 (2017101 维修，2017102 安装，2017103 营业)
+staff	1	staff_id	int(11)	NO	PRI	ID
+staff	2	name	varchar(20)	NO		name
+staff	42	logon_number	int(11)	YES		允许同时登录的工号个数
+staff	43	is_allow_cs_login	int(11)	YES		是否允许登录客户端0允许1不允许
+staff	44	job_id	int(11)	YES		所属岗位,取pub_restriction表中的字典值，对应：普通员工  社区经理  社区经理管理员
+sync_set_addr_info	1	seq_id	decimal(24,0)	YES		同步序列号
+sync_set_addr_info	2	set_segm_id	varchar(24)	NO	MUL	需同步的安装地址 id
+sync_set_addr_info	3	old_segm_id	varchar(24)	YES	MUL	对应的旧标准地址 id
+sync_set_addr_info	4	new_segm_id	varchar(24)	NO	MUL	对应的新标准地址 id
+sync_set_addr_info	5	sync_update_type	int(11)	YES		同步状态：0 = 待更新、-1 = 更新失败、-2 = 数据冗余
+sync_set_addr_info	6	create_date	datetime	YES		创建时间
+sync_set_addr_info	7	cust_id	varchar(24)	YES		客户 ID
+sync_set_addr_info	8	return_message	varchar(500)	YES		同步返回信息 / 错误说明
 ```
 
-## 4. 注释覆盖度
+## 5. 大表抽样观测
 
 ```text
-## COMMENT_COVERAGE
-{"table_name":"pub_restriction","column_total":15,"column_with_comment":7}
-{"table_name":"segm_addr_type","column_total":11,"column_with_comment":11}
-{"table_name":"spc_region","column_total":29,"column_with_comment":15}
-{"table_name":"spc_regional_company","column_total":8,"column_with_comment":8}
-{"table_name":"spc_station","column_total":86,"column_with_comment":5}
-{"table_name":"staff","column_total":49,"column_with_comment":13}
-{"table_name":"tmp_addr_segm_nj_20260317","column_total":83,"column_with_comment":52}
-{"table_name":"tmp_addr_set_segm_nj_20260317","column_total":21,"column_with_comment":19}
-```
-
-## 5. 字段注释清单
-
-```text
-## COLUMN_COMMENTS
-{"table_name":"pub_restriction","columns":[{"ordinal":1,"column_name":"id","column_type":"bigint(20) unsigned","nullable":"NO","key":"PRI","comment":"自增主键ID（线上库新增）"},{"ordinal":2,"column_name":"serial_no","column_type":"varchar(64)","nullable":"NO","key":null,"comment":"流水号"},{"ordinal":3,"column_name":"desc_id","column_type":"varchar(64)","nullable":"YES","key":"MUL","comment":"描述字段ID"},{"ordinal":4,"column_name":"desc_china","column_type":"varchar(255)","nullable":"YES","key":null,"comment":"描述字段"},{"ordinal":5,"column_name":"code","column_type":"varchar(255)","nullable":"YES","key":null,"comment":"代码"},{"ordinal":6,"column_name":"keyword","column_type":"varchar(255)","nullable":"YES","key":"MUL","comment":"关键字"},{"ordinal":7,"column_name":"is_display","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null},{"ordinal":8,"column_name":"keyword_desc","column_type":"varchar(255)","nullable":"YES","key":null,"comment":"关键字说明"},{"ordinal":9,"column_name":"delete_state","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null},{"ordinal":10,"column_name":"delete_time","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":11,"column_name":"old_id_eqp","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":12,"column_name":"old_sp","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":13,"column_name":"lan_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":14,"column_name":"create_date","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":15,"column_name":"old_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null}]}
-{"table_name":"segm_addr_type","columns":[{"ordinal":1,"column_name":"id","column_type":"bigint(20) unsigned","nullable":"NO","key":"PRI","comment":"自增主键ID（线上库新增）"},{"ordinal":2,"column_name":"addr_type_id","column_type":"varchar(32)","nullable":"NO","key":null,"comment":"地址类型ID"},{"ordinal":3,"column_name":"name","column_type":"varchar(255)","nullable":"YES","key":null,"comment":"地址类型名称"},{"ordinal":4,"column_name":"no","column_type":"varchar(64)","nullable":"YES","key":"MUL","comment":"地址类型编码"},{"ordinal":5,"column_name":"level_id","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"地址层级值"},{"ordinal":6,"column_name":"score","column_type":"int(11)","nullable":"YES","key":null,"comment":"评分/排序权重"},{"ordinal":7,"column_name":"create_date","column_type":"datetime","nullable":"YES","key":null,"comment":"创建时间"},{"ordinal":8,"column_name":"notes","column_type":"varchar(255)","nullable":"YES","key":null,"comment":"备注/补充说明"},{"ordinal":9,"column_name":"rule","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"规则启用标识"},{"ordinal":10,"column_name":"expression","column_type":"varchar(1024)","nullable":"YES","key":null,"comment":"规则表达式"},{"ordinal":11,"column_name":"version","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"版本号"}]}
-{"table_name":"spc_region","columns":[{"ordinal":1,"column_name":"id","column_type":"bigint(20) unsigned","nullable":"NO","key":"PRI","comment":"自增主键ID（线上库新增）"},{"ordinal":2,"column_name":"region_id","column_type":"varchar(64)","nullable":"NO","key":null,"comment":"关键字"},{"ordinal":3,"column_name":"region_no","column_type":"varchar(64)","nullable":"YES","key":"MUL","comment":"分公司编码"},{"ordinal":4,"column_name":"region_name","column_type":"varchar(255)","nullable":"YES","key":null,"comment":"分公司名称"},{"ordinal":5,"column_name":"alias","column_type":"varchar(255)","nullable":"YES","key":null,"comment":"管理区域别名"},{"ordinal":6,"column_name":"grade_id","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"区域等级"},{"ordinal":7,"column_name":"type_id","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"区域类型"},{"ordinal":8,"column_name":"address","column_type":"varchar(512)","nullable":"YES","key":null,"comment":"区域中心地址"},{"ordinal":9,"column_name":"super_region_id","column_type":"varchar(64)","nullable":"YES","key":"MUL","comment":"上级管理区域"},{"ordinal":10,"column_name":"parent_id","column_type":"varchar(64)","nullable":"YES","key":"MUL","comment":null},{"ordinal":11,"column_name":"delete_state","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null},{"ordinal":12,"column_name":"delete_time","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":13,"column_name":"notes","column_type":"varchar(512)","nullable":"YES","key":null,"comment":"备注"},{"ordinal":14,"column_name":"name_ab","column_type":"varchar(128)","nullable":"YES","key":null,"comment":"拼音缩写"},{"ordinal":15,"column_name":"res_type_id","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"资源类型"},{"ordinal":16,"column_name":"china_name_ab","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null},{"ordinal":17,"column_name":"modify_op","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"录入人员"},{"ordinal":18,"column_name":"modiry_date","column_type":"datetime","nullable":"YES","key":null,"comment":"录入时间"},{"ordinal":19,"column_name":"create_time","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":20,"column_name":"sync_date","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":21,"column_name":"old_id_eqp","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":22,"column_name":"old_sp","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":23,"column_name":"lan_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":24,"column_name":"ppdom_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":25,"column_name":"create_date","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":26,"column_name":"create_op","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":27,"column_name":"crm_region","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":28,"column_name":"crm_lan","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":29,"column_name":"sp_region_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"对应服保分公司id"}]}
-{"table_name":"spc_regional_company","columns":[{"ordinal":1,"column_name":"id","column_type":"bigint(20) unsigned","nullable":"NO","key":"PRI","comment":"自增主键ID（线上库新增）"},{"ordinal":2,"column_name":"organize_id","column_type":"varchar(32)","nullable":"NO","key":null,"comment":"组织ID"},{"ordinal":3,"column_name":"organize_name","column_type":"varchar(255)","nullable":"YES","key":null,"comment":"组织名称"},{"ordinal":4,"column_name":"area_code","column_type":"varchar(128)","nullable":"YES","key":null,"comment":"组织编码"},{"ordinal":5,"column_name":"source","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"来源系统"},{"ordinal":6,"column_name":"district_id","column_type":"varchar(64)","nullable":"YES","key":"MUL","comment":"地区编码"},{"ordinal":7,"column_name":"region_id","column_type":"varchar(64)","nullable":"YES","key":"MUL","comment":"关联区域ID"},{"ordinal":8,"column_name":"segm_type_priv","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"分段类型权限编码"}]}
-{"table_name":"spc_station","columns":[{"ordinal":1,"column_name":"id","column_type":"bigint(20) unsigned","nullable":"NO","key":"PRI","comment":"自增主键ID（线上库新增）"},{"ordinal":2,"column_name":"station_id","column_type":"varchar(64)","nullable":"NO","key":null,"comment":null},{"ordinal":3,"column_name":"station_no","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null},{"ordinal":4,"column_name":"china_name","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null},{"ordinal":5,"column_name":"china_name_ab","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null},{"ordinal":6,"column_name":"alias","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null},{"ordinal":7,"column_name":"name_ab","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null},{"ordinal":8,"column_name":"code","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null},{"ordinal":9,"column_name":"authority","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":10,"column_name":"type_id","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null},{"ordinal":11,"column_name":"district_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":12,"column_name":"region_id","column_type":"varchar(64)","nullable":"YES","key":"MUL","comment":null},{"ordinal":13,"column_name":"grade_id","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null},{"ordinal":14,"column_name":"super_station_id","column_type":"varchar(64)","nullable":"YES","key":"MUL","comment":null},{"ordinal":15,"column_name":"street_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":16,"column_name":"doorplate","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null},{"ordinal":17,"column_name":"parent_id","column_type":"varchar(64)","nullable":"YES","key":"MUL","comment":null},{"ordinal":18,"column_name":"delete_state","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null},{"ordinal":19,"column_name":"delete_time","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":20,"column_name":"notes","column_type":"varchar(512)","nullable":"YES","key":null,"comment":null},{"ordinal":21,"column_name":"opr_state_id","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null},{"ordinal":22,"column_name":"mnt_state_id","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null},{"ordinal":23,"column_name":"pos_x","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":24,"column_name":"pos_y","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":25,"column_name":"graph_width","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null},{"ordinal":26,"column_name":"graph_height","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null},{"ordinal":27,"column_name":"isoffset","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null},{"ordinal":28,"column_name":"graph_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":29,"column_name":"childregion_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":30,"column_name":"location","column_type":"varchar(512)","nullable":"YES","key":null,"comment":null},{"ordinal":31,"column_name":"builddate","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":32,"column_name":"china_name_full","column_type":"varchar(512)","nullable":"YES","key":null,"comment":null},{"ordinal":33,"column_name":"modify_op","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":34,"column_name":"modiry_date","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":35,"column_name":"principal","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null},{"ordinal":36,"column_name":"building_kind","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":37,"column_name":"management_kind","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":38,"column_name":"prop_char_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":39,"column_name":"building_area","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":40,"column_name":"use_area","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":41,"column_name":"x","column_type":"decimal(18,6)","nullable":"YES","key":null,"comment":null},{"ordinal":42,"column_name":"y","column_type":"decimal(18,6)","nullable":"YES","key":null,"comment":null},{"ordinal":43,"column_name":"z","column_type":"decimal(18,6)","nullable":"YES","key":null,"comment":null},{"ordinal":44,"column_name":"floor","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null},{"ordinal":45,"column_name":"create_time","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":46,"column_name":"create_date","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":47,"column_name":"old_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":48,"column_name":"old_sp","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":49,"column_name":"link_man","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null},{"ordinal":50,"column_name":"link_tele","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":51,"column_name":"imp_level","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null},{"ordinal":52,"column_name":"bus_level","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null},{"ordinal":53,"column_name":"mnt_dept","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":54,"column_name":"check_cycle","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":55,"column_name":"pow_support","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":56,"column_name":"asset_code","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null},{"ordinal":57,"column_name":"rent","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":58,"column_name":"mapx","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":59,"column_name":"mapy","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":60,"column_name":"old_id_eqp","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":61,"column_name":"resource_from","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":62,"column_name":"serial_no","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":63,"column_name":"zd_street","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null},{"ordinal":64,"column_name":"zd_zqybm","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":65,"column_name":"zd_mphm","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null},{"ordinal":66,"column_name":"zd_lc","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":67,"column_name":"zd_lg","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":68,"column_name":"zd_zdmj","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":69,"column_name":"zd_cjdw","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null},{"ordinal":70,"column_name":"zd_cjr","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null},{"ordinal":71,"column_name":"zd_cjrq","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":72,"column_name":"zd_jgrq","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":73,"column_name":"zd_jqbm","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null},{"ordinal":74,"column_name":"zd_jqmm","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null},{"ordinal":75,"column_name":"zd_gcbh","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null},{"ordinal":76,"column_name":"zd_gcmc","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null},{"ordinal":77,"column_name":"zd_ygcbh","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null},{"ordinal":78,"column_name":"zd_ygcmc","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null},{"ordinal":79,"column_name":"zd_sfcl","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null},{"ordinal":80,"column_name":"isoutsh","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null},{"ordinal":81,"column_name":"mnt_region_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":82,"column_name":"res_picture","column_type":"varchar(512)","nullable":"YES","key":null,"comment":"资源图片"},{"ordinal":83,"column_name":"res_type_id","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null},{"ordinal":84,"column_name":"coverhouseholds","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"覆盖户数"},{"ordinal":85,"column_name":"create_op","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"录入人员"},{"ordinal":86,"column_name":"manage_type","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"管理站类型,2017101维修,2017102安装,2017103营业"}]}
-{"table_name":"staff","columns":[{"ordinal":1,"column_name":"id","column_type":"bigint(20) unsigned","nullable":"NO","key":"PRI","comment":"自增主键ID（线上库新增）"},{"ordinal":2,"column_name":"staff_id","column_type":"varchar(64)","nullable":"NO","key":null,"comment":"ID"},{"ordinal":3,"column_name":"name","column_type":"varchar(128)","nullable":"YES","key":null,"comment":"name"},{"ordinal":4,"column_name":"title","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":5,"column_name":"station","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null},{"ordinal":6,"column_name":"password","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null},{"ordinal":7,"column_name":"department","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null},{"ordinal":8,"column_name":"workgroup_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":9,"column_name":"site_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":10,"column_name":"dept_level_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":11,"column_name":"eff_date","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":12,"column_name":"exp_date","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":13,"column_name":"state","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null},{"ordinal":14,"column_name":"state_date","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":15,"column_name":"ip_limit","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":16,"column_name":"ip_subnet","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":17,"column_name":"ip_netmask","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":18,"column_name":"ip_hostname","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null},{"ordinal":19,"column_name":"pc_limit","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":20,"column_name":"pc_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":21,"column_name":"invoice_serial_nbr","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":22,"column_name":"last_date","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":23,"column_name":"email","column_type":"varchar(255)","nullable":"YES","key":null,"comment":"邮箱"},{"ordinal":24,"column_name":"phone_no","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"联系电话"},{"ordinal":25,"column_name":"delete_state","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null},{"ordinal":26,"column_name":"delete_time","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":27,"column_name":"remark","column_type":"varchar(512)","nullable":"YES","key":null,"comment":null},{"ordinal":28,"column_name":"staff_alias","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null},{"ordinal":29,"column_name":"login_name","column_type":"varchar(128)","nullable":"YES","key":"MUL","comment":"登录名"},{"ordinal":30,"column_name":"pwd_mod_date","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":31,"column_name":"lan_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":32,"column_name":"loginuid","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"登录账号唯一标识"},{"ordinal":33,"column_name":"staff_code","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"员工编码"},{"ordinal":34,"column_name":"staff_state","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null},{"ordinal":35,"column_name":"last_login_date","column_type":"datetime","nullable":"YES","key":null,"comment":"最后登录时间"},{"ordinal":36,"column_name":"erro_times","column_type":"int(11)","nullable":"YES","key":null,"comment":null},{"ordinal":37,"column_name":"captcha","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null},{"ordinal":38,"column_name":"validate_time","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":39,"column_name":"his_pwd","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null},{"ordinal":40,"column_name":"safe_strategy","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":41,"column_name":"identity_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":42,"column_name":"hr_code","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":43,"column_name":"logon_number","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"允许同时登录的工号个数"},{"ordinal":44,"column_name":"is_allow_cs_login","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"是否允许登录客户端0允许1不允许"},{"ordinal":45,"column_name":"job_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"所属岗位,取pub_restriction表中的字典值，对应：普通员工  社区经理  社区经理管理员"},{"ordinal":46,"column_name":"allow_batch_adjust_parent_addr","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null},{"ordinal":47,"column_name":"region_id","column_type":"varchar(64)","nullable":"YES","key":"MUL","comment":"所属区域ID"},{"ordinal":48,"column_name":"addr_batch_oper_permission","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null},{"ordinal":49,"column_name":"opt_node_permission","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null}]}
-{"table_name":"tmp_addr_segm_nj_20260317","columns":[{"ordinal":1,"column_name":"id","column_type":"bigint(20) unsigned","nullable":"NO","key":"PRI","comment":"自增主键ID（线上库新增）"},{"ordinal":2,"column_name":"segm_id","column_type":"varchar(1024)","nullable":"YES","key":null,"comment":"分段地址ID即标准地址ID"},{"ordinal":3,"column_name":"segm_type","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"分段地址级别"},{"ordinal":4,"column_name":"segm_name","column_type":"varchar(255)","nullable":"YES","key":null,"comment":"分段地址名称"},{"ordinal":5,"column_name":"segm_no","column_type":"varchar(255)","nullable":"YES","key":null,"comment":"分段地址简拼"},{"ordinal":6,"column_name":"parent_segm_id","column_type":"varchar(64)","nullable":"YES","key":"MUL","comment":"上级分段地址"},{"ordinal":7,"column_name":"outside","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"是否展示给前台 0为是 1为否"},{"ordinal":8,"column_name":"status","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"状态"},{"ordinal":9,"column_name":"time","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"变动时间"},{"ordinal":10,"column_name":"outregion","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"区外"},{"ordinal":11,"column_name":"post_code","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"单项工程编号"},{"ordinal":12,"column_name":"is_city","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":"是否城市"},{"ordinal":13,"column_name":"is_band","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":"是否宽带到户"},{"ordinal":14,"column_name":"is_user","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":"是否为户线"},{"ordinal":15,"column_name":"stand_name","column_type":"varchar(1024)","nullable":"YES","key":null,"comment":"标准地址全称"},{"ordinal":16,"column_name":"stand_no","column_type":"varchar(512)","nullable":"YES","key":"MUL","comment":"标准地址简拼"},{"ordinal":17,"column_name":"region_id","column_type":"varchar(64)","nullable":"YES","key":"MUL","comment":"所属管理区域"},{"ordinal":18,"column_name":"template_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":19,"column_name":"notes","column_type":"text","nullable":"YES","key":null,"comment":"备注"},{"ordinal":20,"column_name":"delete_state","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null},{"ordinal":21,"column_name":"delete_time","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":22,"column_name":"old_data","column_type":"text","nullable":"YES","key":null,"comment":null},{"ordinal":23,"column_name":"modify_op","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"录入人员"},{"ordinal":24,"column_name":"modiry_date","column_type":"datetime","nullable":"YES","key":null,"comment":"录入时间"},{"ordinal":25,"column_name":"alias","column_type":"varchar(255)","nullable":"YES","key":null,"comment":"别名"},{"ordinal":26,"column_name":"sync_date","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":27,"column_name":"create_time","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":28,"column_name":"is4gis","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null},{"ordinal":29,"column_name":"service_region_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"所属社区"},{"ordinal":30,"column_name":"lan_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"所属本地网"},{"ordinal":31,"column_name":"ppdom_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":32,"column_name":"old_id_eqp","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":33,"column_name":"old_sp","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":34,"column_name":"addr_from","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"地址来源"},{"ordinal":35,"column_name":"is_highclass_area","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":"是否高档住宅或政府小区"},{"ordinal":36,"column_name":"create_date","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":37,"column_name":"create_op","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":38,"column_name":"border_address","column_type":"varchar(1024)","nullable":"YES","key":null,"comment":null},{"ordinal":39,"column_name":"x","column_type":"decimal(18,6)","nullable":"YES","key":null,"comment":null},{"ordinal":40,"column_name":"y","column_type":"decimal(18,6)","nullable":"YES","key":null,"comment":null},{"ordinal":41,"column_name":"exp_date","column_type":"datetime","nullable":"YES","key":null,"comment":"到期时间"},{"ordinal":42,"column_name":"addr_type","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null},{"ordinal":43,"column_name":"is_compete_region","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":"是否竞争区域"},{"ordinal":44,"column_name":"is_compete_modify_op","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"修改竞争区域的操作人"},{"ordinal":45,"column_name":"is_compete_modify_date","column_type":"datetime","nullable":"YES","key":null,"comment":"竞争区域的修改时间"},{"ordinal":46,"column_name":"build_units","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"单元数"},{"ordinal":47,"column_name":"build_floors","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"层数"},{"ordinal":48,"column_name":"floor_height","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"层高"},{"ordinal":49,"column_name":"isbuilding","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":"是否为楼宇 0表示否,1表示是"},{"ordinal":50,"column_name":"is_normal_addr","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null},{"ordinal":51,"column_name":"is_instal_addr","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null},{"ordinal":52,"column_name":"mnt_type_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"维护方式：自维、代维"},{"ordinal":53,"column_name":"optic_node","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"光节点"},{"ordinal":54,"column_name":"district_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"行政区域"},{"ordinal":55,"column_name":"location_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"地块ID"},{"ordinal":56,"column_name":"is_key","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":"是否主用名:0-否，1-是"},{"ordinal":57,"column_name":"is_instead_indoor_devices","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null},{"ordinal":58,"column_name":"is_support_cm","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null},{"ordinal":59,"column_name":"is_support_eoc","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null},{"ordinal":60,"column_name":"net_struct_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":61,"column_name":"is_support_ipqqm","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null},{"ordinal":62,"column_name":"line_extension_fee","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":63,"column_name":"is_line_install","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null},{"ordinal":64,"column_name":"net_area_type_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":65,"column_name":"build_grade_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":66,"column_name":"build_type_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":67,"column_name":"citycom_flag","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null},{"ordinal":68,"column_name":"segm_name_fif","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null},{"ordinal":69,"column_name":"segm_name_fir","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null},{"ordinal":70,"column_name":"station_id","column_type":"varchar(64)","nullable":"YES","key":"MUL","comment":"地址所属维修管理站"},{"ordinal":71,"column_name":"addr_in_type","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"地址接入方式（旧）"},{"ordinal":72,"column_name":"place_type","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"场所性质"},{"ordinal":73,"column_name":"opr_state","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"审核状态"},{"ordinal":74,"column_name":"cover_num","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"楼栋覆盖户数"},{"ordinal":75,"column_name":"area_manager","column_type":"varchar(128)","nullable":"YES","key":null,"comment":"片区经理"},{"ordinal":76,"column_name":"installstation_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"地址所属安装管理站"},{"ordinal":77,"column_name":"busstation_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"地址所属营业管理站"},{"ordinal":78,"column_name":"addr_in_type_ftth","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"光纤接入方式"},{"ordinal":79,"column_name":"ftth_pon_type","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"光纤接入能力"},{"ordinal":80,"column_name":"addr_in_type_lan","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"电缆接入方式"},{"ordinal":81,"column_name":"area_type","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"城乡属性"},{"ordinal":82,"column_name":"addr_unit_type","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"房屋属性"},{"ordinal":83,"column_name":"addr_def","column_type":"text","nullable":"YES","key":null,"comment":"房屋定义"}]}
-{"table_name":"tmp_addr_set_segm_nj_20260317","columns":[{"ordinal":1,"column_name":"id","column_type":"bigint(20) unsigned","nullable":"NO","key":"PRI","comment":"自增主键ID（线上库新增）"},{"ordinal":2,"column_name":"set_addr_id","column_type":"varchar(255)","nullable":"NO","key":null,"comment":"安装地址ID"},{"ordinal":3,"column_name":"set_addr_name","column_type":"varchar(1024)","nullable":"YES","key":null,"comment":"安装地址名称"},{"ordinal":4,"column_name":"set_type","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"0:伪地址，2到户地址"},{"ordinal":5,"column_name":"segm_id","column_type":"varchar(255)","nullable":"YES","key":"MUL","comment":"挂接标准地址ID/编码"},{"ordinal":6,"column_name":"status","column_type":"varchar(50)","nullable":"YES","key":null,"comment":"状态"},{"ordinal":7,"column_name":"region_id","column_type":"varchar(255)","nullable":"YES","key":"MUL","comment":"区域ID"},{"ordinal":8,"column_name":"notes","column_type":"varchar(1024)","nullable":"YES","key":null,"comment":"备注"},{"ordinal":9,"column_name":"delete_state","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null},{"ordinal":10,"column_name":"delete_time","column_type":"datetime","nullable":"YES","key":null,"comment":null},{"ordinal":11,"column_name":"modiry_date","column_type":"datetime","nullable":"YES","key":null,"comment":"录入时间"},{"ordinal":12,"column_name":"alias","column_type":"varchar(255)","nullable":"YES","key":null,"comment":"别名"},{"ordinal":13,"column_name":"create_date","column_type":"datetime","nullable":"YES","key":null,"comment":"创建时间"},{"ordinal":14,"column_name":"boss_op","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"BOSS操作人工号"},{"ordinal":15,"column_name":"segm_type","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"标准地址类型编码"},{"ordinal":16,"column_name":"area_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"区域/片区ID"},{"ordinal":17,"column_name":"set_addr_no","column_type":"varchar(512)","nullable":"YES","key":null,"comment":"安装地址简拼/编号"},{"ordinal":18,"column_name":"synchronous_date","column_type":"datetime","nullable":"YES","key":null,"comment":"同步时间"},{"ordinal":19,"column_name":"old_segm_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"旧标准地址ID"},{"ordinal":20,"column_name":"modify_op","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"修改人"},{"ordinal":21,"column_name":"org_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"组织ID"}]}
-```
-
-## 6. 枚举候选字段与实际值域
-
-说明：
-- `ENUM_CANDIDATES` 保留原始表级候选结果，便于后续按表回放字段筛选口径。
-- `ENUM_VALUE_DISTRIBUTION` 仅摘录与字段注释补盘直接相关、且不涉及高基数或敏感明细的原始记录；完整原始输出仍以脚本可重跑结果为准。
-
-```text
-## ENUM_CANDIDATES
-{"table_name":"pub_restriction","candidate_count":3,"candidates":[{"ordinal":7,"column_name":"is_display","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":3},{"ordinal":9,"column_name":"delete_state","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":2},{"ordinal":10,"column_name":"delete_time","column_type":"datetime","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":20}]}
-{"table_name":"segm_addr_type","candidate_count":9,"candidates":[{"ordinal":2,"column_name":"addr_type_id","column_type":"varchar(32)","nullable":"NO","key":null,"comment":"地址类型ID","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":3,"column_name":"name","column_type":"varchar(255)","nullable":"YES","key":null,"comment":"地址类型名称","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":4,"column_name":"no","column_type":"varchar(64)","nullable":"YES","key":"MUL","comment":"地址类型编码","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":6,"column_name":"score","column_type":"int(11)","nullable":"YES","key":null,"comment":"评分/排序权重","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":9},{"ordinal":7,"column_name":"create_date","column_type":"datetime","nullable":"YES","key":null,"comment":"创建时间","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":1},{"ordinal":8,"column_name":"notes","column_type":"varchar(255)","nullable":"YES","key":null,"comment":"备注/补充说明","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":7},{"ordinal":9,"column_name":"rule","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"规则启用标识","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":1},{"ordinal":10,"column_name":"expression","column_type":"varchar(1024)","nullable":"YES","key":null,"comment":"规则表达式","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":4},{"ordinal":11,"column_name":"version","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"版本号","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0}]}
-{"table_name":"spc_region","candidate_count":17,"candidates":[{"ordinal":5,"column_name":"alias","column_type":"varchar(255)","nullable":"YES","key":null,"comment":"管理区域别名","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":1},{"ordinal":7,"column_name":"type_id","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"区域类型","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":8,"column_name":"address","column_type":"varchar(512)","nullable":"YES","key":null,"comment":"区域中心地址","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":11,"column_name":"delete_state","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":2},{"ordinal":12,"column_name":"delete_time","column_type":"datetime","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":3},{"ordinal":13,"column_name":"notes","column_type":"varchar(512)","nullable":"YES","key":null,"comment":"备注","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":14,"column_name":"name_ab","column_type":"varchar(128)","nullable":"YES","key":null,"comment":"拼音缩写","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":3},{"ordinal":15,"column_name":"res_type_id","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"资源类型","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":16,"column_name":"china_name_ab","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":17,"column_name":"modify_op","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"录入人员","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":1},{"ordinal":18,"column_name":"modiry_date","column_type":"datetime","nullable":"YES","key":null,"comment":"录入时间","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":20,"column_name":"sync_date","column_type":"datetime","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":21,"column_name":"old_id_eqp","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":22,"column_name":"old_sp","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":26,"column_name":"create_op","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":2},{"ordinal":27,"column_name":"crm_region","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":28,"column_name":"crm_lan","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0}]}
-{"table_name":"spc_regional_company","candidate_count":3,"candidates":[{"ordinal":5,"column_name":"source","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"来源系统","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":7,"column_name":"region_id","column_type":"varchar(64)","nullable":"YES","key":"MUL","comment":"关联区域ID","selection_rule":"SOURCE_HINT","value_source":"SOURCE_HINTS","source_hint":"spc_region.region_id","distinct_nonnull":null},{"ordinal":8,"column_name":"segm_type_priv","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"分段类型权限编码","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null}]}
-{"table_name":"spc_station","candidate_count":57,"candidates":[{"ordinal":5,"column_name":"china_name_ab","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":6,"column_name":"alias","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":7,"column_name":"name_ab","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":9,"column_name":"authority","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":1},{"ordinal":12,"column_name":"region_id","column_type":"varchar(64)","nullable":"YES","key":"MUL","comment":null,"selection_rule":"SOURCE_HINT","value_source":"SOURCE_HINTS","source_hint":"spc_region.region_id","distinct_nonnull":null},{"ordinal":16,"column_name":"doorplate","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":18,"column_name":"delete_state","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":2},{"ordinal":19,"column_name":"delete_time","column_type":"datetime","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":17},{"ordinal":20,"column_name":"notes","column_type":"varchar(512)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":23,"column_name":"pos_x","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":24,"column_name":"pos_y","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":25,"column_name":"graph_width","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":26,"column_name":"graph_height","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":27,"column_name":"isoffset","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":1},{"ordinal":30,"column_name":"location","column_type":"varchar(512)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":32,"column_name":"china_name_full","column_type":"varchar(512)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":37,"column_name":"management_kind","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":39,"column_name":"building_area","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":40,"column_name":"use_area","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":43,"column_name":"z","column_type":"decimal(18,6)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":44,"column_name":"floor","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":4},{"ordinal":45,"column_name":"create_time","column_type":"datetime","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":48,"column_name":"old_sp","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":49,"column_name":"link_man","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":11},{"ordinal":50,"column_name":"link_tele","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":11},{"ordinal":51,"column_name":"imp_level","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":52,"column_name":"bus_level","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":53,"column_name":"mnt_dept","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":54,"column_name":"check_cycle","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":55,"column_name":"pow_support","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":57,"column_name":"rent","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":58,"column_name":"mapx","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":59,"column_name":"mapy","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":60,"column_name":"old_id_eqp","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":61,"column_name":"resource_from","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":63,"column_name":"zd_street","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":64,"column_name":"zd_zqybm","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":65,"column_name":"zd_mphm","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":66,"column_name":"zd_lc","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":67,"column_name":"zd_lg","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":68,"column_name":"zd_zdmj","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":69,"column_name":"zd_cjdw","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":70,"column_name":"zd_cjr","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":71,"column_name":"zd_cjrq","column_type":"datetime","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":72,"column_name":"zd_jgrq","column_type":"datetime","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":73,"column_name":"zd_jqbm","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":74,"column_name":"zd_jqmm","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":75,"column_name":"zd_gcbh","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":76,"column_name":"zd_gcmc","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":77,"column_name":"zd_ygcbh","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":78,"column_name":"zd_ygcmc","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":79,"column_name":"zd_sfcl","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":80,"column_name":"isoutsh","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":82,"column_name":"res_picture","column_type":"varchar(512)","nullable":"YES","key":null,"comment":"资源图片","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":84,"column_name":"coverhouseholds","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"覆盖户数","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":1},{"ordinal":85,"column_name":"create_op","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"录入人员","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":86,"column_name":"manage_type","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"管理站类型,2017101维修,2017102安装,2017103营业","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null}]}
-{"table_name":"staff","candidate_count":33,"candidates":[{"ordinal":4,"column_name":"title","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":4},{"ordinal":5,"column_name":"station","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":1},{"ordinal":7,"column_name":"department","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":12,"column_name":"exp_date","column_type":"datetime","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":2},{"ordinal":13,"column_name":"state","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":2},{"ordinal":14,"column_name":"state_date","column_type":"datetime","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":4},{"ordinal":15,"column_name":"ip_limit","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":16,"column_name":"ip_subnet","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":17,"column_name":"ip_netmask","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":18,"column_name":"ip_hostname","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":19,"column_name":"pc_limit","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":1},{"ordinal":21,"column_name":"invoice_serial_nbr","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":22,"column_name":"last_date","column_type":"datetime","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":23,"column_name":"email","column_type":"varchar(255)","nullable":"YES","key":null,"comment":"邮箱","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":25,"column_name":"delete_state","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":2},{"ordinal":26,"column_name":"delete_time","column_type":"datetime","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":27,"column_name":"remark","column_type":"varchar(512)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":2},{"ordinal":28,"column_name":"staff_alias","column_type":"varchar(128)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":30,"column_name":"pwd_mod_date","column_type":"datetime","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":2},{"ordinal":32,"column_name":"loginuid","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"登录账号唯一标识","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":34,"column_name":"staff_state","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":1},{"ordinal":36,"column_name":"erro_times","column_type":"int(11)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":1},{"ordinal":37,"column_name":"captcha","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":1},{"ordinal":38,"column_name":"validate_time","column_type":"datetime","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":3},{"ordinal":39,"column_name":"his_pwd","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":3},{"ordinal":40,"column_name":"safe_strategy","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":5},{"ordinal":43,"column_name":"logon_number","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"允许同时登录的工号个数","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":44,"column_name":"is_allow_cs_login","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"是否允许登录客户端0允许1不允许","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":45,"column_name":"job_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"所属岗位,取pub_restriction表中的字典值，对应：普通员工  社区经理  社区经理管理员","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":"pub_restriction.code","distinct_nonnull":null},{"ordinal":46,"column_name":"allow_batch_adjust_parent_addr","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":2},{"ordinal":47,"column_name":"region_id","column_type":"varchar(64)","nullable":"YES","key":"MUL","comment":"所属区域ID","selection_rule":"SOURCE_HINT","value_source":"SOURCE_HINTS","source_hint":"spc_region.region_id","distinct_nonnull":null},{"ordinal":48,"column_name":"addr_batch_oper_permission","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":1},{"ordinal":49,"column_name":"opt_node_permission","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":1}]}
-{"table_name":"tmp_addr_segm_nj_20260317","candidate_count":56,"candidates":[{"ordinal":3,"column_name":"segm_type","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"分段地址级别","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":11},{"ordinal":7,"column_name":"outside","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"是否展示给前台 0为是 1为否","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":8,"column_name":"status","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"状态","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":9,"column_name":"time","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"变动时间","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":10,"column_name":"outregion","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"区外","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":12,"column_name":"is_city","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":"是否城市","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":13,"column_name":"is_band","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":"是否宽带到户","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":14,"column_name":"is_user","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":"是否为户线","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":17,"column_name":"region_id","column_type":"varchar(64)","nullable":"YES","key":"MUL","comment":"所属管理区域","selection_rule":"SOURCE_HINT","value_source":"SOURCE_HINTS","source_hint":"spc_region.region_id","distinct_nonnull":null},{"ordinal":19,"column_name":"notes","column_type":"text","nullable":"YES","key":null,"comment":"备注","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":6},{"ordinal":20,"column_name":"delete_state","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":2},{"ordinal":22,"column_name":"old_data","column_type":"text","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":1},{"ordinal":23,"column_name":"modify_op","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"录入人员","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":15},{"ordinal":26,"column_name":"sync_date","column_type":"datetime","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":28,"column_name":"is4gis","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":1},{"ordinal":33,"column_name":"old_sp","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":34,"column_name":"addr_from","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"地址来源","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":35,"column_name":"is_highclass_area","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":"是否高档住宅或政府小区","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":37,"column_name":"create_op","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":13},{"ordinal":38,"column_name":"border_address","column_type":"varchar(1024)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":39,"column_name":"x","column_type":"decimal(18,6)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":40,"column_name":"y","column_type":"decimal(18,6)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":41,"column_name":"exp_date","column_type":"datetime","nullable":"YES","key":null,"comment":"到期时间","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":42,"column_name":"addr_type","column_type":"varchar(32)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":4},{"ordinal":43,"column_name":"is_compete_region","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":"是否竞争区域","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":44,"column_name":"is_compete_modify_op","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"修改竞争区域的操作人","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":45,"column_name":"is_compete_modify_date","column_type":"datetime","nullable":"YES","key":null,"comment":"竞争区域的修改时间","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":46,"column_name":"build_units","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"单元数","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":47,"column_name":"build_floors","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"层数","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":48,"column_name":"floor_height","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"层高","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":49,"column_name":"isbuilding","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":"是否为楼宇 0表示否,1表示是","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":50,"column_name":"is_normal_addr","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":1},{"ordinal":51,"column_name":"is_instal_addr","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":1},{"ordinal":53,"column_name":"optic_node","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"光节点","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":56,"column_name":"is_key","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":"是否主用名:0-否，1-是","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":57,"column_name":"is_instead_indoor_devices","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":58,"column_name":"is_support_cm","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":59,"column_name":"is_support_eoc","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":61,"column_name":"is_support_ipqqm","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":62,"column_name":"line_extension_fee","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":63,"column_name":"is_line_install","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":67,"column_name":"citycom_flag","column_type":"varchar(64)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":68,"column_name":"segm_name_fif","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":69,"column_name":"segm_name_fir","column_type":"varchar(255)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":2},{"ordinal":70,"column_name":"station_id","column_type":"varchar(64)","nullable":"YES","key":"MUL","comment":"地址所属维修管理站","selection_rule":"SOURCE_HINT","value_source":"SOURCE_HINTS","source_hint":"spc_station.station_id","distinct_nonnull":null},{"ordinal":72,"column_name":"place_type","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"场所性质","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":4},{"ordinal":73,"column_name":"opr_state","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"审核状态","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":75,"column_name":"area_manager","column_type":"varchar(128)","nullable":"YES","key":null,"comment":"片区经理","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":8},{"ordinal":76,"column_name":"installstation_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"地址所属安装管理站","selection_rule":"SOURCE_HINT","value_source":"SOURCE_HINTS","source_hint":"spc_station.station_id","distinct_nonnull":null},{"ordinal":77,"column_name":"busstation_id","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"地址所属营业管理站","selection_rule":"SOURCE_HINT","value_source":"SOURCE_HINTS","source_hint":"spc_station.station_id","distinct_nonnull":null},{"ordinal":78,"column_name":"addr_in_type_ftth","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"光纤接入方式","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":3},{"ordinal":79,"column_name":"ftth_pon_type","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"光纤接入能力","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":80,"column_name":"addr_in_type_lan","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"电缆接入方式","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":5},{"ordinal":81,"column_name":"area_type","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"城乡属性","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":82,"column_name":"addr_unit_type","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"房屋属性","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":83,"column_name":"addr_def","column_type":"text","nullable":"YES","key":null,"comment":"房屋定义","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0}]}
-{"table_name":"tmp_addr_set_segm_nj_20260317","candidate_count":9,"candidates":[{"ordinal":4,"column_name":"set_type","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"0:伪地址，2到户地址","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":6,"column_name":"status","column_type":"varchar(50)","nullable":"YES","key":null,"comment":"状态","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":7,"column_name":"region_id","column_type":"varchar(255)","nullable":"YES","key":"MUL","comment":"区域ID","selection_rule":"SOURCE_HINT","value_source":"SOURCE_HINTS","source_hint":"spc_region.region_id","distinct_nonnull":null},{"ordinal":8,"column_name":"notes","column_type":"varchar(1024)","nullable":"YES","key":null,"comment":"备注","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":2},{"ordinal":9,"column_name":"delete_state","column_type":"tinyint(4)","nullable":"YES","key":null,"comment":null,"selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":2},{"ordinal":12,"column_name":"alias","column_type":"varchar(255)","nullable":"YES","key":null,"comment":"别名","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":15,"column_name":"segm_type","column_type":"varchar(32)","nullable":"YES","key":null,"comment":"标准地址类型编码","selection_rule":"COMMENT_HINT","value_source":"字段注释","source_hint":null,"distinct_nonnull":null},{"ordinal":18,"column_name":"synchronous_date","column_type":"datetime","nullable":"YES","key":null,"comment":"同步时间","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":0},{"ordinal":20,"column_name":"modify_op","column_type":"varchar(64)","nullable":"YES","key":null,"comment":"修改人","selection_rule":"LOW_CARDINALITY","value_source":"当前表实际值域","source_hint":null,"distinct_nonnull":12}]}
-## ENUM_VALUE_DISTRIBUTION
-{"table_name":"pub_restriction","column_name":"is_display","distinct_nonnull":3,"values":[{"value":"1","total":5992},{"value":"0","total":303},{"value":"2","total":7}]}
-{"table_name":"pub_restriction","column_name":"delete_state","distinct_nonnull":2,"values":[{"value":"0","total":6222},{"value":"1","total":98}]}
-{"table_name":"pub_restriction","column_name":"delete_time","distinct_nonnull":20,"values":[{"value":"2006-03-22T00:00","total":2},{"value":"2007-02-28T17:00:19","total":2},{"value":"2014-08-25T16:07:59","total":1},{"value":"2014-09-17T10:25:21","total":1},{"value":"2014-10-08T16:14:18","total":1},{"value":"2014-11-25T08:58:52","total":1},{"value":"2015-01-30T09:11:13","total":1},{"value":"2015-04-14T13:54:38","total":1},{"value":"2015-06-26T13:53:38","total":1},{"value":"2015-06-26T13:53:39","total":1},{"value":"2015-07-06T14:30:21","total":1},{"value":"2015-07-07T17:02:17","total":1},{"value":"2015-07-07T17:02:20","total":1},{"value":"2015-07-08T14:07:02","total":1},{"value":"2015-07-08T15:13:25","total":1},{"value":"2015-07-08T15:57:26","total":1},{"value":"2015-07-08T16:19:13","total":1},{"value":"2015-07-09T10:00:43","total":1},{"value":"2015-08-03T19:27:33","total":1},{"value":"2015-10-26T18:26:42","total":1}]}
-{"table_name":"segm_addr_type","column_name":"addr_type_id","distinct_nonnull":18,"values":[{"value":"180000","total":1},{"value":"180001","total":1},{"value":"180002","total":1},{"value":"180003","total":1},{"value":"180004","total":1},{"value":"180005","total":1},{"value":"180006","total":1},{"value":"180007","total":1},{"value":"180008","total":1},{"value":"180009","total":1},{"value":"180010","total":1},{"value":"180011","total":1},{"value":"180013","total":1},{"value":"180014","total":1},{"value":"180015","total":1},{"value":"180095","total":1},{"value":"180099","total":1},{"value":"180100","total":1}]}
-{"table_name":"segm_addr_type","column_name":"name","distinct_nonnull":18,"values":[{"value":"乡、镇、街道","total":1},{"value":"伪地址","total":1},{"value":"县、区","total":1},{"value":"地址补充描述","total":1},{"value":"尾级地址(选址生成)","total":1},{"value":"层、楼","total":1},{"value":"市","total":1},{"value":"市区","total":1},{"value":"庄、组、队","total":1},{"value":"建筑","total":1},{"value":"建筑单元","total":1},{"value":"建筑群,小区","total":1},{"value":"房间","total":1},{"value":"村","total":1},{"value":"横向建筑","total":1},{"value":"省、自治区","total":1},{"value":"路","total":1},{"value":"门牌号","total":1}]}
-{"table_name":"segm_addr_type","column_name":"no","distinct_nonnull":18,"values":[{"value":"BUILDING","total":1},{"value":"CELL","total":1},{"value":"CITY","total":1},{"value":"COUNTY","total":1},{"value":"DESCRIPTION","total":1},{"value":"FLOOR","total":1},{"value":"HOUSE","total":1},{"value":"LAST","total":1},{"value":"PROVINCE","total":1},{"value":"PSEUDOADDR","total":1},{"value":"ROAD","total":1},{"value":"ROAD NUMBER","total":1},{"value":"ROOM","total":1},{"value":"STREET","total":1},{"value":"TEAM","total":1},{"value":"TRANSVERSEHOUSE","total":1},{"value":"URBAN","total":1},{"value":"VILLAGE","total":1}]}
-{"table_name":"segm_addr_type","column_name":"score","distinct_nonnull":9,"values":[{"value":"0","total":4},{"value":"90","total":4},{"value":"60","total":2},{"value":"75","total":2},{"value":"80","total":2},{"value":"30","total":1},{"value":"40","total":1},{"value":"70","total":1},{"value":"95","total":1}]}
-{"table_name":"segm_addr_type","column_name":"create_date","distinct_nonnull":1,"values":[{"value":"2011-10-17T18:10:14","total":18}]}
-{"table_name":"segm_addr_type","column_name":"notes","distinct_nonnull":7,"values":[{"value":"单元(FTTB)、单元(LAN)、单元","total":1},{"value":"号(FTTB)、号(LAN)、号(FTTH)、号","total":1},{"value":"号楼、栋、幢","total":1},{"value":"室(FTTH)、室","total":1},{"value":"层、楼","total":1},{"value":"庄、组、队","total":1},{"value":"村","total":1}]}
-{"table_name":"segm_addr_type","column_name":"rule","distinct_nonnull":1,"values":[{"value":"Y","total":18}]}
-{"table_name":"segm_addr_type","column_name":"expression","distinct_nonnull":4,"values":[{"value":"^[0-9A-Z]+$","total":2},{"value":"^[0-9]+$","total":2},{"value":"^[A-Z0-9\\\\-]+$","total":2},{"value":"^[0-9东,中,西,甲,乙,丙,丁,戊,己,庚,辛,壬,癸]+$","total":1}]}
-{"table_name":"segm_addr_type","column_name":"version","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_region","column_name":"alias","distinct_nonnull":1,"values":[{"value":"盐都","total":1}]}
-{"table_name":"spc_region","column_name":"type_id","distinct_nonnull":1,"values":[{"value":"2000104","total":2}]}
-{"table_name":"spc_region","column_name":"address","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_region","column_name":"delete_state","distinct_nonnull":2,"values":[{"value":"0","total":91},{"value":"1","total":11}]}
-{"table_name":"spc_region","column_name":"delete_time","distinct_nonnull":3,"values":[{"value":"2023-09-04T16:18:59","total":11},{"value":"2015-08-28T15:40:40","total":1},{"value":"2016-08-18T15:47:05","total":1}]}
-{"table_name":"spc_region","column_name":"notes","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_region","column_name":"name_ab","distinct_nonnull":3,"values":[{"value":"1503","total":1},{"value":"HASFGS","total":1},{"value":"yandu","total":1}]}
-{"table_name":"spc_region","column_name":"res_type_id","distinct_nonnull":1,"values":[{"value":"200","total":102}]}
-{"table_name":"spc_region","column_name":"china_name_ab","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_region","column_name":"modify_op","distinct_nonnull":1,"values":[{"value":"11","total":1}]}
-{"table_name":"spc_region","column_name":"modiry_date","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_region","column_name":"sync_date","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_region","column_name":"old_id_eqp","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_region","column_name":"old_sp","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_region","column_name":"create_op","distinct_nonnull":2,"values":[{"value":"11","total":51},{"value":"19000001","total":23}]}
-{"table_name":"spc_region","column_name":"crm_region","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_region","column_name":"crm_lan","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_regional_company","column_name":"source","distinct_nonnull":2,"values":[{"value":"BOSS1","total":67},{"value":"BOSS2","total":12}]}
-{"table_name":"spc_regional_company","column_name":"segm_type_priv","distinct_nonnull":1,"values":[{"value":"180013","total":79}]}
-{"table_name":"spc_station","column_name":"china_name_ab","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"alias","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"name_ab","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"authority","distinct_nonnull":1,"values":[{"value":"40001","total":1216}]}
-{"table_name":"spc_station","column_name":"doorplate","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"delete_state","distinct_nonnull":2,"values":[{"value":"0","total":1210},{"value":"1","total":19}]}
-{"table_name":"spc_station","column_name":"delete_time","distinct_nonnull":17,"values":[{"value":"2020-12-16T14:46:01","total":3},{"value":"2016-12-01T19:51:38","total":1},{"value":"2019-01-03T16:29:56","total":1},{"value":"2019-01-03T16:31:01","total":1},{"value":"2019-01-15T10:58:43","total":1},{"value":"2019-08-30T17:59:51","total":1},{"value":"2019-08-30T17:59:55","total":1},{"value":"2019-08-30T17:59:59","total":1},{"value":"2019-08-30T18:00:02","total":1},{"value":"2019-10-12T09:22:50","total":1},{"value":"2019-10-12T09:22:55","total":1},{"value":"2019-10-12T09:22:59","total":1},{"value":"2019-10-12T09:23:03","total":1},{"value":"2019-10-12T09:23:15","total":1},{"value":"2020-12-16T14:46","total":1},{"value":"2020-12-25T10:42:23","total":1},{"value":"2021-08-23T13:47:46","total":1}]}
-{"table_name":"spc_station","column_name":"notes","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"pos_x","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"pos_y","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"graph_width","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"graph_height","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"isoffset","distinct_nonnull":1,"values":[{"value":"1","total":1229}]}
-{"table_name":"spc_station","column_name":"location","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"china_name_full","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"management_kind","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"building_area","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"use_area","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"z","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"floor","distinct_nonnull":4,"values":[{"value":"11","total":5},{"value":"1","total":1},{"value":"111","total":1},{"value":"12","total":1}]}
-{"table_name":"spc_station","column_name":"create_time","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"old_sp","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"imp_level","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"bus_level","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"mnt_dept","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"check_cycle","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"pow_support","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"rent","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"mapx","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"mapy","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"old_id_eqp","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"resource_from","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_street","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_zqybm","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_mphm","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_lc","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_lg","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_zdmj","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_cjdw","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_cjr","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_cjrq","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_jgrq","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_jqbm","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_jqmm","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_gcbh","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_gcmc","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_ygcbh","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_ygcmc","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_sfcl","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"isoutsh","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"res_picture","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"coverhouseholds","distinct_nonnull":1,"values":[{"value":"30000","total":1}]}
-{"table_name":"spc_station","column_name":"create_op","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"manage_type","distinct_nonnull":3,"values":[{"value":"2017101","total":1024},{"value":"2017102","total":104},{"value":"2017103","total":96}]}
-{"table_name":"staff","column_name":"title","distinct_nonnull":4,"values":[{"value":"50","total":677},{"value":"30","total":188},{"value":"0","total":20},{"value":"1","total":6}]}
-{"table_name":"staff","column_name":"station","distinct_nonnull":1,"values":[{"value":"1","total":21}]}
-{"table_name":"staff","column_name":"department","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"exp_date","distinct_nonnull":2,"values":[{"value":"2030-01-01T00:00","total":890},{"value":"2030-07-15T02:58:32","total":1}]}
-{"table_name":"staff","column_name":"state","distinct_nonnull":2,"values":[{"value":"K0A","total":890},{"value":"1","total":1}]}
-{"table_name":"staff","column_name":"state_date","distinct_nonnull":4,"values":[{"value":"2010-05-05T12:00","total":16},{"value":"2016-08-31T12:00","total":3},{"value":"2016-03-31T12:00","total":1},{"value":"2016-09-05T12:00","total":1}]}
-{"table_name":"staff","column_name":"ip_limit","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"ip_subnet","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"ip_netmask","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"ip_hostname","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"pc_limit","distinct_nonnull":1,"values":[{"value":"0","total":21}]}
-{"table_name":"staff","column_name":"invoice_serial_nbr","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"last_date","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"email","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"delete_state","distinct_nonnull":2,"values":[{"value":"0","total":872},{"value":"1","total":19}]}
-{"table_name":"staff","column_name":"delete_time","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"remark","distinct_nonnull":2,"values":[{"value":"33","total":1},{"value":"test备注","total":1}]}
-{"table_name":"staff","column_name":"staff_alias","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"pwd_mod_date","distinct_nonnull":2,"values":[{"value":"2030-01-01T00:00","total":890},{"value":"2026-03-17T15:00:42","total":1}]}
-{"table_name":"staff","column_name":"loginuid","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"staff_state","distinct_nonnull":1,"values":[{"value":"1","total":891}]}
-{"table_name":"staff","column_name":"erro_times","distinct_nonnull":1,"values":[{"value":"0","total":891}]}
-{"table_name":"staff","column_name":"validate_time","distinct_nonnull":3,"values":[{"value":"2013-11-26T11:11:37","total":17},{"value":"2013-11-05T11:11:37","total":3},{"value":"2016-11-05T11:11:37","total":1}]}
-{"table_name":"staff","column_name":"safe_strategy","distinct_nonnull":5,"values":[{"value":"1624","total":556},{"value":"1750","total":297},{"value":"1740","total":28},{"value":"1690","total":9},{"value":"1600","total":1}]}
-{"table_name":"staff","column_name":"logon_number","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"is_allow_cs_login","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"job_id","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"allow_batch_adjust_parent_addr","distinct_nonnull":2,"values":[{"value":"0","total":645},{"value":"1","total":88}]}
-{"table_name":"staff","column_name":"addr_batch_oper_permission","distinct_nonnull":1,"values":[{"value":"1","total":744}]}
-{"table_name":"staff","column_name":"opt_node_permission","distinct_nonnull":1,"values":[{"value":"1","total":4}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"segm_type","distinct_nonnull":11,"values":[{"value":"180007","total":336020},{"value":"180013","total":20379},{"value":"180006","total":3110},{"value":"180005","total":2320},{"value":"180009","total":1824},{"value":"180095","total":277},{"value":"180004","total":54},{"value":"180010","total":8},{"value":"180002","total":6},{"value":"180003","total":1},{"value":"180015","total":1}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"outside","distinct_nonnull":1,"values":[{"value":"1","total":364000}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"status","distinct_nonnull":1,"values":[{"value":"2140900","total":363998}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"time","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"outregion","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_city","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_band","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_user","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"region_id","distinct_nonnull":3,"values":[{"value":"000102000000000042762791","total":350284},{"value":"000102000000000042763012","total":8562},{"value":"000102140000000021128049","total":5154}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"notes","distinct_nonnull":6,"values":[{"value":"删除未关联客户的伪地址20240408","total":135},{"value":"公客核查拆迁","total":2},{"value":"1-4层商铺","total":1},{"value":"公客核查公头","total":1},{"value":"公客核查平房","total":1},{"value":"小市教堂","total":1}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"delete_state","distinct_nonnull":2,"values":[{"value":"0","total":363345},{"value":"1","total":655}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"old_data","distinct_nonnull":1,"values":[{"value":"0","total":364000}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"modify_op","distinct_nonnull":15,"values":[{"value":"1889832","total":201991},{"value":"1889833","total":2366},{"value":"1889733","total":835},{"value":"1889834","total":455},{"value":"1890030","total":290},{"value":"1889835","total":274},{"value":"1889836","total":266},{"value":"1889826","total":157},{"value":"1890343","total":38},{"value":"1890152","total":18},{"value":"522479","total":12},{"value":"19000001","total":6},{"value":"40460","total":5},{"value":"1890028","total":3},{"value":"1890182","total":3}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"sync_date","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is4gis","distinct_nonnull":1,"values":[{"value":"0","total":364000}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"old_sp","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"addr_from","distinct_nonnull":3,"values":[{"value":"前台选址生成","total":15946},{"value":"后端录入","total":5480},{"value":"批量导入","total":1059}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_highclass_area","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"create_op","distinct_nonnull":13,"values":[{"value":"1889733","total":15908},{"value":"1889826","total":3175},{"value":"1889836","total":1421},{"value":"1889833","total":1289},{"value":"1889834","total":325},{"value":"1889835","total":316},{"value":"1890152","total":18},{"value":"522479","total":16},{"value":"1889832","total":9},{"value":"1890030","total":3},{"value":"1890182","total":3},{"value":"111340028","total":1},{"value":"1890193","total":1}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"border_address","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"x","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"y","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"exp_date","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"addr_type","distinct_nonnull":4,"values":[{"value":"2140001","total":316368},{"value":"2140500","total":31671},{"value":"2140502","total":10},{"value":"2140501","total":3}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_compete_region","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_compete_modify_op","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_compete_modify_date","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"build_units","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"build_floors","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"floor_height","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"isbuilding","distinct_nonnull":1,"values":[{"value":"0","total":364000}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_normal_addr","distinct_nonnull":1,"values":[{"value":"1","total":5480}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_instal_addr","distinct_nonnull":1,"values":[{"value":"0","total":363834}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"optic_node","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_key","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_instead_indoor_devices","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_support_cm","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_support_eoc","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_support_ipqqm","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"line_extension_fee","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_line_install","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"citycom_flag","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"segm_name_fif","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"segm_name_fir","distinct_nonnull":2,"values":[{"value":"1","total":3871},{"value":"0","total":2324}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"place_type","distinct_nonnull":4,"values":[{"value":"2140800","total":7389},{"value":"2140802","total":44},{"value":"2140803","total":3},{"value":"2140806","total":3}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"opr_state","distinct_nonnull":3,"values":[{"value":"2141002","total":363188},{"value":"2141000","total":733},{"value":"2141003","total":79}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"area_manager","distinct_nonnull":8,"values":[{"value":"张俊伟","total":87},{"value":"付维栋","total":27},{"value":"彭立斌","total":22},{"value":"周明景","total":16},{"value":"王兵","total":4},{"value":"陈颖","total":4},{"value":"俞锡锐","total":1},{"value":"张川","total":1}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"installstation_id","distinct_nonnull":2,"values":[{"value":"000102010000000011823750","total":2},{"value":"000102010000000011823692","total":1}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"busstation_id","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"addr_in_type_ftth","distinct_nonnull":3,"values":[{"value":"2140760","total":20019},{"value":"2140761","total":62},{"value":"2140762","total":36}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"ftth_pon_type","distinct_nonnull":3,"values":[{"value":"2141301","total":19073},{"value":"2141302","total":794},{"value":"2141303","total":28}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"addr_in_type_lan","distinct_nonnull":5,"values":[{"value":"2140780","total":14016},{"value":"2140785","total":5099},{"value":"2140782","total":779},{"value":"2140784","total":137},{"value":"2140781","total":25}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"area_type","distinct_nonnull":1,"values":[{"value":"2140511","total":13104}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"addr_unit_type","distinct_nonnull":2,"values":[{"value":"2140521","total":17702},{"value":"2140522","total":2133}]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"addr_def","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_set_segm_nj_20260317","column_name":"set_type","distinct_nonnull":1,"values":[{"value":"0","total":3625}]}
-{"table_name":"tmp_addr_set_segm_nj_20260317","column_name":"status","distinct_nonnull":1,"values":[{"value":"2140900","total":3625}]}
-{"table_name":"tmp_addr_set_segm_nj_20260317","column_name":"region_id","distinct_nonnull":8,"values":[{"value":"000102140000000021128049","total":372339},{"value":"000102000000000042762791","total":330225},{"value":"000102000000000042762790","total":200342},{"value":"000102000000000042763011","total":168706},{"value":"000102000000000042763016","total":153546},{"value":"000102000000000042763012","total":128457},{"value":"000102000000000042763015","total":112521},{"value":"000102000000000042763013","total":99864}]}
-{"table_name":"tmp_addr_set_segm_nj_20260317","column_name":"notes","distinct_nonnull":2,"values":[{"value":"已拆迁地址作逻辑删除","total":4576},{"value":"null","total":3618}]}
-{"table_name":"tmp_addr_set_segm_nj_20260317","column_name":"delete_state","distinct_nonnull":2,"values":[{"value":"0","total":1561371},{"value":"1","total":4629}]}
-{"table_name":"tmp_addr_set_segm_nj_20260317","column_name":"alias","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_set_segm_nj_20260317","column_name":"segm_type","distinct_nonnull":5,"values":[{"value":"180007","total":1184105},{"value":"180013","total":377488},{"value":"180004","total":4076},{"value":"180005","total":261},{"value":"180010","total":70}]}
-{"table_name":"tmp_addr_set_segm_nj_20260317","column_name":"synchronous_date","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_set_segm_nj_20260317","column_name":"modify_op","distinct_nonnull":12,"values":[{"value":"1889832","total":182382},{"value":"1889826","total":3356},{"value":"1889822","total":1069},{"value":"1890182","total":511},{"value":"522479","total":490},{"value":"1889834","total":416},{"value":"1890030","total":290},{"value":"1889830","total":164},{"value":"1889833","total":101},{"value":"40460","total":71},{"value":"1890171","total":10},{"value":"19000001","total":6}]}
-```
-
-## 7. 当前 8 表内可识别的取值来源提示
-
-```text
-## SOURCE_HINTS
-{"table_name":"spc_regional_company","column_name":"region_id","source":"spc_region.region_id"}
-{"table_name":"spc_station","column_name":"region_id","source":"spc_region.region_id"}
-{"table_name":"staff","column_name":"job_id","source":"pub_restriction.code"}
-{"table_name":"staff","column_name":"region_id","source":"spc_region.region_id"}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"region_id","source":"spc_region.region_id"}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"station_id","source":"spc_station.station_id"}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"installstation_id","source":"spc_station.station_id"}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"busstation_id","source":"spc_station.station_id"}
-{"table_name":"tmp_addr_set_segm_nj_20260317","column_name":"region_id","source":"spc_region.region_id"}
-```
-
-## 8. 缺口与异常保留项
-
-说明：
-- 以下仅摘录覆盖度偏低表与 `distinct_nonnull=0` 的原始异常项，代码块内保持原始 label/JSON，不做二次改写。
-
-```text
-## COMMENT_COVERAGE
-{"table_name":"pub_restriction","column_total":15,"column_with_comment":7}
-{"table_name":"spc_region","column_total":29,"column_with_comment":15}
-{"table_name":"spc_station","column_total":86,"column_with_comment":5}
-{"table_name":"staff","column_total":49,"column_with_comment":13}
-{"table_name":"tmp_addr_segm_nj_20260317","column_total":83,"column_with_comment":52}
-{"table_name":"tmp_addr_set_segm_nj_20260317","column_total":21,"column_with_comment":19}
-
-## ENUM_VALUE_DISTRIBUTION
-{"table_name":"segm_addr_type","column_name":"version","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_region","column_name":"address","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_region","column_name":"notes","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_region","column_name":"china_name_ab","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_region","column_name":"modiry_date","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_region","column_name":"sync_date","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_region","column_name":"old_id_eqp","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_region","column_name":"old_sp","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_region","column_name":"crm_region","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_region","column_name":"crm_lan","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"china_name_ab","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"notes","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"pos_x","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"pos_y","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"graph_width","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"graph_height","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"location","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"china_name_full","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"management_kind","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"building_area","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"use_area","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"z","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"create_time","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"old_sp","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"imp_level","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"bus_level","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"mnt_dept","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"check_cycle","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"pow_support","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"rent","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"mapx","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"mapy","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"old_id_eqp","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"resource_from","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_street","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_zqybm","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_mphm","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_lc","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_lg","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_zdmj","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_cjdw","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_cjr","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_cjrq","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_jgrq","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_jqbm","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_jqmm","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_gcbh","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_gcmc","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_ygcbh","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_ygcmc","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"zd_sfcl","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"isoutsh","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"res_picture","distinct_nonnull":0,"values":[]}
-{"table_name":"spc_station","column_name":"create_op","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"department","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"ip_limit","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"ip_subnet","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"ip_netmask","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"ip_hostname","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"invoice_serial_nbr","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"last_date","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"email","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"delete_time","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"staff_alias","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"loginuid","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"logon_number","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"is_allow_cs_login","distinct_nonnull":0,"values":[]}
-{"table_name":"staff","column_name":"job_id","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"time","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"outregion","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_city","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_band","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_user","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"sync_date","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"old_sp","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_highclass_area","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"border_address","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"x","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"y","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"exp_date","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_compete_region","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_compete_modify_op","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_compete_modify_date","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"build_units","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"build_floors","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"floor_height","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"optic_node","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_key","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_instead_indoor_devices","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_support_cm","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_support_eoc","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_support_ipqqm","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"line_extension_fee","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"is_line_install","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"citycom_flag","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"segm_name_fif","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"busstation_id","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_segm_nj_20260317","column_name":"addr_def","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_set_segm_nj_20260317","column_name":"alias","distinct_nonnull":0,"values":[]}
-{"table_name":"tmp_addr_set_segm_nj_20260317","column_name":"synchronous_date","distinct_nonnull":0,"values":[]}
+table_name	metric_type	field_name	field_value	metric_count
+ADDR_SEGM	sample_meta	sample_rule	crc32(segm_id)%100=0	23289
+ADDR_SEGM	sample_meta	total_rows	-	2318000
+ADDR_SEGM	null_rate	parent_segm_id	NON_EMPTY	23264
+ADDR_SEGM	null_rate	parent_segm_id	NULL_OR_EMPTY	25
+ADDR_SEGM	null_rate	region_id	NON_EMPTY	23289
+ADDR_SEGM	null_rate	station_id	NULL_OR_EMPTY	1730
+ADDR_SEGM	null_rate	station_id	NON_EMPTY	21559
+ADDR_SEGM	null_rate	installstation_id	NULL_OR_EMPTY	23289
+ADDR_SEGM	null_rate	busstation_id	NULL_OR_EMPTY	23289
+ADDR_SEGM	dist	segm_type	180007	16819
+ADDR_SEGM	dist	segm_type	180006	4057
+ADDR_SEGM	dist	segm_type	180095	984
+ADDR_SEGM	dist	segm_type	180009	661
+ADDR_SEGM	dist	segm_type	180013	633
+ADDR_SEGM	dist	segm_type	180005	93
+ADDR_SEGM	dist	segm_type	180004	23
+ADDR_SEGM	dist	segm_type	180010	15
+ADDR_SEGM	dist	segm_type	180003	2
+ADDR_SEGM	dist	segm_type	180099	1
+ADDR_SEGM	dist	segm_type	180012	1
+ADDR_SEGM	dist	status	2140900	23289
+ADDR_SEGM	dist	delete_state	0	22126
+ADDR_SEGM	dist	delete_state	1	1163
+ADDR_SEGM	dist	outside	1	23289
+ADDR_SEGM	dist	addr_type	2140500	17281
+ADDR_SEGM	dist	addr_type	2140001	5354
+ADDR_SEGM	dist	addr_type	null	654
+ADDR_SEGM	dist	place_type	2140800	14945
+ADDR_SEGM	dist	place_type	null	8189
+ADDR_SEGM	dist	place_type	2140802	88
+ADDR_SEGM	dist	place_type	2140801	54
+ADDR_SEGM	dist	place_type	2140803	12
+ADDR_SEGM	dist	place_type	2140806	1
+ADDR_SEGM	dist	opr_state	2141002	23172
+ADDR_SEGM	dist	opr_state	2141000	101
+ADDR_SEGM	dist	opr_state	2141003	16
+ADDR_SEGM	dist	area_type	null	23109
+ADDR_SEGM	dist	area_type	2140511	180
+ADDR_SEGM	dist	addr_unit_type	null	23040
+ADDR_SEGM	dist	addr_unit_type	2140521	221
+ADDR_SEGM	dist	addr_unit_type	2140522	28
+ADDR_SEGM	dist	addr_from	NULL	21869
+ADDR_SEGM	dist	addr_from	前台选址生成	646
+ADDR_SEGM	dist	addr_from	批量导入	535
+ADDR_SEGM	dist	addr_from	后端录入	239
+ADDR_SET_SEGM	sample_meta	sample_rule	crc32(set_addr_id)%100=0	1023
+ADDR_SET_SEGM	sample_meta	total_rows	-	100000
+ADDR_SET_SEGM	null_rate	segm_id	NON_EMPTY	1023
+ADDR_SET_SEGM	null_rate	region_id	NON_EMPTY	1023
+ADDR_SET_SEGM	null_rate	area_id	NON_NULL	48
+ADDR_SET_SEGM	null_rate	area_id	NULL	975
+ADDR_SET_SEGM	null_rate	org_id	NULL_OR_EMPTY	975
+ADDR_SET_SEGM	null_rate	org_id	NON_EMPTY	48
+ADDR_SET_SEGM	dist	set_type	null	975
+ADDR_SET_SEGM	dist	set_type	0	48
+ADDR_SET_SEGM	dist	status	null	975
+ADDR_SET_SEGM	dist	status	2140900	48
+ADDR_SET_SEGM	dist	delete_state	0	1014
+ADDR_SET_SEGM	dist	delete_state	1	9
+ADDR_SET_SEGM	dist	segm_type	180007	1012
+ADDR_SET_SEGM	dist	segm_type	180013	11
 ```

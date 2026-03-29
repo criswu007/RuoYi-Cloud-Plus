@@ -4,7 +4,7 @@
 >
 > 事实依据：
 > - 证据材料：[nanjing-standard-address-core-evidence.md](./evidence/nanjing-standard-address-core-evidence.md)
-> - 任务体系设计：[2026-03-24-historical-schema-inventory-design.md](../../../../docs/superpowers/specs/2026-03-24-historical-schema-inventory-design.md)
+> - 任务体系设计：[2026-03-24-historical-schema-inventory-design.md](/Users/criswu/IdeaProjects/RuoYi-Cloud-Plus/archive/address-working-notes/superpowers/specs/2026-03-24-historical-schema-inventory-design.md)
 >
 > 盘点批次标识：以表名后缀 `_nj_20260317` 为本批次历史基线标识。
 
@@ -30,8 +30,8 @@
 |---|---|---|---:|
 | `tmp_addr_segm_nj_20260317` | 主事实表 | 南京标准地址历史主表，承载标准地址对象与父子层级 | 364000 |
 | `tmp_addr_set_segm_nj_20260317` | 关联事实表 | 安装地址与标准地址挂接关系的事实表，本批次为“主链路盘点需要”暂归入标准地址核心 | 1566000 |
-| `spc_station` | 主数据表 | 管理站主数据，本批次仅确认已纳入盘点并参与关联一致性检查 | 1229 |
-| `spc_region` | 主数据表 | 区域主数据，本批次仅确认已纳入盘点并参与关联一致性检查 | 102 |
+| `spc_station` | 主数据表 | 管理站主数据，本批次已补充字段注释与结构索引，可参与关联一致性检查与主数据结构盘点 | 1229 |
+| `spc_region` | 主数据表 | 区域主数据，本批次已补充字段注释与结构索引，可参与关联一致性检查与主数据结构盘点 | 102 |
 | `segm_addr_type` | 辅助表（类型解释表） | 地址类型与层级规则解释（字典/解释性质） | 18 |
 | `pub_restriction` | 辅助表（字典/限制表） | 历史字典与限制项解释 | 6361 |
 | `spc_regional_company` | 辅助表（组织映射表） | 区域公司与权限口径辅助（组织映射） | 79 |
@@ -109,16 +109,16 @@
 ### 4.3 `spc_station`（主数据表）
 
 - 行数：1229
-- 字段口径：证据材料仅提供行数，未提供字段清单/主键/编码口径。本报告不对字段作结论。
+- 字段口径：本轮已补充字段级注释，可识别 `station_id`、`station_no`、`china_name`、`region_id`、`manage_type`、`mnt_region_id` 等字段的中文语义；详见同目录结构手册。
 - 关联位置：标准地址主事实表存在 `station_id`、`installstation_id`、`busstation_id` 等站点相关字段，并已完成缺失统计（见第 3.1 节）。
-- 待补证据：`spc_station` 的主键/业务编码字段、站点层级与有效性状态字段。
+- 当前边界：虽然字段注释已完整，但站点层级、组织归属、管理角色等业务口径仍不能仅凭本表单独冻结。
 
 ### 4.4 `spc_region`（主数据表）
 
 - 行数：102
-- 字段口径：证据材料仅提供行数，未提供字段清单/主键/编码口径。本报告不对字段作结论。
+- 字段口径：本轮已补充字段级注释，可识别 `region_id`、`region_no`、`region_name`、`grade_id`、`type_id`、`res_type_id`、`parent_id` 等字段的中文语义；详见同目录结构手册。
 - 关联位置：标准地址主事实表存在 `region_id` 字段，并已完成缺失检查输出为空（见第 3.1 节）。
-- 待补证据：`spc_region` 的主键/业务编码字段、区域层级与有效性状态字段。
+- 当前边界：区域类型、资源类型等编码字段仍需结合字典或历史规则确认，不能仅凭字段注释直接冻结业务规则。
 
 ### 4.5 `segm_addr_type`（辅助表：类型解释表）
 
@@ -203,7 +203,7 @@
 
 - 缺少“父子断链（parent 非空但父节点不存在）”的统计证据，无法确认树结构是否可直接用于树查询接口。
 - 缺少“安装地址挂接未命中原因拆分”的证据，无法定义标准的兜底策略（例如：按 region 推断、按 set_addr_name 模糊匹配等均不可在无证据前提下确定）。
-- `spc_station`、`spc_region`、`staff` 等主数据/辅助表缺少字段口径证据，导致接口字段清单无法完整落到“可展示字段、可筛选字段、可校验字段”的具体列级定义。
+- `staff` 的字段注释与人员/权限规则证据仍然不足；`spc_station`、`spc_region` 虽已补充字段注释，但其业务规则与连接口径仍需继续补证据，接口字段清单暂不能直接冻结全部衍生语义。
 
 ## 8. 对接口设计的直接输入
 
@@ -245,7 +245,7 @@
 
 ### 8.3 主数据/字典依赖（`spc_station`、`spc_region`、`segm_addr_type`、`pub_restriction`、`spc_regional_company`、`staff`）
 
-- `spc_station`、`spc_region`：当前仅确认已纳入本批次盘点，且与主事实表的关联一致性检查相关；具体字段级用途、连接键与映射规则待补证据。
+- `spc_station`、`spc_region`：本轮已补充字段注释，可作为主数据结构索引与字段语义参考；但具体连接键约束、层级规则与映射口径仍待继续补证据。
 - `segm_addr_type`：用于解释类型/层级（已知存在 `level_id` 分布证据，但映射字段与含义待补）。
 - `pub_restriction`：用于解释限制/字典项（已知 `code` 值域复杂且大量空值，接口侧需谨慎使用）。
 - `spc_regional_company`：用于组织/权限口径辅助（已知 `segm_type_priv=180013` 的分布证据）。
@@ -260,4 +260,4 @@
 - `segm_type`（如 `180007`、`180013` 等）与 `addr_type` 的业务语义与可读枚举说明。
 - `segm_addr_type.level_id` 的业务含义，以及其与标准地址字段（`segm_type`/`addr_type`）的映射规则与主键口径。
 - `pub_restriction.code` 的业务含义，及 `NULL`、`UNKNOW`、`O`、数字/长数字等混合值的统一解释与取值规范。
-- `spc_station`、`spc_region`、`staff` 的字段清单、主键/业务编码口径、有效性规则与与主事实表的连接键说明（本批次证据未覆盖字段级信息）。
+- `spc_station`、`spc_region`、`staff` 与主事实表的连接规则、有效性规则及业务编码口径；其中 `spc_station`、`spc_region` 已补充字段级注释，但规则级闭环仍未完成。

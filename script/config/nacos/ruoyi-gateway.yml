@@ -83,3 +83,10 @@ spring:
                 - Path=/test-mq/**
               filters:
                 - StripPrefix=1
+            # 地址服务
+            - id: ruoyi-address
+              uri: lb://ruoyi-address
+              predicates:
+                - Path=/address/**
+              filters:
+                - StripPrefix=1

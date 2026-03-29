@@ -29,6 +29,22 @@ spring:
         # 配置组
         group: @nacos.config.group@
         namespace: ${spring.profiles.active}
+    gateway:
+      routes:
+        # MQ演示服务
+        - id: ruoyi-test-mq
+          uri: lb://ruoyi-test-mq
+          predicates:
+            - Path=/test-mq/**
+          filters:
+            - StripPrefix=1
+        # 地址服务
+        - id: ruoyi-address
+          uri: lb://ruoyi-address
+          predicates:
+            - Path=/address/**
+          filters:
+            - StripPrefix=1
   config:
     import:
       - optional:nacos:application-common.yml

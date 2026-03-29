@@ -3,7 +3,7 @@
 > 本清单用于将“南京标准地址核心”历史盘点的**已采集事实**提炼为后续接口设计的输入边界与字段口径，不引入证据材料与正式报告之外的臆断字段与能力。
 >
 > 允许引用来源仅限：
-> - [2026-03-24-historical-schema-inventory-design.md](../../../../docs/superpowers/specs/2026-03-24-historical-schema-inventory-design.md)
+> - [2026-03-24-historical-schema-inventory-design.md](/Users/criswu/IdeaProjects/RuoYi-Cloud-Plus/archive/address-working-notes/superpowers/specs/2026-03-24-historical-schema-inventory-design.md)
 > - [nanjing-standard-address-core-evidence.md](./evidence/nanjing-standard-address-core-evidence.md)
 > - [nanjing-standard-address-core-report.md](./nanjing-standard-address-core-report.md)
 

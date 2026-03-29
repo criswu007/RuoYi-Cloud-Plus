@@ -1,0 +1,92 @@
+server:
+  port: 9206
+
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  autoconfigure:
+    exclude:
+      - org.apache.seata.spring.boot.autoconfigure.SeataCoreAutoConfiguration
+      - org.apache.seata.spring.boot.autoconfigure.SeataAutoConfiguration
+      - org.apache.seata.spring.boot.autoconfigure.SeataDataSourceAutoConfiguration
+      - org.apache.seata.spring.boot.autoconfigure.SeataHttpAutoConfiguration
+      - org.apache.seata.spring.boot.autoconfigure.SeataSagaAutoConfiguration
+      - org.redisson.spring.starter.RedissonAutoConfigurationV2
+      - com.baomidou.lock.spring.boot.autoconfigure.LockAutoConfiguration
+      - com.baomidou.lock.spring.boot.autoconfigure.RedissonLockAutoConfiguration
+      - org.dromara.common.translation.config.TranslationConfig
+      - org.dromara.common.translation.core.impl.DeptNameTranslationImpl
+      - org.dromara.common.translation.core.impl.DictTypeTranslationImpl
+      - org.dromara.common.translation.core.impl.OssUrlTranslationImpl
+      - org.dromara.common.translation.core.impl.UserNameTranslationImpl
+      - org.dromara.common.translation.core.impl.NicknameTranslationImpl
+  datasource:
+    type: com.zaxxer.hikari.HikariDataSource
+    dynamic:
+      primary: address
+      strict: true
+      p6spy: false
+      seata: false
+      datasource:
+        address:
+          driver-class-name: org.h2.Driver
+          url: jdbc:h2:mem:ruoyi_address;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE
+          username: sa
+          password:
+  cloud:
+    discovery:
+      enabled: false
+    nacos:
+      discovery:
+        enabled: false
+      config:
+        enabled: false
+    service-registry:
+      auto-registration:
+        enabled: false
+  data:
+    redis:
+      repositories:
+        enabled: false
+  sql:
+    init:
+      mode: always
+      schema-locations:
+        - classpath:standalone/schema-standalone.sql
+      data-locations:
+        - classpath:standalone/data-standalone.sql
+
+sa-token:
+  check-same-token: false
+  jwt-secret-key: standalone-address-local-jwt-secret
+
+mybatis-plus:
+  enableLogicDelete: true
+  mapperPackage: org.dromara.**.mapper
+  mapperLocations: classpath*:mapper/**/*Mapper.xml
+  typeAliasesPackage: org.dromara.**.domain
+  global-config:
+    dbConfig:
+      idType: ASSIGN_ID
+
+tenant:
+  enable: false
+
+dubbo:
+  enabled: false
+  application:
+    qos-enable: false
+    register-mode: instance
+  protocol:
+    name: dubbo
+    port: -1
+  registry:
+    address: N/A
+  metadata-report:
+    address: N/A
+
+logging:
+  level:
+    org.springframework: warn
+    org.apache.dubbo: error
+    org.mybatis.spring.mapper: error

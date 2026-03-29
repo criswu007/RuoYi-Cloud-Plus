@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.dromara.address.mapper.SpcRegionMapper">
+
+    <select id="selectStandardAddressList" resultType="org.dromara.address.domain.vo.StandardAddressVo">
+        select
+            region_id as segmId,
+            super_region_id as parentSegmId,
+            region_name as segmName,
+            region_name as standName,
+            region_no as segmNo,
+            notes as notes
+        from spc_region
+        <where>
+            and ifnull(delete_state, '0') = '0'
+            <if test="bo != null and bo.segmId != null and bo.segmId != ''">
+                and region_id = #{bo.segmId}
+            </if>
+            <if test="bo != null and bo.parentSegmId != null and bo.parentSegmId != ''">
+                and super_region_id = #{bo.parentSegmId}
+            </if>
+            <if test="bo != null and bo.segmName != null and bo.segmName != ''">
+                and region_name like concat('%', #{bo.segmName}, '%')
+            </if>
+        </where>
+        order by region_no
+    </select>
+
+</mapper>

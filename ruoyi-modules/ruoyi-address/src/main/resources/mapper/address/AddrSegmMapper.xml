@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.dromara.address.mapper.AddrSegmMapper">
+
+    <select id="selectStandardAddressList" resultType="org.dromara.address.domain.vo.StandardAddressVo">
+        select
+            segm_id as segmId,
+            parent_segm_id as parentSegmId,
+            segm_name as segmName,
+            stand_name as standName,
+            segm_no as segmNo,
+            stand_no as standNo,
+            segm_type as segmType,
+            region_id as regionId,
+            district_id as districtId,
+            service_region_id as serviceRegionId,
+            station_id as stationId,
+            installstation_id as installStationId,
+            busstation_id as busStationId,
+            status as status,
+            notes as notes,
+            create_date as createDate
+        from ADDR_SEGM
+        <where>
+            and ifnull(delete_state, '0') = '0'
+            <if test="bo != null and bo.segmId != null and bo.segmId != ''">
+                and segm_id = #{bo.segmId}
+            </if>
+            <if test="bo != null and bo.parentSegmId != null and bo.parentSegmId != ''">
+                and parent_segm_id = #{bo.parentSegmId}
+            </if>
+            <if test="bo != null and bo.segmName != null and bo.segmName != ''">
+                and segm_name like concat('%', #{bo.segmName}, '%')
+            </if>
+            <if test="bo != null and bo.standName != null and bo.standName != ''">
+                and stand_name like concat('%', #{bo.standName}, '%')
+            </if>
+            <if test="bo != null and bo.status != null and bo.status != ''">
+                and status = #{bo.status}
+            </if>
+            <if test="segmTypes != null and segmTypes.size() > 0">
+                and segm_type in
+                <foreach collection="segmTypes" item="segmType" open="(" separator="," close=")">
+                    #{segmType}
+                </foreach>
+            </if>
+        </where>
+        order by create_date desc
+    </select>
+
+    <select id="selectStandardAddressBySegmId" resultType="org.dromara.address.domain.vo.StandardAddressVo">
+        select
+            segm_id as segmId,
+            parent_segm_id as parentSegmId,
+            segm_name as segmName,
+            stand_name as standName,
+            segm_no as segmNo,
+            stand_no as standNo,
+            segm_type as segmType,
+            region_id as regionId,
+            district_id as districtId,
+            service_region_id as serviceRegionId,
+            station_id as stationId,
+            installstation_id as installStationId,
+            busstation_id as busStationId,
+            status as status,
+            notes as notes,
+            create_date as createDate
+        from ADDR_SEGM
+        where segm_id = #{segmId}
+          and ifnull(delete_state, '0') = '0'
+        limit 1
+    </select>
+
+    <select id="countChildren" resultType="java.lang.Long">
+        select count(1)
+        from ADDR_SEGM
+        where ifnull(delete_state, '0') = '0'
+          and parent_segm_id in
+          <foreach collection="segmIds" item="segmId" open="(" separator="," close=")">
+              #{segmId}
+          </foreach>
+    </select>
+
+    <select id="selectChildrenByParentSegmId" resultType="org.dromara.address.domain.AddrSegm">
+        select *
+        from ADDR_SEGM
+        where ifnull(delete_state, '0') = '0'
+          and parent_segm_id = #{parentSegmId}
+        order by segm_id
+    </select>
+
+    <update id="logicalDeleteBySegmIds">
+        update ADDR_SEGM
+        set delete_state = '1',
+            delete_time = now(),
+            modify_date = now()
+        where ifnull(delete_state, '0') = '0'
+          and segm_id in
+          <foreach collection="segmIds" item="segmId" open="(" separator="," close=")">
+              #{segmId}
+          </foreach>
+    </update>
+
+</mapper>

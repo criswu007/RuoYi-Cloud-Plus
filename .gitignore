@@ -40,6 +40,12 @@ nbdist/
 *.log.gz
 *.xml.versionsBackup
 *.swp
+.DS_Store
+
+# Local temp docs / exports
+tmp/
+output/
+ruoyi-address-ui/node_modules/
 
 !*/build/*.java
 !*/build/*.html

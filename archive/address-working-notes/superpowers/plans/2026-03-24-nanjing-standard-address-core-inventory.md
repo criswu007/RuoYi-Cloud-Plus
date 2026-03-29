@@ -27,15 +27,15 @@
 
 ### 可能修改文件
 
-- `ruoyi-modules/ruoyi-address/docs/project-config.md`
-  - 仅当需要补充“历史盘点入口说明”时修改；若不需要则保持不动。
+- `ruoyi-modules/ruoyi-address/docs/project-baseline.md`
+  - 当前主入口已收敛到项目总控基线；历史盘点入口说明如需调整，应优先改这里。
 
 ### 不在本计划内的文件
 
 - `script/sql/ruoyi-address.sql`
-- `ruoyi-modules/ruoyi-address/docs/standard-address-db-design.md`
+- `ruoyi-modules/ruoyi-address/docs/archive/standard-address-db-design.md`
 - `ruoyi-modules/ruoyi-address/docs/interface-checklist.md`
-- `ruoyi-modules/ruoyi-address/docs/vibe-coding-api-manual.md`
+- `ruoyi-modules/ruoyi-address/docs/reference/vibe-coding-api-manual.md`
 
 这些文件在历史事实未进一步收敛前不作为本轮执行目标，避免再次把“方案稿”误当基线。
 

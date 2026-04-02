@@ -1,6 +1,7 @@
 package org.dromara.address.domain;
 
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
@@ -26,11 +27,13 @@ public class SegmAddrType implements Serializable {
     /**
      * 地址类型名称。
      */
+    @TableField("name")
     private String addrTypeName;
 
     /**
      * 父类型编码。
      */
+    @TableField(exist = false)
     private String parentAddrTypeId;
 
     /**

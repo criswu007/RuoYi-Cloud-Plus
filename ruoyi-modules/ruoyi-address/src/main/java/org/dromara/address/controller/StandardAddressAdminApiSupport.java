@@ -16,6 +16,7 @@ import org.dromara.address.domain.bo.StandardAddressTagBindBo;
 import org.dromara.address.domain.bo.StandardAddressTagBo;
 import org.dromara.address.domain.vo.InstallationAddressVo;
 import org.dromara.address.domain.vo.StandardAddressAdminVo;
+import org.dromara.address.domain.vo.StandardAddressImportResultVo;
 import org.dromara.address.domain.vo.StandardAddressImportRecordVo;
 import org.dromara.address.domain.vo.StandardAddressMonitorRecordVo;
 import org.dromara.address.domain.vo.StandardAddressMonitorRuleVo;
@@ -47,6 +48,21 @@ public abstract class StandardAddressAdminApiSupport extends BaseController impl
 
     @Override
     public TableDataInfo<StandardAddressVo> listStandardAddresses(StandardAddressBo bo, PageQuery pageQuery) {
+        throw unsupportedOperation();
+    }
+
+    @Override
+    public R<List<StandardAddressAdminVo.LevelOptionVo>> listStandardAddressLevelOptions() {
+        throw unsupportedOperation();
+    }
+
+    @Override
+    public R<StandardAddressAdminVo.FormOptionsVo> listStandardAddressFormOptions() {
+        throw unsupportedOperation();
+    }
+
+    @Override
+    public R<List<StandardAddressAdminVo.StationOptionVo>> listStandardAddressStationOptions(StandardAddressAdminBo.StationOptionQueryBo bo) {
         throw unsupportedOperation();
     }
 
@@ -96,12 +112,12 @@ public abstract class StandardAddressAdminApiSupport extends BaseController impl
     }
 
     @Override
-    public R<String> importStandardAddressData(MultipartFile file, boolean updateSupport) throws Exception {
+    public void downloadStandardAddressImportTemplate(HttpServletResponse response) throws Exception {
         throw unsupportedOperation();
     }
 
     @Override
-    public R<Void> rollbackImportRecord(Long recordId) {
+    public R<StandardAddressImportResultVo> importStandardAddressData(MultipartFile file, boolean updateSupport) throws Exception {
         throw unsupportedOperation();
     }
 

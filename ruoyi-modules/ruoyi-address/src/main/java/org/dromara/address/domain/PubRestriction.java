@@ -1,5 +1,6 @@
 package org.dromara.address.domain;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -29,9 +30,10 @@ public class PubRestriction implements Serializable {
     private String keyword;
 
     /**
-     * 字典名称。
+     * 字典中文名称，对应线上 `pub_restriction.desc_china`。
      */
-    private String name;
+    @TableField("desc_china")
+    private String descChina;
 
     /**
      * 字典编码。

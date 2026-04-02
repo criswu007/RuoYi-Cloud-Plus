@@ -42,6 +42,11 @@ public class StandardAddressVo implements Serializable {
     private String parentSegmId;
 
     /**
+     * 父级标准地址名称。
+     */
+    private String parentStandName;
+
+    /**
      * 当级标准地址名称。
      */
     @ExcelProperty(value = "当级名称")
@@ -64,6 +69,11 @@ public class StandardAddressVo implements Serializable {
      */
     @ExcelProperty(value = "地址层级")
     private Integer level;
+
+    /**
+     * 地址业务级别（1-19），用于前后端展示与交互。
+     */
+    private Integer addrLevel;
 
     /**
      * 当级标准地址名称，面向线上 `ADDR_SEGM.segm_name` 契约。
@@ -91,7 +101,7 @@ public class StandardAddressVo implements Serializable {
     private String segmType;
 
     /**
-     * 线上层级 ID，来源于 `segm_addr_type.level_id`。
+     * 数据库真实层级 ID，来源于 `segm_addr_type.level_id`。
      */
     private Integer levelId;
 
@@ -124,6 +134,51 @@ public class StandardAddressVo implements Serializable {
      * 营业站 ID。
      */
     private String busStationId;
+
+    /**
+     * 单项工程编号，对应线上 `ADDR_SEGM.post_code`。
+     */
+    private String singleProjectCode;
+
+    /**
+     * 是否配套费小区，对应线上 `ADDR_SEGM.segm_name_fir`。
+     */
+    private String supportingFeeCommunityFlag;
+
+    /**
+     * 城区/非城区标识，对应线上 `ADDR_SEGM.is_city`。
+     */
+    private String isCity;
+
+    /**
+     * 光纤接入方式，对应线上 `ADDR_SEGM.addr_in_type_ftth`。
+     */
+    private Integer addrInTypeFtth;
+
+    /**
+     * 光纤接入能力，对应线上 `ADDR_SEGM.ftth_pon_type`。
+     */
+    private Integer ftthPonType;
+
+    /**
+     * 电缆接入方式，对应线上 `ADDR_SEGM.addr_in_type_lan`。
+     */
+    private Integer addrInTypeLan;
+
+    /**
+     * 城乡属性，对应线上 `ADDR_SEGM.area_type`。
+     */
+    private Integer areaType;
+
+    /**
+     * 场所性质，对应线上 `ADDR_SEGM.place_type`。
+     */
+    private Integer placeType;
+
+    /**
+     * 楼栋覆盖户数，对应线上 `ADDR_SEGM.cover_num`。
+     */
+    private Integer coverNum;
 
     /**
      * 管理站名称。
@@ -274,13 +329,21 @@ public class StandardAddressVo implements Serializable {
         this.code = segmNo;
     }
 
+    public Integer getAddrLevel() {
+        return addrLevel != null ? addrLevel : level;
+    }
+
+    public void setAddrLevel(Integer addrLevel) {
+        this.addrLevel = addrLevel;
+        this.level = addrLevel;
+    }
+
     public Integer getLevelId() {
-        return levelId != null ? levelId : level;
+        return levelId;
     }
 
     public void setLevelId(Integer levelId) {
         this.levelId = levelId;
-        this.level = levelId;
     }
 
     public void setId(String id) {
@@ -310,7 +373,7 @@ public class StandardAddressVo implements Serializable {
 
     public void setLevel(Integer level) {
         this.level = level;
-        this.levelId = level;
+        this.addrLevel = level;
     }
 
     public String getNotes() {

@@ -252,12 +252,15 @@ public class StandardAddressTagServiceImpl implements IStandardAddressTagService
      * 异常：存在缺失地址时抛出业务异常。
      */
     private void validateStandardAddressIds(Collection<Long> standardAddressIds) {
-        long count = standardAddressIds.stream()
+        List<String> segmIds = standardAddressIds.stream()
             .filter(Objects::nonNull)
-            .map(id -> standardAddressService.getStandardAddressBySegmId(String.valueOf(id)))
-            .filter(Objects::nonNull)
+            .map(String::valueOf)
+            .toList();
+        Map<String, String> standardAddressMap = standardAddressService.listStandardAddressStandNameMapBySegmIds(segmIds);
+        long validCount = segmIds.stream()
+            .filter(standardAddressMap::containsKey)
             .count();
-        if (count != standardAddressIds.size()) {
+        if (validCount != standardAddressIds.size()) {
             throw new ServiceException("存在无效的标准地址");
         }
     }

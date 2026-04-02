@@ -16,6 +16,114 @@ public final class StandardAddressAdminVo {
     }
 
     @Data
+    public static class LevelOptionVo implements Serializable {
+
+        @Serial
+        private static final long serialVersionUID = 1L;
+
+        /**
+         * 地址类型编码，面向线上 `segm_addr_type.addr_type_id` 契约。
+         */
+        private String addrTypeId;
+
+        /**
+         * 地址类型名称，面向线上 `segm_addr_type.name` 契约。
+         */
+        private String name;
+
+        /**
+         * 地址业务级别（1-19），用于前后端级别交互。
+         */
+        private Integer addrLevel;
+
+        /**
+         * 数据库真实层级 ID，面向线上 `segm_addr_type.level_id` 契约。
+         */
+        private Integer levelId;
+    }
+
+    @Data
+    public static class RestrictionOptionVo implements Serializable {
+
+        @Serial
+        private static final long serialVersionUID = 1L;
+
+        /**
+         * 字典值，面向线上 `pub_restriction.serial_no` 契约。
+         */
+        private String value;
+
+        /**
+         * 字典中文名称，面向线上 `pub_restriction.desc_china` 契约。
+         */
+        private String label;
+    }
+
+    @Data
+    public static class FormOptionsVo implements Serializable {
+
+        @Serial
+        private static final long serialVersionUID = 1L;
+
+        /**
+         * 标准地址状态字典。
+         */
+        private List<RestrictionOptionVo> statusOptions;
+
+        /**
+         * 光纤接入方式字典。
+         */
+        private List<RestrictionOptionVo> addrInTypeFtthOptions;
+
+        /**
+         * 光纤接入能力字典。
+         */
+        private List<RestrictionOptionVo> ftthPonTypeOptions;
+
+        /**
+         * 电缆接入方式字典。
+         */
+        private List<RestrictionOptionVo> addrInTypeLanOptions;
+
+        /**
+         * 城乡属性字典。
+         */
+        private List<RestrictionOptionVo> areaTypeOptions;
+
+        /**
+         * 房屋属性字典。
+         */
+        private List<RestrictionOptionVo> placeTypeOptions;
+    }
+
+    @Data
+    public static class StationOptionVo implements Serializable {
+
+        @Serial
+        private static final long serialVersionUID = 1L;
+
+        /**
+         * 管理站 ID，面向线上 `spc_station.station_id` 契约。
+         */
+        private String stationId;
+
+        /**
+         * 管理站名称，面向线上 `spc_station.station_name` 契约。
+         */
+        private String stationName;
+
+        /**
+         * 区域 ID，面向线上 `spc_station.region_id` 契约。
+         */
+        private String regionId;
+
+        /**
+         * 管理站类型，面向线上 `spc_station.manage_type` 契约。
+         */
+        private String manageType;
+    }
+
+    @Data
     public static class BatchPreviewVo implements Serializable {
 
         @Serial
@@ -35,6 +143,11 @@ public final class StandardAddressAdminVo {
          * 层级。
          */
         private Integer level;
+
+        /**
+         * 地址业务级别（1-19）。
+         */
+        private Integer addrLevel;
 
         /**
          * 当级标准地址名称，面向线上 `ADDR_SEGM.segm_name` 契约。
@@ -57,7 +170,7 @@ public final class StandardAddressAdminVo {
         private String standNo;
 
         /**
-         * 线上层级 ID。
+         * 数据库真实层级 ID。
          */
         private Integer levelId;
 
@@ -84,13 +197,26 @@ public final class StandardAddressAdminVo {
             this.fullName = standName;
         }
 
+        public Integer getAddrLevel() {
+            return addrLevel != null ? addrLevel : level;
+        }
+
+        public void setAddrLevel(Integer addrLevel) {
+            this.addrLevel = addrLevel;
+            this.level = addrLevel;
+        }
+
         public Integer getLevelId() {
-            return levelId != null ? levelId : level;
+            return levelId;
         }
 
         public void setLevelId(Integer levelId) {
             this.levelId = levelId;
-            this.level = levelId;
+        }
+
+        public void setLevel(Integer level) {
+            this.level = level;
+            this.addrLevel = level;
         }
     }
 

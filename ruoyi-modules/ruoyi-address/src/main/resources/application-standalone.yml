@@ -65,6 +65,8 @@ mybatis-plus:
   mapperPackage: org.dromara.**.mapper
   mapperLocations: classpath*:mapper/**/*Mapper.xml
   typeAliasesPackage: org.dromara.**.domain
+  configuration:
+    logImpl: org.apache.ibatis.logging.slf4j.Slf4jImpl
   global-config:
     dbConfig:
       idType: ASSIGN_ID
@@ -85,8 +87,14 @@ dubbo:
   metadata-report:
     address: N/A
 
+management:
+  health:
+    redis:
+      enabled: false
+
 logging:
   level:
     org.springframework: warn
     org.apache.dubbo: error
     org.mybatis.spring.mapper: error
+    org.dromara.address.mapper: debug

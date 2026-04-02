@@ -4,4 +4,20 @@
     "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.dromara.address.mapper.PubRestrictionMapper">
 
+    <select id="selectStandardAddressFormRestrictions" resultType="org.dromara.address.domain.PubRestriction">
+        SELECT serial_no,
+               keyword,
+               desc_china,
+               code
+        FROM pub_restriction
+        WHERE keyword IN (
+            'ADDR_SEGM_STATUS',
+            'ADDR_IN_TYPE_FTTH',
+            'FTTH_PON_TYPE',
+            'ADDR_IN_TYPE_LAN',
+            'AREA_TYPE',
+            'ADDR_PLACE_TYPE'
+        )
+        ORDER BY keyword ASC, serial_no ASC
+    </select>
 </mapper>

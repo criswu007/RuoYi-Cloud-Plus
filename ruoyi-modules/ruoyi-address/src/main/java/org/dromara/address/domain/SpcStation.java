@@ -1,5 +1,6 @@
 package org.dromara.address.domain;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -32,4 +33,10 @@ public class SpcStation implements Serializable {
      * 区域 ID。
      */
     private String regionId;
+
+    /**
+     * 管理站类型，对应 `pub_restriction.keyword='MANAGE_TYPE'` 的字典值。
+     */
+    @TableField("manage_type")
+    private String manageType;
 }

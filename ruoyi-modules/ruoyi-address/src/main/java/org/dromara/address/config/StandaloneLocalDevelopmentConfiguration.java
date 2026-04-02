@@ -33,16 +33,41 @@ import java.util.Set;
 @Configuration
 public class StandaloneLocalDevelopmentConfiguration {
 
+    private static final String STANDALONE_REGION_ID = "320100";
+
     private static final Set<String> STANDALONE_PERMISSIONS = Set.of(
         "address:standard:list",
         "address:standard:query",
         "address:standard:add",
         "address:standard:edit",
         "address:standard:remove",
+        "address:standard:merge",
+        "address:standard:split",
         "address:standard:export",
+        "address:standard:import",
+        "address:import:record:list",
+        "address:import:record:query",
+        "address:import:record:export",
+        "address:selection:query",
+        "address:selection:create",
         "address:tag:list",
         "address:tag:query",
-        "address:tag:bind"
+        "address:tag:add",
+        "address:tag:edit",
+        "address:tag:remove",
+        "address:tag:bind",
+        "address:attribute:list",
+        "address:attribute:query",
+        "address:attribute:add",
+        "address:attribute:edit",
+        "address:attribute:remove",
+        "address:installation:list",
+        "address:installation:query",
+        "address:installation:add",
+        "address:installation:edit",
+        "address:installation:remove",
+        "address:operation:log:list",
+        "address:operation:log:query"
     );
 
     /**
@@ -87,7 +112,7 @@ public class StandaloneLocalDevelopmentConfiguration {
                     loginUser.setUserType(UserType.SYS_USER.getUserType());
                     loginUser.setMenuPermission(new LinkedHashSet<>(STANDALONE_PERMISSIONS));
                     loginUser.setRolePermission(Set.of("standalone-dev"));
-                    LoginHelper.login(loginUser, new SaLoginParameter());
+                    LoginHelper.login(loginUser, new SaLoginParameter().setExtra("regionId", STANDALONE_REGION_ID));
                     response.setHeader("Authorization", StpUtil.getTokenValue());
                 }
                 filterChain.doFilter(request, response);

@@ -3,7 +3,6 @@ package org.dromara.address.domain.bo;
 import lombok.Data;
 
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
 /**
@@ -14,14 +13,14 @@ import java.util.List;
 public class StandardAddressMergeBo {
 
     /**
-     * 待合并的源标准地址ID集合
+     * 待合并的源标准地址 `segmId` 集合
      */
-    @NotEmpty(message = "源标准地址ID集合不能为空")
-    private List<Long> sourceStandardAddressIds;
+    @NotEmpty(message = "待合并地址不能为空")
+    private List<String> sourceSegmIds;
 
     /**
-     * 目标标准地址ID
+     * 合并目标地址 `segmId`
      */
-    @NotNull(message = "目标标准地址ID不能为空")
-    private Long targetStandardAddressId;
+    @jakarta.validation.constraints.NotBlank(message = "目标地址不能为空")
+    private String targetSegmId;
 }

@@ -12,7 +12,8 @@ spring:
     name: ruoyi-address
   profiles:
     # 环境配置
-    active: @profiles.active@
+#    active: @profiles.active@
+    active: standalone
 
 ---
 spring:

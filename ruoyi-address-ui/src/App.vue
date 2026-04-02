@@ -66,6 +66,7 @@ export default {
       apiBase: import.meta.env.VITE_API_BASE || '代理 /address',
       titleMap: {
         '/standard/list': '标准地址列表',
+        '/standard/detail': '标准地址详情',
         '/standard/merge': '标准地址归并',
         '/standard/split': '标准地址拆分',
         '/standard/labels': '地址标签管理',
@@ -81,6 +82,9 @@ export default {
   },
   computed: {
     pageTitle() {
+      if (this.$route.path.startsWith('/standard/detail/')) {
+        return this.titleMap['/standard/detail'];
+      }
       return this.titleMap[this.$route.path] || '标准地址管理';
     }
   },

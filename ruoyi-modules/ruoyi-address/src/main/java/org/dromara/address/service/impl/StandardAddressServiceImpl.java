@@ -2,9 +2,12 @@ package org.dromara.address.service.impl;
 
 import com.baomidou.dynamic.datasource.annotation.DS;
 import lombok.RequiredArgsConstructor;
+import org.dromara.address.domain.bo.StandardAddressAdminBo;
 import org.dromara.address.domain.bo.StandardAddressBatchAddBo;
 import org.dromara.address.domain.bo.StandardAddressBo;
+import org.dromara.address.domain.bo.StandardAddressSplitItemBo;
 import org.dromara.address.domain.vo.StandardAddressAdminVo;
+import org.dromara.address.domain.vo.StandardAddressImportResultVo;
 import org.dromara.address.domain.vo.StandardAddressImportVo;
 import org.dromara.address.domain.vo.StandardAddressVo;
 import org.dromara.address.service.IStandardAddressService;
@@ -15,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 标准地址核心 facade。
@@ -30,6 +34,8 @@ public class StandardAddressServiceImpl implements IStandardAddressService {
 
     private final StandardAddressQueryService queryService;
     private final StandardAddressCommandService commandService;
+    private final StandardAddressDictionaryService dictionaryService;
+    private final StandardAddressImportService importService;
 
     /**
      * 目的：按线上 `segmId` 查询标准地址详情。
@@ -56,6 +62,42 @@ public class StandardAddressServiceImpl implements IStandardAddressService {
     }
 
     /**
+     * 目的：查询标准地址级别选项。
+     * 入参：无。
+     * 出参：标准地址级别选项列表。
+     * 关键约束：结果必须与线上 `segm_addr_type` 保持一致，供前端下拉与展示统一复用。
+     * 异常与副作用：无写入副作用。
+     */
+    @Override
+    public List<StandardAddressAdminVo.LevelOptionVo> listStandardAddressLevelOptions() {
+        return dictionaryService.listLevelOptions();
+    }
+
+    /**
+     * 目的：查询标准地址编辑页聚合字典。
+     * 入参：无。
+     * 出参：编辑页聚合字典。
+     * 关键约束：状态、接入方式、接入能力、城乡属性和房屋属性都必须以线上 `pub_restriction` 为准。
+     * 异常与副作用：无写入副作用。
+     */
+    @Override
+    public StandardAddressAdminVo.FormOptionsVo listStandardAddressFormOptions() {
+        return dictionaryService.listFormOptions();
+    }
+
+    /**
+     * 目的：查询标准地址编辑页管理站候选。
+     * 入参：管理站类型、区域和搜索关键字。
+     * 出参：管理站候选列表。
+     * 关键约束：候选必须按 `manageType` 显式区分维修/安装/营业，并优先按 `regionId` 收敛结果。
+     * 异常与副作用：无写入副作用。
+     */
+    @Override
+    public List<StandardAddressAdminVo.StationOptionVo> listStandardAddressStationOptions(StandardAddressAdminBo.StationOptionQueryBo bo) {
+        return dictionaryService.listStationOptions(bo);
+    }
+
+    /**
      * 目的：查询标准地址列表。
      * 入参：查询条件。
      * 出参：标准地址列表。
@@ -65,6 +107,18 @@ public class StandardAddressServiceImpl implements IStandardAddressService {
     @Override
     public List<StandardAddressVo> queryStandardAddressList(StandardAddressBo bo) {
         return queryService.queryList(bo);
+    }
+
+    /**
+     * 目的：批量查询标准地址名称映射。
+     * 入参：标准地址字符串主键集合。
+     * 出参：`segmId -> standName` 映射。
+     * 关键约束：列表和聚合回填场景必须走批量查询，避免逐条详情查询放大数据库压力。
+     * 异常与副作用：无写入副作用。
+     */
+    @Override
+    public Map<String, String> listStandardAddressStandNameMapBySegmIds(Collection<String> segmIds) {
+        return queryService.listStandardAddressStandNameMapBySegmIds(segmIds);
     }
 
     /**
@@ -135,8 +189,8 @@ public class StandardAddressServiceImpl implements IStandardAddressService {
      * 异常与副作用：抛出业务异常，无写入副作用。
      */
     @Override
-    public Boolean mergeStandardAddresses(List<Long> sourceStandardAddressIds, Long targetStandardAddressId) {
-        throw new ServiceException("标准地址合并暂未实现");
+    public Boolean mergeStandardAddresses(List<String> sourceSegmIds, String targetSegmId) {
+        return commandService.mergeStandardAddresses(sourceSegmIds, targetSegmId);
     }
 
     /**
@@ -147,8 +201,8 @@ public class StandardAddressServiceImpl implements IStandardAddressService {
      * 异常与副作用：抛出业务异常，无写入副作用。
      */
     @Override
-    public Boolean splitStandardAddress(Long sourceStandardAddressId, List<StandardAddressBo> newAddresses) {
-        throw new ServiceException("标准地址拆分暂未实现");
+    public Boolean splitStandardAddress(String sourceSegmId, List<StandardAddressSplitItemBo> splitItems) {
+        return commandService.splitStandardAddress(sourceSegmId, splitItems);
     }
 
     /**
@@ -159,7 +213,7 @@ public class StandardAddressServiceImpl implements IStandardAddressService {
      * 异常与副作用：抛出业务异常，无写入副作用。
      */
     @Override
-    public String importStandardAddressData(List<StandardAddressImportVo> list, Boolean updateSupport, String operName, String fileName) {
-        throw new ServiceException("标准地址导入暂未实现");
+    public StandardAddressImportResultVo importStandardAddressData(List<StandardAddressImportVo> list, Boolean updateSupport, String operName, String fileName) {
+        return importService.importStandardAddressData(list, updateSupport, operName, fileName);
     }
 }

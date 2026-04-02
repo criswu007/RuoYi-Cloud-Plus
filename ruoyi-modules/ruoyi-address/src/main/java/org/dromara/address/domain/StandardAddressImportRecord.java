@@ -29,6 +29,11 @@ public class StandardAddressImportRecord extends TenantEntity {
     private Long id;
 
     /**
+     * 批次号
+     */
+    private String batchNo;
+
+    /**
      * 导入文件名
      */
     private String fileName;
@@ -37,6 +42,11 @@ public class StandardAddressImportRecord extends TenantEntity {
      * 状态（0进行中 1成功 2失败）
      */
     private String status;
+
+    /**
+     * 总数量
+     */
+    private Integer totalCount;
 
     /**
      * 成功数量
@@ -52,6 +62,11 @@ public class StandardAddressImportRecord extends TenantEntity {
      * 错误信息
      */
     private String errorMsg;
+
+    /**
+     * 是否允许更新
+     */
+    private Boolean updateSupport;
 
     /**
      * 删除标志（0代表存在 1代表删除）

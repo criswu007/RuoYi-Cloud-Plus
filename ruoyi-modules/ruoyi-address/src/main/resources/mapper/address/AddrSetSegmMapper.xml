@@ -7,11 +7,21 @@
     <select id="countBySegmIds" resultType="java.lang.Long">
         select count(1)
         from ADDR_SET_SEGM
-        where ifnull(delete_state, '0') = '0'
+        where coalesce(delete_state, '0') = '0'
           and segm_id in
           <foreach collection="segmIds" item="segmId" open="(" separator="," close=")">
               #{segmId}
           </foreach>
     </select>
+
+    <update id="rebindSegmIds">
+        update ADDR_SET_SEGM
+        set segm_id = #{targetSegmId}
+        where coalesce(delete_state, '0') = '0'
+          and segm_id in
+          <foreach collection="sourceSegmIds" item="segmId" open="(" separator="," close=")">
+              #{segmId}
+          </foreach>
+    </update>
 
 </mapper>

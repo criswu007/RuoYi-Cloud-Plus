@@ -8,9 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.dromara.address.api.RemoteStandardAddressService;
 import org.dromara.address.api.domain.RemoteStandardAddressVo;
-import org.dromara.address.domain.bo.StandardAddressBo;
 import org.dromara.address.domain.vo.StandardAddressVo;
-import org.dromara.address.service.IStandardAddressService;
+import org.dromara.address.service.impl.StandardAddressQueryService;
 import org.dromara.common.core.utils.StringUtils;
 import org.springframework.stereotype.Service;
 
@@ -31,7 +30,7 @@ import java.util.Map;
 @DS("address")
 public class RemoteStandardAddressServiceImpl implements RemoteStandardAddressService {
 
-    private final IStandardAddressService addressStandardService;
+    private final StandardAddressQueryService queryService;
 
     @Override
     /**
@@ -46,7 +45,7 @@ public class RemoteStandardAddressServiceImpl implements RemoteStandardAddressSe
         if (ObjectUtil.isNull(id)) {
             return null;
         }
-        StandardAddressVo addressStandardVo = addressStandardService.getStandardAddressBySegmId(String.valueOf(id));
+        StandardAddressVo addressStandardVo = queryService.getBySegmId(String.valueOf(id), null);
         if (addressStandardVo == null) {
             return null;
         }
@@ -69,13 +68,13 @@ public class RemoteStandardAddressServiceImpl implements RemoteStandardAddressSe
         }
         int pageSize = limit != null ? limit : 10;
         Map<String, RemoteStandardAddressVo> result = new LinkedHashMap<>();
-        collectSearchResult(result, buildRegionSearchBo(keyword, 1), pageSize);
-        collectSearchResult(result, buildRegionSearchBo(keyword, 2), pageSize);
-        collectSearchResult(result, buildAddrSegmSearchBo(keyword), pageSize);
+        collectSearchResult(result, queryService.searchRegionCandidates(keyword, 1, pageSize), pageSize);
+        collectSearchResult(result, queryService.searchRegionCandidates(keyword, 2, pageSize - result.size()), pageSize);
+        collectSearchResult(result, queryService.searchAddrSegmCandidates(keyword, null, null, pageSize - result.size()), pageSize);
         if (result.isEmpty()) {
             return Collections.emptyList();
         }
-        return new ArrayList<>(result.values()).subList(0, Math.min(pageSize, result.size()));
+        return new ArrayList<>(result.values());
     }
 
     @Override
@@ -89,7 +88,7 @@ public class RemoteStandardAddressServiceImpl implements RemoteStandardAddressSe
         if (ObjectUtil.isNull(id)) {
             return false;
         }
-        StandardAddressVo vo = addressStandardService.getStandardAddressBySegmId(String.valueOf(id));
+        StandardAddressVo vo = queryService.getBySegmId(String.valueOf(id), null);
         return vo != null;
     }
 
@@ -104,12 +103,14 @@ public class RemoteStandardAddressServiceImpl implements RemoteStandardAddressSe
         if (ObjectUtil.isNull(id)) {
             return null;
         }
-        StandardAddressVo vo = addressStandardService.getStandardAddressBySegmId(String.valueOf(id));
+        StandardAddressVo vo = queryService.getBySegmId(String.valueOf(id), null);
         return vo != null ? vo.getStandName() : null;
     }
 
-    private void collectSearchResult(Map<String, RemoteStandardAddressVo> result, StandardAddressBo bo, int limit) {
-        List<StandardAddressVo> list = addressStandardService.queryStandardAddressList(bo);
+    private void collectSearchResult(Map<String, RemoteStandardAddressVo> result, List<StandardAddressVo> list, int limit) {
+        if (limit <= 0) {
+            return;
+        }
         if (CollUtil.isEmpty(list)) {
             return;
         }
@@ -121,25 +122,12 @@ public class RemoteStandardAddressServiceImpl implements RemoteStandardAddressSe
         }
     }
 
-    private StandardAddressBo buildRegionSearchBo(String keyword, Integer levelId) {
-        StandardAddressBo bo = new StandardAddressBo();
-        bo.setLevelId(levelId);
-        bo.setSegmName(keyword);
-        return bo;
-    }
-
-    private StandardAddressBo buildAddrSegmSearchBo(String keyword) {
-        StandardAddressBo bo = new StandardAddressBo();
-        bo.setStandName(keyword);
-        return bo;
-    }
-
     private RemoteStandardAddressVo toRemoteVo(StandardAddressVo vo) {
         RemoteStandardAddressVo remote = BeanUtil.toBean(vo, RemoteStandardAddressVo.class);
         remote.setId(parseLegacyId(vo.getSegmId()));
         remote.setName(vo.getSegmName());
         remote.setFullName(vo.getStandName());
-        remote.setLevel(vo.getLevelId());
+        remote.setLevel(vo.getAddrLevel());
         remote.setCode(vo.getSegmNo());
         return remote;
     }

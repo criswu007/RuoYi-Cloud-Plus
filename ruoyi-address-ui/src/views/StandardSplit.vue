@@ -1,88 +1,263 @@
 <template>
-  <el-card class="split-card">
-    <div class="page-head">
-      <div>
-        <h3>标准地址拆分</h3>
-        <p>将一个标准地址拆成多个同层级子项，适合道路分段、栋单元细化等场景。</p>
+  <div class="split-page">
+    <el-card shadow="never">
+      <el-form :inline="true" :model="query" @submit.native.prevent>
+        <el-form-item label="标准地址关键词">
+          <el-input v-model="query.standName" clearable placeholder="请输入标准地址关键词" @keyup.enter.native="fetchList" />
+        </el-form-item>
+        <el-form-item label="级别">
+          <el-select v-model="query.segmType" clearable placeholder="请选择级别">
+            <el-option
+              v-for="item in levelOptions"
+              :key="item.addrTypeId"
+              :label="item.name"
+              :value="item.addrTypeId"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="fetchList">查询</el-button>
+          <el-button @click="reset">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <el-card shadow="never">
+      <el-table
+        v-loading="loading"
+        :data="list"
+        border
+        highlight-current-row
+        size="small"
+        @row-click="selectSource"
+      >
+        <el-table-column prop="standName" label="地址名称" min-width="280" show-overflow-tooltip />
+        <el-table-column prop="parentStandName" label="父级地址" min-width="220" show-overflow-tooltip />
+        <el-table-column prop="segmName" label="当级名称" min-width="140" show-overflow-tooltip />
+        <el-table-column label="等级" width="110">
+          <template #default="{ row }">
+            {{ levelLabel(row) }}
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <div class="pager">
+        <el-pagination
+          layout="total, prev, pager, next"
+          :total="total"
+          :current-page="pageNum"
+          :page-size="pageSize"
+          @current-change="changePage"
+        />
       </div>
-    </div>
-    <el-form label-width="120px">
-      <el-form-item label="源标准地址ID">
-        <el-input v-model="sourceStandardAddressId" placeholder="例如 1001" />
-      </el-form-item>
-      <el-form-item label="新地址列表">
-        <div class="split-rows">
-          <div v-for="(row, idx) in newAddresses" :key="idx" class="split-row">
-            <el-input v-model="row.name" placeholder="新地址名称" />
-            <el-button type="text" @click="removeRow(idx)">删除</el-button>
-          </div>
+    </el-card>
+
+    <el-card shadow="never">
+      <div class="source-bar">
+        <div>待拆分地址：{{ selectedSource?.standName || '-' }}</div>
+        <el-button v-if="selectedSource" type="text" @click="cancelSelectedSource">取消选择</el-button>
+      </div>
+
+      <div class="config-head">
+        <div class="title">拆分后地址配置</div>
+        <el-button type="primary" plain :disabled="!selectedSource" @click="addSplitItem">新增拆分地址项</el-button>
+      </div>
+
+      <div v-if="splitItems.length" class="split-items">
+        <div v-for="(item, index) in splitItems" :key="index" class="split-item">
+          <div class="split-item__title">第 {{ index + 1 }} 项</div>
+          <el-input v-model="item.segmName" placeholder="拆分后当级名称" />
+          <el-input :value="selectedSource?.parentStandName || '-'" disabled />
+          <el-button type="text" @click="removeSplitItem(index)">删除</el-button>
         </div>
-        <el-button type="primary" plain size="mini" @click="addRow">新增一行</el-button>
-      </el-form-item>
-      <el-form-item>
-        <el-button type="primary" @click="submit">拆分</el-button>
-      </el-form-item>
-    </el-form>
-  </el-card>
+      </div>
+      <div v-else class="empty-tip">请先选择待拆分地址，并新增拆分地址项</div>
+    </el-card>
+
+    <div class="submit-bar">
+      <el-button type="primary" :disabled="!canSubmit()" :loading="submitLoading" @click="submitSplit">确认拆分</el-button>
+    </div>
+  </div>
 </template>
 
 <script>
-import { splitStandardAddress } from '../api/address';
+import {
+  getStandardAddressLevelOptions,
+  getStandardAddressList,
+  splitStandardAddress
+} from '../api/address';
 
 export default {
   data() {
     return {
-      sourceStandardAddressId: '',
-      newAddresses: [{ name: '' }]
+      query: {
+        standName: '',
+        segmType: ''
+      },
+      levelOptions: [],
+      levelMap: {},
+      list: [],
+      total: 0,
+      pageNum: 1,
+      pageSize: 10,
+      loading: false,
+      selectedSource: null,
+      splitItems: [],
+      submitLoading: false
     };
   },
+  mounted() {
+    this.initializePage();
+  },
   methods: {
-    addRow() {
-      this.newAddresses.push({ name: '' });
+    async initializePage() {
+      const res = await getStandardAddressLevelOptions();
+      this.levelOptions = res.data || [];
+      this.levelMap = (res.data || []).reduce((accumulator, item) => {
+        accumulator[item.addrTypeId] = item.name;
+        return accumulator;
+      }, {});
+      await this.fetchList();
     },
-    removeRow(idx) {
-      this.newAddresses.splice(idx, 1);
-      if (!this.newAddresses.length) {
-        this.newAddresses.push({ name: '' });
+    async fetchList() {
+      this.loading = true;
+      try {
+        const res = await getStandardAddressList({
+          ...this.query,
+          pageNum: this.pageNum,
+          pageSize: this.pageSize
+        });
+        this.list = res.rows || [];
+        this.total = res.total || 0;
+      } catch (err) {
+        this.$message.error(err?.friendlyMessage || err?.message || '标准地址查询失败');
+      } finally {
+        this.loading = false;
       }
     },
-    async submit() {
-      const sourceStandardAddressId = Number(this.sourceStandardAddressId);
-      const newAddresses = this.newAddresses
-        .map(item => ({ name: item.name.trim() }))
-        .filter(item => item.name);
-      if (!sourceStandardAddressId || !newAddresses.length) {
-        this.$message.warning('请填写完整参数');
+    reset() {
+      this.query = { standName: '', segmType: '' };
+      this.pageNum = 1;
+      this.fetchList();
+    },
+    changePage(page) {
+      this.pageNum = page;
+      this.fetchList();
+    },
+    selectSource(row) {
+      this.selectedSource = row;
+      if (!this.splitItems.length) {
+        this.addSplitItem();
+      }
+    },
+    cancelSelectedSource() {
+      this.selectedSource = null;
+      this.splitItems = [];
+    },
+    addSplitItem() {
+      this.splitItems.push({ segmName: '' });
+    },
+    removeSplitItem(index) {
+      this.splitItems.splice(index, 1);
+    },
+    buildSubmitPayload() {
+      return {
+        sourceSegmId: this.selectedSource?.segmId || '',
+        splitItems: (this.splitItems || [])
+          .map(item => ({ segmName: (item.segmName || '').trim() }))
+          .filter(item => item.segmName)
+      };
+    },
+    canSubmit() {
+      const payload = this.buildSubmitPayload();
+      return !!(payload.sourceSegmId && payload.splitItems.length);
+    },
+    levelLabel(row) {
+      if (!row) {
+        return '-';
+      }
+      return this.levelMap[row.segmType] || (row.addrLevel ? `${row.addrLevel}级` : '-');
+    },
+    async submitSplit() {
+      const payload = this.buildSubmitPayload();
+      if (!payload.sourceSegmId) {
+        this.$message.warning('请先选择待拆分地址');
         return;
       }
-      await splitStandardAddress(sourceStandardAddressId, newAddresses);
-      this.$message.success('拆分完成');
-      this.sourceStandardAddressId = '';
-      this.newAddresses = [{ name: '' }];
+      if (!payload.splitItems.length) {
+        this.$message.warning('请至少填写一条拆分地址项');
+        return;
+      }
+      this.submitLoading = true;
+      try {
+        await splitStandardAddress(payload.sourceSegmId, payload.splitItems);
+        this.$message.success('拆分完成');
+        this.cancelSelectedSource();
+        await this.fetchList();
+      } catch (err) {
+        this.$message.error(err?.friendlyMessage || err?.message || '拆分失败');
+      } finally {
+        this.submitLoading = false;
+      }
     }
   }
 };
 </script>
 
 <style scoped>
-.split-rows {
+.split-page {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 16px;
 }
-.split-row {
+
+.pager {
+  margin-top: 16px;
+  text-align: right;
+}
+
+.source-bar,
+.config-head,
+.submit-bar {
   display: flex;
-  gap: 8px;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
-.split-card {
-  border-radius: 18px;
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
 }
-.page-head h3 {
-  margin: 0 0 6px;
+
+.split-items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
 }
-.page-head p {
-  margin: 0 0 18px;
-  color: #5f6f7f;
+
+.split-item {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) minmax(0, 1fr) 72px;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #ebeef5;
+  background: #fafbfd;
+}
+
+.split-item__title,
+.empty-tip {
+  color: #909399;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .split-item {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

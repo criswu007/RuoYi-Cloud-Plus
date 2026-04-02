@@ -11,7 +11,7 @@
 - `online-schema-comment-inventory-*` 与 `ftth-cloud-address-schema-handbook.md` 用于当前线上非备份表结构盘点，负责当前结构、字段注释和类型映射。
 - 已归档的南京批次专题可补充历史值域、迁移链路、安装地址挂接现象和旧系统兼容现象；凡涉及迁移、治理、双向同步或 legacy 行为，不应完全跳过这类材料。
 - 若两类材料与 `/Users/criswu/Desktop/广电/需求/技术需求书_标准地址_待明确问题0323.docx` 冲突，以 `0323` 需求书正文和备注为准。
-- 需求书写作 `spec_region`，历史盘点现有结构索引写作 `spc_region`；本册统一按“区域主数据”理解，实现前需核对联调库实际表名。
+- 标准地址区域主数据表名统一按 `spc_region` 处理；需求书中的旧写法统一视为同一对象，不再在新增文档、代码和 SQL 中继续扩散。
 
 当前约束已经明确：
 
@@ -140,7 +140,7 @@ pageNum=1&pageSize=20&orderByColumn=createTime&isAsc=desc
 | --- | --- | --- | --- |
 | 标准地址需兼容老系统，支持历史数据平滑迁移，并预留全量同步、增量同步、双向增量同步 | `2.3.5.5` 备注 | 建议主表或同步扩展表保留 `sourceSystem`、`sourceId`、`syncVersion`、`syncStatus`、`lastSyncTime`、`batchNo` 等字段，并设计同步日志 / outbox | 标准地址查询、新增、导入、安装地址、网格模块说明 |
 | 所有查询类能力均需按 `tenantId`、`deptId` 等数据范围限制 | `2.3.5.5` 备注、`2.3.5.5.14` 备注、`2.3.5.5.17` 备注 | 业务主表需要具备租户、部门或组织维度字段及索引；接口层不一定显式传参，但数据层必须可过滤 | 标准地址查询、选址、安装地址查询、网格查询说明 |
-| 标准地址列表/查询在 legacy 口径上，`1/2` 级行政区划来自 `spec_region`，其他级别来自 `segm_addr`；层级定义以 `segm_addr_type.level_id` 为准 | `2.3.5.5.1` 备注 | 查询实现需支持行政区划投影或兼容视图；若需求书的 `spec_region` 与历史盘点的 `spc_region` 命名不一致，需在联调库核准实际表名 | 标准地址列表、详情、选址说明 |
+| 标准地址列表/查询在 legacy 口径上，`1/2` 级行政区划来自 `spc_region`，其他级别来自 `addr_segm`；层级定义以 `segm_addr_type.level_id` 为准 | `2.3.5.5.1` 备注 | 查询实现需支持行政区划投影或兼容视图；`addr_segm` 侧层级条件统一作用于 `addr_segm.segm_type`，不再继续保留旧命名分支 | 标准地址列表、详情、选址说明 |
 | `城区/非城区` 标识复用 `addr_segm.is_city`；`addr_segm.area_type` 表示城乡属性，枚举来自 `pub_restriction.keyword='AREA_TYPE'` | `2.3.5.5.1` 正文与备注 | 地址模型至少需要区分 `isCity` 与 `areaType` 两类字段，`8/9` 级规则不能再直接用城乡属性代替城区判定 | 地址新增、修改、拆分、查询说明 |
 | 地址名称修改后，需级联刷新地址拼装名称、地址拼装简拼，以及所有下级地址和关联安装地址 | `2.3.5.5.3` 正文与备注 | 主表应围绕 `segmName/standName/segmNo/standNo` 建模；其中 `standNo` 对应线上 `ADDR_SEGM.stand_no`，生成规则固定为“中文转拼音首字母大写、中文括号转英文括号、数字不变”；安装地址表需保存关联地址快照或支持级联更新 | 标准地址修改说明、安装地址说明 |
 | 一、二级标准地址由外部提供，不允许界面新增、修改、删除、合并、拆分 | `2.3.5.5.2` 备注 | 建议保留只读标识、数据来源标识或系统级保护标识，并在操作权限位中显式返回不可编辑、不可合并、不可拆分 | 标准地址新增、修改、删除、详情说明 |
@@ -149,7 +149,7 @@ pageNum=1&pageSize=20&orderByColumn=createTime&isAsc=desc
 | 标准地址合并只能高等级地址合并低等级地址，同级禁止；合并时先迁移下级地址，再删除源地址；若全局拼装地址重名需显式提示 | `2.3.5.5.7` 备注 | 等级比较必须按真实 `segm_addr_type.level_id` 执行，同时需要父子树关系可重挂接，建议有合并关系日志或历史映射表，保证追溯，并在唯一性校验层支持“合并前重名预警” | 标准地址合并说明 |
 | 标准地址拆分后级别不变，源地址复制出多个同级地址，属性默认继承不变，源地址默认回收 | `2.3.5.5.8` 备注 | 拆分结果需能继承或复制源地址的层级、部分属性及来源关系；建议保留拆分来源标识与源地址回收状态 | 标准地址拆分说明 |
 | 标准地址导出需支持“导出本页数据”“导出选中数据”“按用户选择字段导出”三种模式 | `2.3.5.5.5` 备注 | 导出接口除筛选条件外，还需承载当前页 / 选中 ID / 字段选择等信息 | 标准地址导出说明 |
-| 导入记录需按“每一条导入数据”记明细，而不是仅按批次记；失败数据返回 Excel，回滚优先针对成功入库数据 | `2.3.5.5.11` 备注 | 建议设计 `import_batch` + `import_detail` 两层表；明细表以单条地址为粒度记录状态、错误原因、操作人，并保留失败明细下载能力 | 导入记录、导入回滚、导入说明 |
+| 导入记录需按“每一条导入数据”记明细，而不是仅按批次记；失败数据返回 Excel | `2.3.5.5.11` 备注 | 设计按 `import_batch` + `import_detail` 两层表收口；明细表以单条地址为粒度记录状态、错误原因、操作人，并保留失败明细下载能力；当前阶段不提供部分成功数据回滚 | 导入记录、失败导出、导入说明 |
 | 标准地址所属管理站分维修、安装、营业三类，单地址最多同时归属三种不同管理站；历史主数据当前参考 `spc_station` 并按 `region_id` 划分 | `2.3.5.5.15` 备注 | 建议使用关系表并以 `address_id + station_type` 唯一约束实现“一类一个”；管理站主表需兼容“源表无类型、关系表补业务角色”的现状，类型字典取 `pub_restriction.keyword='MANAGE_TYPE'`（`2017101/2017102/2017103`） | 标准地址详情/新增/修改补充说明 |
 | 标准地址属性包含接入方式、接入能力、城乡属性、房屋属性、覆盖户数、工程编号、是否配套费小区等 | `2.3.5.5.16` | 建议属性扩展表一对一承载；其中“接入能力”可能为多选，优先考虑关系表或数组 / JSON 字段 | 标准地址详情/新增/修改补充说明 |
 | 安装地址与标准地址是分开的实体；`0323` 备注明确安装地址默认关联标准地址，并要求保留双向同步能力 | `2.3.5.5.17` 正文与备注 | 安装地址表应独立建表，并围绕 `setAddrId/setAddrName/setType/segmId/segmType/regionId/orgId` 等线上字段设计；`associationStatus` 属于派生查询口径，不应替代 `segm_id` 作为主关联字段；业务接口默认写入 `BOUND`，仅迁移/治理态允许保留 `UNBOUND` 视图 | 安装地址查询、删除、修改说明 |
@@ -164,8 +164,8 @@ pageNum=1&pageSize=20&orderByColumn=createTime&isAsc=desc
 ### 2.6 历史证据基线补充
 
 - `spc_station`、`spc_region`、`segm_addr_type`、`ADDR_SEGM.is_city`、`pub_restriction` 当前都可以与 `0323` 需求书合并引用，分别支撑管理站主数据、区域主数据、层级规则、城区标识和字典值说明。
-- 合并引用时，字段结构与注释优先取历史盘点 / 结构手册，业务约束优先取 `0323` 需求书备注，例如“按 `region_id` 划分管理站”“管理站类型来自 `MANAGE_TYPE`”“`1/2` 级查询按 `spec_region` 口径”“`8/9` 级区分要看 `is_city` 而不是 `area_type`”。
-- 若需求书中的 `spec_region` 与历史盘点中的 `spc_region`、联调库实表命名不一致，本册先统一按“区域主数据”描述，最终以联调库核验结果落定。
+- 合并引用时，字段结构与注释优先取历史盘点 / 结构手册，业务约束优先取 `0323` 需求书备注，例如“按 `region_id` 划分管理站”“管理站类型来自 `MANAGE_TYPE`”“`1/2` 级查询按 `spc_region` 口径”“`8/9` 级区分要看 `is_city` 而不是 `area_type`”。
+- 当前文档、代码与 SQL 一律统一使用 `spc_region`，不再继续保留旧命名分支。
 
 ### 2.7 全局实现约束
 
@@ -191,7 +191,7 @@ pageNum=1&pageSize=20&orderByColumn=createTime&isAsc=desc
 - 本节专门回答三个问题：这个接口能传哪些字段、哪些字段必填、字段格式应该是什么。
 - `必填/选填` 以当前后端接口合同口径为准，不只看 Java 注解；部分 BO 虽然暂未加校验注解，但业务上仍按“必填”执行。
 - 列表查询和导出筛选默认复用同一套筛选字段；列表接口还需要额外叠加 [第 2.3 节](#23-分页参数) 的分页参数。
-- 详情、删除、启停、回滚这类路径参数统一看 [第 3.2 节](#32-通用路径分页与表单参数)。
+- 详情、删除、启停、失败明细导出这类路径参数统一看 [第 3.2 节](#32-通用路径分页与表单参数)。
 - `条件必填` 表示是否必须传入取决于当前接口或其他字段取值，例如“二选一”“指定范围时必填”。
 - 查询接口若使用 `application/x-www-form-urlencoded`，字段名与下文模型字段名完全一致。
 
@@ -205,7 +205,7 @@ pageNum=1&pageSize=20&orderByColumn=createTime&isAsc=desc
 | `isAsc` | form | `String` | 选填 | `asc` 或 `desc` | 分页查询 | `desc` |
 | `id` | path | `Long` | 必填 | 正整数主键 | 标签、监控规则、日志、工单、组织、网格等明确数值主键资源的详情或单对象操作 | `10001` |
 | `ids` | path | `Long[]` | 必填 | 逗号分隔的 `Long` 集合 | 标签、监控任务、异常忽略等明确数值主键资源的批量操作 | `10001,10002` |
-| `recordId` | path | `Long` | 必填 | 正整数主键 | 导入回滚、失败明细导出 | `9001` |
+| `batchId` | path | `Long` | 必填 | 正整数主键 | 导入批次详情、失败明细导出 | `9001` |
 | `segmId` | path | `String` | 必填 | `varchar(24)` 字符串主键 | 标准地址详情、标准地址单对象操作 | `000102010000000011800001` |
 | `segmIds` | path | `String` | 必填 | 逗号分隔的 `varchar(24)` 字符串主键集合 | 标准地址批量删除 | `000102010000000011800001,000102010000000011800002` |
 | `setAddrId` | path | `String` | 必填 | `varchar(24)` 字符串主键 | 安装地址详情、安装地址单对象操作 | `000102010000000099900001` |
@@ -262,9 +262,9 @@ pageNum=1&pageSize=20&orderByColumn=createTime&isAsc=desc
 
 - `stationId/installStationId/busStationId` 的候选主数据当前参考历史库 `spc_station`，并结合 `region_id` 做组织范围约束；管理站类型字典来自 `pub_restriction.keyword='MANAGE_TYPE'`（`2017101=维修`、`2017102=安装`、`2017103=营业`）；源数据暂不区分业务类型，最终类型以地址和管理站关系表中的业务角色为准。
 - 旧文档中的 `code/fullNameSimpleSpell/accessMethod/accessCapabilityCodes/urbanRuralAttr/houseProperty/coverageHouseholds/projectNumber/supportingFeeFlag` 不再作为主命名；若历史接口暂时保留这些字段名，必须在代码或适配层标注其对应物理字段。
-- 旧文档中的 `provinceCode/cityCode/districtCode/streetCode/villageCode` 不是 `ADDR_SEGM` 当前主表的默认直存字段；若页面仍需使用，建议通过 `spec_region/spc_region` 或额外区域映射投影返回，不再默认放入标准地址主 BO。
+- 旧文档中的 `provinceCode/cityCode/districtCode/streetCode/villageCode` 不是 `ADDR_SEGM` 当前主表的默认直存字段；若页面仍需使用，建议通过 `spc_region` 或额外区域映射投影返回，不再默认放入标准地址主 BO。
 
-补充说明：标准地址列表若筛选或返回 `1/2` 级行政区划，优先按 `spec_region` 口径处理；其他级别按 `segm_addr` / 标准地址事实表处理，层级定义统一以 `segm_addr_type.level_id` 为准。需求书写 `spec_region`，历史盘点现写 `spc_region`，实现前需核实际库名。
+补充说明：标准地址列表若筛选或返回 `1/2` 级行政区划，统一按 `spc_region` 口径处理；其他级别按 `addr_segm` / 标准地址事实表处理，层级定义统一以 `segm_addr_type.level_id` 为准，且 `addr_segm` 侧层级条件应用于 `addr_segm.segm_type`。
 
 地址层级口径（摘自 `0323` 需求书，直接影响 `level` 含义）：
 
@@ -345,36 +345,23 @@ pageNum=1&pageSize=20&orderByColumn=createTime&isAsc=desc
 | 字段 | 类型 | 必填 | 格式说明 | 说明 | 示例 |
 | --- | --- | --- | --- | --- | --- |
 | `sourceSegmId` | `String` | 必填 | `varchar(24)` 字符串主键 | 被拆分的源地址 | `000102010000000011800003` |
-| `newAddresses` | `List<StandardAddressBo>` | 必填 | 至少 1 条 | 拆分后的新地址列表 | 见下方 |
+| `splitItems` | `List<StandardAddressSplitItemBo>` | 必填 | 至少 1 条 | 拆分后的新地址最小配置项列表 | 见下方 |
 
-`newAddresses[]` 元素字段口径：
+`splitItems[]` 元素字段口径：
 
 | 字段 | 类型 | 必填 | 格式说明 | 说明 | 示例 |
 | --- | --- | --- | --- | --- | --- |
-| `parentSegmId` | `String` | 必填 | `varchar(24)` 字符串主键 | 新地址父级 | `000102010000000011800010` |
 | `segmName` | `String` | 必填 | 非空字符串 | 新地址名称 | `1单元` |
-| `segmType` | `Integer` | 选填 | `segm_addr_type.addr_type_id` | 地址类型 ID | `180009` |
-| `levelId` | `Integer` | 选填 | 正整数 | 地址层级（真实 `level_id`） | `13` |
-| `status` | `Integer` | 选填 | `ADDR_SEGM_STATUS` 字典值 | 地址状态 | `2140900` |
-| `notes` | `String` | 选填 | 普通文本 | 备注 | `拆分生成` |
 
 ```json
 {
   "sourceSegmId": "000102010000000011800003",
-  "newAddresses": [
+  "splitItems": [
     {
-      "parentSegmId": "000102010000000011800010",
-      "segmName": "1单元",
-      "segmType": 180009,
-      "levelId": 13,
-      "status": 2140900
+      "segmName": "1单元"
     },
     {
-      "parentSegmId": "000102010000000011800010",
-      "segmName": "2单元",
-      "segmType": 180009,
-      "levelId": 13,
-      "status": 2140900
+      "segmName": "2单元"
     }
   ]
 }
@@ -1049,7 +1036,7 @@ segmId=000102010000000011800001&operationType=MERGE&pageNum=1&pageSize=20
 - 方法/路径：`POST /address/standard/list`
 - 请求格式：`application/x-www-form-urlencoded`
 - 功能描述：根据 `segmName`、`standName`、`segmNo`、`standNo`、`segmType`、`levelId`、`parentSegmId`、`regionId`、`districtId`、`serviceRegionId`、`status` 以及分页排序条件查询标准地址列表，并兼容需求书中提到的 `分公司/组织范围`、`地址属性`、`管理站归属` 等扩展筛选。返回字段除基础地址信息外，还应覆盖标签、管理站名称、地址属性摘要、创建时间等，供综合管理、下级地址查看、标签操作和导出复用。
-- 格式要求：分页字段必须和过滤字段一起提交；排序字段建议只允许白名单字段；模糊搜索优先对 `segmName/standName` 生效；`segmType` 是真实存储字段，`levelId` 是按 `segm_addr_type.level_id` 投影后的层级口径；查询结果必须按登录态 `tenantId/deptId` 及数据权限范围过滤；若筛选或返回 `1/2` 级行政区划，优先按 `spec_region` 口径处理，其他级别按 `segm_addr` / 标准地址事实表处理；“下级地址查看”场景必须支持按某个祖先地址查询其全部后代地址，再按层级过滤，不能仅按直属 `parentSegmId` 查询替代。
+- 格式要求：分页字段必须和过滤字段一起提交；排序字段建议只允许白名单字段；模糊搜索优先对 `segmName/standName` 生效；`segmType` 是真实存储字段，`levelId` 是按 `segm_addr_type.level_id` 投影后的层级口径；查询结果必须按登录态 `tenantId/deptId` 及数据权限范围过滤；若筛选或返回 `1/2` 级行政区划，统一按 `spc_region` 口径处理，其他级别按 `addr_segm` / 标准地址事实表处理，且 `addr_segm` 侧层级条件应用于 `addr_segm.segm_type`；“下级地址查看”场景必须支持按某个祖先地址查询其全部后代地址，再按层级过滤，不能仅按直属 `parentSegmId` 查询替代。
 
 请求示例：
 
@@ -1199,27 +1186,19 @@ POST /address/standard/remove/000102010000000011800001,000102010000000011800002?
 - 方法/路径：`POST /address/standard/split`
 - 请求格式：`application/json`
 - 功能描述：将一个源标准地址拆分成多条新地址。适合原始地址过粗、需要细化到单元、楼层或房间的场景。需求书明确“拆分后的地址级别不变”，且 `0323` 备注明确“源地址复制出多个同级地址、属性保持不变、源地址默认删除”，因此拆分主要改变同级名称集合，而不是改变层级；触发拆分后，系统需自动新增拆分后的标准地址，并保留拆分来源关系便于追溯。
-- 格式要求：`sourceSegmId` 必填；`newAddresses` 至少一条；每条新地址都必须满足层级和父子关系约束；拆分结果与源地址必须保持同级；默认继承源地址属性，源地址进入回收 / 删除流程，建议在库表层预留来源 / 状态字段。
+- 格式要求：`sourceSegmId` 必填；`splitItems` 至少一条；每条拆分项当前只允许提交 `segmName`，父级、级别、管理站、接入方式等字段统一由服务层从源地址继承；拆分结果与源地址必须保持同级；默认继承源地址属性，源地址进入回收 / 删除流程，建议在库表层预留来源 / 状态字段。
 
 请求示例：
 
 ```json
 {
   "sourceSegmId": "000102010000000011800003",
-  "newAddresses": [
+  "splitItems": [
     {
-      "parentSegmId": "000102010000000011800010",
-      "segmName": "1单元",
-      "segmType": 180009,
-      "levelId": 13,
-      "status": 2140900
+      "segmName": "1单元"
     },
     {
-      "parentSegmId": "000102010000000011800010",
-      "segmName": "2单元",
-      "segmType": 180009,
-      "levelId": 13,
-      "status": 2140900
+      "segmName": "2单元"
     }
   ]
 }
@@ -1279,26 +1258,24 @@ POST /address/standard/remove/000102010000000011800001,000102010000000011800002?
 
 ### 4.1.11 导入标准地址
 
-- 方法/路径：
-- `POST /address/standard/importData`
-- `POST /address/standard/importStandardAddressData`
+- 方法/路径：`POST /address/standard/import`
 - 请求格式：`multipart/form-data`
 - 功能描述：导入标准地址 Excel 文件，批量写入地址数据，并记录成功数、失败数和错误信息。需求书要求系统提供固定模板下载，模板内置下拉框等限制，导入失败时返回失败明细 Excel；历史数据导入场景中还需兼容有线侧导出的 `csv` 基础数据转换。
-- 格式要求：文件字段名固定为 `file`；`updateSupport` 表示是否允许更新；一二级预置地址不允许通过导入修改；导入记录必须细化到单条数据粒度；“一键撤回”按需求书备注应优先理解为对成功入库数据做回滚、对失败数据返回 Excel 明细，而不是简单整批删库。
+- 格式要求：文件字段名固定为 `file`；`updateSupport` 表示是否允许更新；一二级预置地址不允许通过导入修改；导入记录必须细化到单条数据粒度；当前阶段不提供部分成功数据回滚，只要求把当前批次失败数据记录并支持 Excel 导出。
 
 请求示例：
 
 ```http
-POST /address/standard/importData?updateSupport=false
+POST /address/standard/import?updateSupport=false
 Content-Type: multipart/form-data
 ```
 
-### 4.1.12 导入回滚
+### 4.1.12 下载导入模板
 
-- 方法/路径：`POST /address/standard/importRollback/{recordId}`
+- 方法/路径：`POST /address/standard/import/template`
 - 请求格式：无请求体
-- 功能描述：根据导入记录主键回滚一次导入。适用于导入错误、模板错误或需求回退场景。结合需求书备注，如果导入明细按单条记录建模，则回滚能力需要能够从单条明细追溯到其所属批次以及该条记录实际写入的地址数据。
-- 格式要求：只能回滚符合状态要求的导入批次或明细；需要能追溯到本次导入创建的所有地址记录；失败数据本身不应参与回滚删除，而应保留失败明细供下载修正。
+- 功能描述：下载标准地址导入模板，供导入弹窗直接使用。
+- 格式要求：响应为 Excel 文件流；模板列头、级别下拉和字段命名需与当前 `spc_region + addr_segm` 口径及最新导入合同保持一致。
 
 ## 4.2 标签管理
 
@@ -1371,21 +1348,29 @@ Content-Type: multipart/form-data
 
 - 方法/路径：`POST /address/import-record/list`
 - 请求格式：`application/x-www-form-urlencoded`
-- 功能描述：根据 `fileName`、`status`、`createBy` 和分页条件查询导入记录，返回文件名、成功数、失败数、错误信息、创建时间等字段。结合需求书备注，该列表默认应按“单条导入明细”粒度展示，至少能看到标准地址、导入时间、操作人、导入结果和失败原因；如页面需要批次视图，可在此基础上聚合。
-- 格式要求：适合导入记录列表页和导入历史页面；需要支持按地址名称、操作时间、操作人等条件查询。
+- 功能描述：根据 `fileName`、`status`、`segmName`、`createBy` 和分页条件查询导入失败明细，返回批次号、文件名、行号、父级地址、当级名称、地址级别、失败原因和创建时间等字段。该列表默认按“单条失败明细”粒度展示，满足原型中的失败明细分页页需求。
+- 格式要求：必须依赖数据库真实分页；支持按导入文件、地址名称、操作时间、操作人等条件组合筛选；页面中的批次信息需通过联表回填 `batchNo/fileName`。
 
-### 4.3.2 导入记录详情
+### 4.3.2 导入批次详情
 
-- 方法/路径：`POST /address/import-record/{id}`
-- 功能描述：根据导入记录主键查询单条导入记录详情，主要用于查看某次导入的结果和回滚入口。如果列表按单条明细展示，则详情页需能继续回溯所属批次、原始导入文件和本条记录的错误原因。
+- 方法/路径：`POST /address/import-record/batch/{batchId}`
+- 功能描述：根据导入批次主键查询批次摘要，主要用于导入结果弹窗、失败明细页顶部摘要和失败导出入口。
+- 格式要求：返回字段至少包含 `batchId/batchNo/fileName/status/totalCount/successCount/failCount/updateSupport/errorMsg/createBy/createTime`。
 
-### 4.3.3 操作日志列表
+### 4.3.3 失败明细导出
+
+- 方法/路径：`POST /address/import-record/failure/export/{batchId}`
+- 请求格式：无请求体
+- 功能描述：导出指定导入批次下的失败明细 Excel，供用户修正后重新导入。
+- 格式要求：只导出当前批次失败数据；响应为 Excel 文件流；不得把成功数据或其他批次失败数据混入导出结果。
+
+### 4.3.4 操作日志列表
 
 - 方法/路径：`POST /address/operation-log/list`
 - 请求格式：`application/x-www-form-urlencoded`
 - 功能描述：根据 `segmId`、`operationType`、`operator`、分页排序条件查询操作日志。返回字段至少包括日志主键、标准地址主键、操作类型、操作人、操作时间、操作详情。
 
-### 4.3.4 操作日志详情
+### 4.3.5 操作日志详情
 
 - 方法/路径：`POST /address/operation-log/{id}`
 - 功能描述：查看一条日志的详细操作信息，用于审计追溯。
@@ -1658,7 +1643,7 @@ keyword=中央路88号&levelMax=10&limit=20
 
 - 所属管理站分为 `维修管理站`、`安装管理站`、`营业管理站` 三种类型；单条地址最多同时归属这三种不同管理站各一个。
 - 管理站历史主数据当前参考 `spc_station` 并结合 `region_id` 划分；管理站类型字典来自 `pub_restriction.keyword='MANAGE_TYPE'`，其中 `2017101=维修`、`2017102=安装`、`2017103=营业`；由于源表暂不区分业务类型，系统需要在地址与管理站关系层补齐 `维修/安装/营业` 三类业务角色。
-- `spc_station`、`spc_region` 已具备字段级结构索引，并且现在可与 `0323` 需求书备注合并引用；如遇到 `spec_region/spc_region` 命名差异或联调库差异，实现前以实际库表核验结果为准。
+- `spc_station`、`spc_region` 已具备字段级结构索引，并且现在可与 `0323` 需求书备注合并引用；当前实现、文档与 SQL 统一使用 `spc_region` 表名。
 - 地址属性至少包含 `接入方式`、`接入能力`、`城乡属性`、`房屋属性`、`覆盖户数`、`工程编号`、`是否配套费小区`。
 - 如果要兼容老系统外部接口，还需进一步细化并保留 `FTTH_PON_TYPE`、`ADDR_IN_TYPE_FTTH`、`ADDR_IN_TYPE_LAN` 及其对应字典 ID，不宜只保留一个泛化的 `accessMethod` 字段。
 - 因此 [标准地址详情](/Users/criswu/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-modules/ruoyi-address/docs/reference/vibe-coding-api-manual.md#4112-标准地址详情)、[新增标准地址](/Users/criswu/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-modules/ruoyi-address/docs/reference/vibe-coding-api-manual.md#4113-新增标准地址)、[修改标准地址](/Users/criswu/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-modules/ruoyi-address/docs/reference/vibe-coding-api-manual.md#4114-修改标准地址)、[导出标准地址](/Users/criswu/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-modules/ruoyi-address/docs/reference/vibe-coding-api-manual.md#4110-导出标准地址) 必须覆盖这些字段。
@@ -1962,7 +1947,7 @@ keyword=中央路88号&levelMax=10&limit=20
 不要擅自新增接口清单之外的业务接口。
 优先复用 ruoyi-address 已有 StandardAddress 相关 Service/Mapper 风格。
 网格模块当前没有现成实现，请按 controller -> service -> mapper -> domain 的顺序补齐。
-实现时重点处理层级校验、幂等、删除约束、导入回滚、历史迁移、双向增量同步和操作日志。
+实现时重点处理层级校验、幂等、删除约束、导入失败明细记录与导出、历史迁移、双向增量同步和操作日志。
 同时覆盖租户/部门数据范围过滤、地址拼装简拼级联刷新、单条导入明细记录、管理站关系、地址属性扩展、`isCity + areaType` 组合判定、批量新增 `200` 条候选限制、安装地址默认关联标准地址、楼栋级网格唯一归属及客户覆盖优先级；其中“楼栋级”统一按业务语义 + 类型映射解析，不按固定数值硬编码。
 ```
 

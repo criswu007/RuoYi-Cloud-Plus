@@ -12,9 +12,9 @@ import org.dromara.common.mybatis.core.domain.BaseEntity;
 public class StandardAddressImportRecordBo extends BaseEntity {
 
     /**
-     * 主键ID
+     * 批次ID
      */
-    private Long id;
+    private Long batchId;
 
     /**
      * 导入文件名
@@ -27,12 +27,20 @@ public class StandardAddressImportRecordBo extends BaseEntity {
     private String status;
 
     /**
-     * 错误信息
+     * 当级名称关键字
      */
-    private String errorMsg;
+    private String segmName;
 
     /**
      * 创建者（用户ID）
      */
     private Long createBy;
+
+    /**
+     * 原始主键兼容字段
+     */
+    @Deprecated
+    public Long getId() {
+        return batchId;
+    }
 }

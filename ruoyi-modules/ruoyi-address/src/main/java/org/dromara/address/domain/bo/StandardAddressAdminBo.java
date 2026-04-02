@@ -1,5 +1,6 @@
 package org.dromara.address.domain.bo;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.dromara.common.mybatis.core.domain.BaseEntity;
@@ -156,6 +157,34 @@ public final class StandardAddressAdminBo {
 
         /**
          * 限制条数。
+         */
+        private Integer limit;
+    }
+
+    @Data
+    public static class StationOptionQueryBo implements Serializable {
+
+        @Serial
+        private static final long serialVersionUID = 1L;
+
+        /**
+         * 当前地址所属区域 ID，对应 `ADDR_SEGM.region_id` / `spc_station.region_id`。
+         */
+        private String regionId;
+
+        /**
+         * 管理站类型，对应 `pub_restriction.keyword='MANAGE_TYPE'` 的字典值。
+         */
+        @NotBlank(message = "管理站类型不能为空")
+        private String manageType;
+
+        /**
+         * 管理站搜索关键字，优先匹配管理站名称，也兼容按管理站 ID 检索。
+         */
+        private String keyword;
+
+        /**
+         * 返回数量上限，未传时由服务层按默认值兜底。
          */
         private Integer limit;
     }

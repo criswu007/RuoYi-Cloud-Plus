@@ -5,10 +5,9 @@
 <mapper namespace="org.dromara.address.mapper.SegmAddrTypeMapper">
 
     <select id="selectLevelIdByAddrTypeId" resultType="java.lang.Integer">
-        select level_id
+        select max(level_id)
         from segm_addr_type
         where addr_type_id = #{addrTypeId}
-        limit 1
     </select>
 
     <select id="selectAddrTypeIdsByLevelId" resultType="java.lang.String">
@@ -19,20 +18,15 @@
     </select>
 
     <select id="selectNextLevelId" resultType="java.lang.Integer">
-        select level_id
+        select min(level_id)
         from segm_addr_type
         where level_id &gt; #{currentLevelId}
-        group by level_id
-        order by level_id
-        limit 1
     </select>
 
     <select id="selectFirstAddrTypeIdByLevelId" resultType="java.lang.String">
-        select addr_type_id
+        select min(addr_type_id)
         from segm_addr_type
         where level_id = #{levelId}
-        order by addr_type_id
-        limit 1
     </select>
 
 </mapper>

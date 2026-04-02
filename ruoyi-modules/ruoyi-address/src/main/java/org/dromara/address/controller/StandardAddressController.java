@@ -3,18 +3,22 @@ package org.dromara.address.controller;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.dromara.address.domain.bo.StandardAddressAdminBo;
 import org.dromara.address.domain.bo.StandardAddressBatchAddBo;
 import org.dromara.address.domain.bo.StandardAddressBo;
 import org.dromara.address.domain.bo.StandardAddressMergeBo;
 import org.dromara.address.domain.bo.StandardAddressSplitBo;
 import org.dromara.address.domain.vo.StandardAddressAdminVo;
+import org.dromara.address.domain.vo.StandardAddressImportResultVo;
 import org.dromara.address.domain.vo.StandardAddressImportVo;
 import org.dromara.address.domain.vo.StandardAddressVo;
 import org.dromara.address.service.IStandardAddressService;
 import org.dromara.common.core.domain.R;
+import org.dromara.common.core.utils.file.FileUtils;
 import org.dromara.common.excel.core.DefaultExcelListener;
 import org.dromara.common.excel.core.ExcelResult;
 import org.dromara.common.excel.utils.ExcelUtil;
+import org.dromara.common.excel.utils.ExcelWriterWrapper;
 import org.dromara.common.log.annotation.Log;
 import org.dromara.common.log.enums.BusinessType;
 import org.dromara.common.mybatis.core.page.PageQuery;
@@ -24,6 +28,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -38,6 +43,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/address/standard")
 public class StandardAddressController extends StandardAddressAdminApiSupport {
+
+    private static final int EXPORT_BATCH_SIZE = 500;
 
     private final IStandardAddressService addressStandardService;
 
@@ -55,6 +62,52 @@ public class StandardAddressController extends StandardAddressAdminApiSupport {
     @PostMapping("/list")
     public TableDataInfo<StandardAddressVo> listStandardAddresses(StandardAddressBo bo, PageQuery pageQuery) {
         return addressStandardService.queryStandardAddressPageList(bo, pageQuery);
+    }
+
+    /**
+     * 查询标准地址级别选项。
+     *
+     * @return 标准地址级别字典
+     *
+     * 关键约束：选项必须以线上 `segm_addr_type` 的真实层级定义为准。
+     * 异常与副作用：无写入副作用。
+     */
+    @Override
+    @SaCheckPermission("address:standard:list")
+    @PostMapping("/levelOptions")
+    public R<List<StandardAddressAdminVo.LevelOptionVo>> listStandardAddressLevelOptions() {
+        return R.ok(addressStandardService.listStandardAddressLevelOptions());
+    }
+
+    /**
+     * 查询标准地址编辑页聚合字典。
+     *
+     * @return 编辑页聚合字典
+     *
+     * 关键约束：状态、接入方式、接入能力、城乡属性、房屋属性等选项必须直接来源于线上 `pub_restriction`。
+     * 异常与副作用：无写入副作用。
+     */
+    @Override
+    @SaCheckPermission("address:standard:list")
+    @PostMapping("/formOptions")
+    public R<StandardAddressAdminVo.FormOptionsVo> listStandardAddressFormOptions() {
+        return R.ok(addressStandardService.listStandardAddressFormOptions());
+    }
+
+    /**
+     * 查询标准地址编辑页管理站候选。
+     *
+     * @param bo 管理站候选查询条件
+     * @return 管理站候选列表
+     *
+     * 关键约束：必须显式按 `manageType` 区分维修、安装、营业管理站，并优先按 `regionId` 收敛结果。
+     * 异常与副作用：无写入副作用。
+     */
+    @Override
+    @SaCheckPermission("address:standard:list")
+    @PostMapping("/stationOptions")
+    public R<List<StandardAddressAdminVo.StationOptionVo>> listStandardAddressStationOptions(@RequestBody @Validated StandardAddressAdminBo.StationOptionQueryBo bo) {
+        return R.ok(addressStandardService.listStandardAddressStationOptions(bo));
     }
 
     /**
@@ -139,7 +192,7 @@ public class StandardAddressController extends StandardAddressAdminApiSupport {
     @Log(title = "标准地址", businessType = BusinessType.UPDATE)
     @PostMapping("/merge")
     public R<Void> mergeStandardAddresses(@RequestBody StandardAddressMergeBo bo) {
-        return toAjax(addressStandardService.mergeStandardAddresses(bo.getSourceStandardAddressIds(), bo.getTargetStandardAddressId()));
+        return toAjax(addressStandardService.mergeStandardAddresses(bo.getSourceSegmIds(), bo.getTargetSegmId()));
     }
 
     /**
@@ -156,7 +209,7 @@ public class StandardAddressController extends StandardAddressAdminApiSupport {
     @Log(title = "标准地址", businessType = BusinessType.UPDATE)
     @PostMapping("/split")
     public R<Void> splitStandardAddress(@RequestBody StandardAddressSplitBo bo) {
-        return toAjax(addressStandardService.splitStandardAddress(bo.getSourceStandardAddressId(), bo.getNewAddresses()));
+        return toAjax(addressStandardService.splitStandardAddress(bo.getSourceSegmId(), bo.getSplitItems()));
     }
 
     /**
@@ -196,15 +249,63 @@ public class StandardAddressController extends StandardAddressAdminApiSupport {
      * @param bo 查询条件
      * @param response 响应输出流
      *
-     * 副作用：输出 Excel 文件。
+     * 关键约束：导出必须按分页分批拉取标准地址数据，避免超大数据量下全量加载造成内存放大。
+     * 异常与副作用：输出 Excel 文件；写出流异常时抛出运行时异常。
      */
     @Override
     @SaCheckPermission("address:standard:export")
     @Log(title = "标准地址", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
     public void exportStandardAddresses(StandardAddressBo bo, HttpServletResponse response) {
-        List<StandardAddressVo> list = addressStandardService.queryStandardAddressList(bo);
-        ExcelUtil.exportExcel(list, "标准地址", StandardAddressVo.class, response);
+        try {
+            FileUtils.setAttachmentResponseHeader(response, ExcelUtil.encodingFilename("标准地址"));
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8");
+            ExcelUtil.exportExcel(StandardAddressVo.class, response.getOutputStream(), writer -> writeStandardAddressExportRows(bo, writer));
+        } catch (IOException e) {
+            throw new RuntimeException("导出标准地址异常", e);
+        }
+    }
+
+    /**
+     * 目的：下载标准地址导入模板。
+     * 入参：响应输出流。
+     * 出参：无，直接向响应流写出模板文件。
+     * 关键约束：模板字段口径必须与当前导入接口合同保持一致。
+     * 异常与副作用：会写出 Excel 文件流，不产生数据库写入副作用。
+     */
+    @Override
+    @SaCheckPermission("address:standard:import")
+    @PostMapping("/import/template")
+    public void downloadStandardAddressImportTemplate(HttpServletResponse response) throws Exception {
+        FileUtils.setAttachmentResponseHeader(response, ExcelUtil.encodingFilename("标准地址导入模板"));
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8");
+        ExcelUtil.exportExcel(List.of(), "标准地址导入模板", StandardAddressImportVo.class, response.getOutputStream());
+    }
+
+    /**
+     * 目的：按分页批次写出标准地址导出数据。
+     * 入参：标准地址查询条件与 Excel 写出包装器。
+     * 出参：无，直接把查询结果逐批写入工作表。
+     * 关键约束：每批最多拉取 `500` 条，直到达到总记录数或当前批次为空，禁止一次性全量加载。
+     * 异常与副作用：会持续写入响应输出流，不产生数据库写入副作用。
+     */
+    private void writeStandardAddressExportRows(StandardAddressBo bo, ExcelWriterWrapper<StandardAddressVo> writer) {
+        long total = Long.MAX_VALUE;
+        int pageNum = 1;
+        var writeSheet = ExcelWriterWrapper.buildSheet("标准地址");
+        while (((long) (pageNum - 1) * EXPORT_BATCH_SIZE) < total) {
+            TableDataInfo<StandardAddressVo> pageData = addressStandardService.queryStandardAddressPageList(bo, new PageQuery(EXPORT_BATCH_SIZE, pageNum));
+            List<StandardAddressVo> rows = pageData.getRows();
+            if (rows == null || rows.isEmpty()) {
+                return;
+            }
+            writer.write(rows, writeSheet);
+            total = pageData.getTotal();
+            if (((long) pageNum * EXPORT_BATCH_SIZE) >= total) {
+                return;
+            }
+            pageNum++;
+        }
     }
 
     /**
@@ -221,10 +322,10 @@ public class StandardAddressController extends StandardAddressAdminApiSupport {
     @Override
     @SaCheckPermission("address:standard:import")
     @Log(title = "标准地址", businessType = BusinessType.IMPORT)
-    @PostMapping({"/importData", "/importStandardAddressData"})
-    public R<String> importStandardAddressData(MultipartFile file, boolean updateSupport) throws Exception {
+    @PostMapping("/import")
+    public R<StandardAddressImportResultVo> importStandardAddressData(MultipartFile file, boolean updateSupport) throws Exception {
         ExcelResult<StandardAddressImportVo> result = ExcelUtil.importExcel(file.getInputStream(), StandardAddressImportVo.class, new DefaultExcelListener<>());
-        String msg = addressStandardService.importStandardAddressData(result.getList(), updateSupport, LoginHelper.getUsername(), file.getOriginalFilename());
-        return R.ok(msg);
+        StandardAddressImportResultVo summary = addressStandardService.importStandardAddressData(result.getList(), updateSupport, LoginHelper.getUsername(), file.getOriginalFilename());
+        return R.ok(summary);
     }
 }

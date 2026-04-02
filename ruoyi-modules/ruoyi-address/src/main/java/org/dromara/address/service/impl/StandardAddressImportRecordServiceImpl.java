@@ -7,15 +7,15 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.dromara.address.domain.StandardAddressImportRecord;
 import org.dromara.address.domain.bo.StandardAddressImportRecordBo;
+import org.dromara.address.domain.vo.StandardAddressImportBatchVo;
 import org.dromara.address.domain.vo.StandardAddressImportRecordVo;
+import org.dromara.address.mapper.StandardAddressImportFailDetailMapper;
 import org.dromara.address.mapper.StandardAddressImportRecordMapper;
 import org.dromara.address.service.IStandardAddressImportRecordService;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -30,13 +30,30 @@ import java.util.List;
 public class StandardAddressImportRecordServiceImpl implements IStandardAddressImportRecordService {
 
     private final StandardAddressImportRecordMapper baseMapper;
+    private final StandardAddressImportFailDetailMapper failDetailMapper;
 
     @Override
     /**
      * {@inheritDoc}
      */
-    public StandardAddressImportRecordVo queryById(Long id) {
-        return baseMapper.selectVoById(id);
+    public StandardAddressImportBatchVo queryBatchById(Long batchId) {
+        StandardAddressImportRecord record = baseMapper.selectById(batchId);
+        if (record == null) {
+            return null;
+        }
+        StandardAddressImportBatchVo batchVo = new StandardAddressImportBatchVo();
+        batchVo.setBatchId(record.getId());
+        batchVo.setBatchNo(record.getBatchNo());
+        batchVo.setFileName(record.getFileName());
+        batchVo.setStatus(record.getStatus());
+        batchVo.setTotalCount(record.getTotalCount());
+        batchVo.setSuccessCount(record.getSuccessCount());
+        batchVo.setFailCount(record.getFailCount());
+        batchVo.setUpdateSupport(record.getUpdateSupport());
+        batchVo.setErrorMsg(record.getErrorMsg());
+        batchVo.setCreateBy(record.getCreateBy());
+        batchVo.setCreateTime(record.getCreateTime());
+        return batchVo;
     }
 
     @Override
@@ -44,8 +61,7 @@ public class StandardAddressImportRecordServiceImpl implements IStandardAddressI
      * {@inheritDoc}
      */
     public TableDataInfo<StandardAddressImportRecordVo> queryPageList(StandardAddressImportRecordBo bo, PageQuery pageQuery) {
-        LambdaQueryWrapper<StandardAddressImportRecord> lqw = buildQueryWrapper(bo);
-        Page<StandardAddressImportRecordVo> result = baseMapper.selectVoPage(pageQuery.build(), lqw);
+        Page<StandardAddressImportRecordVo> result = failDetailMapper.selectFailDetailPage(pageQuery.build(), bo);
         return TableDataInfo.build(result);
     }
 
@@ -53,9 +69,8 @@ public class StandardAddressImportRecordServiceImpl implements IStandardAddressI
     /**
      * {@inheritDoc}
      */
-    public List<StandardAddressImportRecordVo> queryList(StandardAddressImportRecordBo bo) {
-        LambdaQueryWrapper<StandardAddressImportRecord> lqw = buildQueryWrapper(bo);
-        return baseMapper.selectVoList(lqw);
+    public List<StandardAddressImportRecordVo> listFailDetailsByBatchId(Long batchId) {
+        return failDetailMapper.selectFailDetailListByBatchId(batchId);
     }
 
     private LambdaQueryWrapper<StandardAddressImportRecord> buildQueryWrapper(StandardAddressImportRecordBo bo) {
@@ -68,20 +83,5 @@ public class StandardAddressImportRecordServiceImpl implements IStandardAddressI
             lqw.between(true, StandardAddressImportRecord::getCreateTime, bo.getParams().get("beginTime"), bo.getParams().get("endTime"));
         }
         return lqw;
-    }
-
-    @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
-    /**
-     * {@inheritDoc}
-     */
-    public void saveRecord(String fileName, String status, int successCount, int failCount, String errorMsg, String operator) {
-        StandardAddressImportRecord record = new StandardAddressImportRecord();
-        record.setFileName(StringUtils.blankToDefault(fileName, "unknown"));
-        record.setStatus(status);
-        record.setSuccessCount(successCount);
-        record.setFailCount(failCount);
-        record.setErrorMsg(errorMsg);
-        baseMapper.insert(record);
     }
 }

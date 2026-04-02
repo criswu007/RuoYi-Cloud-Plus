@@ -20,6 +20,7 @@ import org.dromara.address.domain.bo.StandardAddressTagBindBo;
 import org.dromara.address.domain.bo.StandardAddressTagBo;
 import org.dromara.address.domain.vo.InstallationAddressVo;
 import org.dromara.address.domain.vo.StandardAddressAdminVo;
+import org.dromara.address.domain.vo.StandardAddressImportResultVo;
 import org.dromara.address.domain.vo.StandardAddressImportRecordVo;
 import org.dromara.address.domain.vo.StandardAddressMonitorRecordVo;
 import org.dromara.address.domain.vo.StandardAddressMonitorRuleVo;
@@ -60,6 +61,37 @@ public interface StandardAddressAdminApi {
      */
     @PostMapping("/address/standard/list")
     TableDataInfo<StandardAddressVo> listStandardAddresses(StandardAddressBo bo, PageQuery pageQuery);
+
+    /**
+     * 目的：查询标准地址级别下拉选项。
+     * 入参：无。
+     * 出参：标准地址级别字典集合。
+     * 关键约束：选项必须直接来源于线上 `segm_addr_type` 的 19 级数据。
+     * 异常与副作用：无写入副作用。
+     */
+    @PostMapping("/address/standard/levelOptions")
+    R<List<StandardAddressAdminVo.LevelOptionVo>> listStandardAddressLevelOptions();
+
+    /**
+     * 目的：查询标准地址编辑页聚合字典。
+     * 入参：无。
+     * 出参：状态、接入方式、接入能力、城乡属性、房屋属性等字典分组。
+     * 关键约束：字典值必须直接来源于线上 `pub_restriction`，返回 key 与表单字段保持一致。
+     * 异常与副作用：无写入副作用。
+     */
+    @PostMapping("/address/standard/formOptions")
+    R<StandardAddressAdminVo.FormOptionsVo> listStandardAddressFormOptions();
+
+    /**
+     * 目的：查询标准地址编辑页管理站候选。
+     * 入参：区域、管理站类型、搜索关键字与返回上限。
+     * 出参：管理站候选集合。
+     * 关键约束：必须显式按 `manageType` 区分维修/安装/营业管理站。
+     * 异常与副作用：无写入副作用。
+     */
+    @PostMapping("/address/standard/stationOptions")
+    R<List<StandardAddressAdminVo.StationOptionVo>> listStandardAddressStationOptions(
+        @Valid @RequestBody StandardAddressAdminBo.StationOptionQueryBo bo);
 
     /**
      * 目的：查询标准地址详情。
@@ -153,25 +185,25 @@ public interface StandardAddressAdminApi {
     void exportStandardAddresses(StandardAddressBo bo, HttpServletResponse response);
 
     /**
+     * 目的：下载标准地址导入模板。
+     * 入参：响应流。
+     * 出参：Excel 模板文件流。
+     * 关键约束：模板需与线上字段口径和当前导入合同保持一致。
+     * 异常与副作用：成功后会向响应流写出模板内容。
+     */
+    @PostMapping("/address/standard/import/template")
+    void downloadStandardAddressImportTemplate(HttpServletResponse response) throws Exception;
+
+    /**
      * 目的：导入标准地址数据。
      * 入参：导入文件与是否允许更新。
      * 出参：导入结果描述。
-     * 关键约束：导入模板、失败明细和撤回规则由实现层统一保证。
+     * 关键约束：导入模板、失败明细记录与失败导出规则由实现层统一保证，本轮不提供成功数据回滚。
      * 异常与副作用：成功后会写入地址数据、导入记录和操作日志。
      */
-    @PostMapping({"/address/standard/importData", "/address/standard/importStandardAddressData"})
-    R<String> importStandardAddressData(@RequestPart("file") MultipartFile file,
-                                        @RequestParam(defaultValue = "false") boolean updateSupport) throws Exception;
-
-    /**
-     * 目的：撤回一次标准地址导入。
-     * 入参：导入记录主键。
-     * 出参：统一操作结果。
-     * 关键约束：仅允许撤回符合状态要求的导入批次。
-     * 异常与副作用：成功后会回滚本次导入产生的数据。
-     */
-    @PostMapping("/address/standard/importRollback/{recordId}")
-    R<Void> rollbackImportRecord(@NotNull(message = "导入记录不能为空") @PathVariable Long recordId);
+    @PostMapping("/address/standard/import")
+    R<StandardAddressImportResultVo> importStandardAddressData(@RequestPart("file") MultipartFile file,
+                                                               @RequestParam(defaultValue = "false") boolean updateSupport) throws Exception;
 
     /**
      * 目的：分页查询标签。

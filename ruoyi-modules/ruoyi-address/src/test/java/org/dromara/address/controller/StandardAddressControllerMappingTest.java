@@ -15,13 +15,20 @@ class StandardAddressControllerMappingTest {
     @Test
     void shouldUsePostMappingsForCoreEndpoints() throws Exception {
         assertHasPostMapping("listStandardAddresses");
+        assertHasPostMapping("listStandardAddressLevelOptions");
+        assertHasPostMapping("listStandardAddressFormOptions");
+        assertHasPostMapping("listStandardAddressStationOptions");
         assertHasPostMapping("getStandardAddressInfo");
         assertHasPostMapping("addStandardAddress");
         assertHasPostMapping("editStandardAddress");
         assertHasPostMapping("removeStandardAddresses");
+        assertHasPostMapping("mergeStandardAddresses");
+        assertHasPostMapping("splitStandardAddress");
         assertHasPostMapping("previewStandardAddressChildren");
         assertHasPostMapping("batchAddStandardAddressChildren");
         assertHasPostMapping("exportStandardAddresses");
+        assertHasPostMapping("downloadStandardAddressImportTemplate");
+        assertHasPostMapping("importStandardAddressData");
     }
 
     @Test

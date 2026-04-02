@@ -1,6 +1,10 @@
+DROP TABLE IF EXISTS address_standard_import_fail_detail;
+DROP TABLE IF EXISTS address_standard_import_record;
 DROP TABLE IF EXISTS ADDR_SET_SEGM;
 DROP TABLE IF EXISTS ADDR_SEGM;
+DROP TABLE IF EXISTS spc_station;
 DROP TABLE IF EXISTS spc_region;
+DROP TABLE IF EXISTS pub_restriction;
 DROP TABLE IF EXISTS segm_addr_type;
 
 CREATE TABLE segm_addr_type (
@@ -21,6 +25,24 @@ CREATE TABLE spc_region (
     delete_state CHAR(1) DEFAULT '0',
     notes VARCHAR(255),
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    create_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE spc_station (
+    station_id VARCHAR(24) PRIMARY KEY,
+    station_name VARCHAR(100) NOT NULL,
+    region_id VARCHAR(24),
+    manage_type VARCHAR(24),
+    notes VARCHAR(255),
+    create_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE pub_restriction (
+    serial_no VARCHAR(24) PRIMARY KEY,
+    keyword VARCHAR(80) NOT NULL,
+    desc_china VARCHAR(200) NOT NULL,
+    code VARCHAR(80),
+    notes VARCHAR(255),
     create_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -62,3 +84,49 @@ CREATE TABLE ADDR_SET_SEGM (
     segm_id VARCHAR(24),
     delete_state CHAR(1) DEFAULT '0'
 );
+
+CREATE TABLE address_standard_import_record (
+    id BIGINT PRIMARY KEY,
+    batch_no VARCHAR(64) NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    status CHAR(1) DEFAULT '0',
+    total_count INT DEFAULT 0,
+    success_count INT DEFAULT 0,
+    fail_count INT DEFAULT 0,
+    error_msg VARCHAR(2000),
+    update_support BOOLEAN DEFAULT FALSE,
+    tenant_id VARCHAR(20) DEFAULT '000000',
+    create_dept BIGINT,
+    create_by BIGINT,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_by BIGINT,
+    update_time TIMESTAMP,
+    del_flag CHAR(1) DEFAULT '0'
+);
+
+CREATE INDEX idx_addr_std_imp_record_batch_no ON address_standard_import_record(batch_no);
+CREATE INDEX idx_addr_std_imp_record_create_time ON address_standard_import_record(create_time);
+
+CREATE TABLE address_standard_import_fail_detail (
+    id BIGINT PRIMARY KEY,
+    batch_id BIGINT NOT NULL,
+    row_num INT NOT NULL,
+    parent_stand_name VARCHAR(500),
+    segm_name VARCHAR(255),
+    segm_type VARCHAR(24),
+    addr_level INT,
+    status CHAR(1) DEFAULT '2',
+    fail_reason VARCHAR(1000),
+    raw_payload CLOB,
+    tenant_id VARCHAR(20) DEFAULT '000000',
+    create_dept BIGINT,
+    create_by BIGINT,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_by BIGINT,
+    update_time TIMESTAMP,
+    del_flag CHAR(1) DEFAULT '0',
+    CONSTRAINT fk_addr_std_imp_fail_batch FOREIGN KEY (batch_id) REFERENCES address_standard_import_record(id)
+);
+
+CREATE INDEX idx_addr_std_imp_fail_batch_id ON address_standard_import_fail_detail(batch_id);
+CREATE INDEX idx_addr_std_imp_fail_create_time ON address_standard_import_fail_detail(create_time);

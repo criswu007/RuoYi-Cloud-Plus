@@ -1,21 +1,22 @@
 package org.dromara.address.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.dromara.address.domain.bo.StandardAddressImportRecordBo;
+import org.dromara.address.domain.vo.StandardAddressImportBatchVo;
 import org.dromara.address.domain.vo.StandardAddressImportRecordVo;
 import org.dromara.address.service.IStandardAddressImportRecordService;
 import org.dromara.common.core.domain.R;
+import org.dromara.common.core.utils.file.FileUtils;
+import org.dromara.common.excel.utils.ExcelUtil;
 import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
-import org.dromara.common.web.core.BaseController;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import jakarta.validation.constraints.NotNull;
 
 /**
  * 地址导入记录对外接口。
@@ -26,7 +27,7 @@ import jakarta.validation.constraints.NotNull;
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/address/import-record")
-public class StandardAddressImportRecordController extends BaseController {
+public class StandardAddressImportRecordController {
 
     private final IStandardAddressImportRecordService importRecordService;
 
@@ -38,20 +39,38 @@ public class StandardAddressImportRecordController extends BaseController {
      * @return 分页结果
      */
     @SaCheckPermission("address:import:record:list")
-    @GetMapping("/list")
+    @PostMapping("/list")
     public TableDataInfo<StandardAddressImportRecordVo> list(StandardAddressImportRecordBo bo, PageQuery pageQuery) {
         return importRecordService.queryPageList(bo, pageQuery);
     }
 
     /**
-     * 获取导入记录详情。
+     * 获取导入批次详情。
      *
-     * @param id 主键ID
-     * @return 导入记录详情
+     * @param batchId 批次ID
+     * @return 批次详情
      */
     @SaCheckPermission("address:import:record:query")
-    @GetMapping("/{id}")
-    public R<StandardAddressImportRecordVo> getInfo(@NotNull(message = "主键不能为空") @PathVariable Long id) {
-        return R.ok(importRecordService.queryById(id));
+    @PostMapping("/batch/{batchId}")
+    public R<StandardAddressImportBatchVo> getBatchInfo(@PathVariable Long batchId) {
+        return R.ok(importRecordService.queryBatchById(batchId));
+    }
+
+    /**
+     * 导出当前批次失败明细。
+     *
+     * @param batchId 批次ID
+     * @param response 响应流
+     * @throws Exception 写出异常
+     */
+    @SaCheckPermission("address:import:record:export")
+    @PostMapping("/failure/export/{batchId}")
+    public void exportFailureDetails(@PathVariable Long batchId, HttpServletResponse response) throws Exception {
+        FileUtils.setAttachmentResponseHeader(response, ExcelUtil.encodingFilename("标准地址导入失败明细"));
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8");
+        ExcelUtil.exportExcel(importRecordService.listFailDetailsByBatchId(batchId),
+            "标准地址导入失败明细",
+            StandardAddressImportRecordVo.class,
+            response);
     }
 }

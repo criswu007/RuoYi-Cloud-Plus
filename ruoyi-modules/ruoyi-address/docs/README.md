@@ -1,5 +1,11 @@
 # `ruoyi-address` 文档导航
 
+## 项目地址
+
+1. 前端：ruoyi-address-ui
+2. 后端：ruoyi-modules/ruoyi-address
+3. 原型网页：https://ftthtest.wetrytech.com/#/login 账号密码：shazhengbo/Wetry2026!
+
 > 当前主线目标是先完成 `ruoyi-address` 标准地址与网格模块的程序设计前置工作。主视角只保留少量活跃文档，旧批次、旧设计稿和过程材料统一收口到 [archive/README.md](./archive/README.md)。
 
 ## 程序设计前先看这 5 份
@@ -53,4 +59,5 @@
 - “当前生效的结构、接口、规则”只写在活跃文档，不写在过程稿里。
 - 标准地址 / 安装地址命名收口与代码落地约束，统一以 [project-baseline.md](./project-baseline.md)、[historical-schema-baseline.md](./historical-schema-baseline.md) 与 [reference/vibe-coding-api-manual.md](./reference/vibe-coding-api-manual.md) 为准；若示例仍出现 legacy 占位名，内部主模型仍优先按 `segmId/setAddrId/segmType/levelId/notes` 等推荐命名实现。
 - 需求书新增备注、系统级约束和标后测试门槛，必须同步回主线活跃文档，不能只留在临时分析记录里。
+- 标准地址模块已启用可视化辅助作为原型交互与页面效果比对手段；后续涉及标准地址原型还原、页面状态核对与交互差异定位时，默认可直接使用，无需重复确认。
 - 旧批次盘点、旧设计稿、AI 过程文档统一进 `archive/`，不再占用主入口。

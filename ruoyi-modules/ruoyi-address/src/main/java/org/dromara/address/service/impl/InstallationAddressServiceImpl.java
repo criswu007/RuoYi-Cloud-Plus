@@ -21,8 +21,6 @@ import org.springframework.stereotype.Service;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * 安装地址服务实现。
@@ -116,31 +114,23 @@ public class InstallationAddressServiceImpl implements IInstallationAddressServi
         if (list == null || list.isEmpty()) {
             return;
         }
-        List<Long> standardAddressIds = list.stream()
+        List<String> standardAddressSegmIds = list.stream()
             .map(InstallationAddressVo::getStandardAddressId)
             .filter(id -> id != null && id > 0)
+            .map(String::valueOf)
             .distinct()
             .toList();
-        if (standardAddressIds.isEmpty()) {
+        if (standardAddressSegmIds.isEmpty()) {
             for (InstallationAddressVo vo : list) {
                 vo.setHasStandardAddress(false);
             }
             return;
         }
-        Map<Long, String> fullNameMap = standardAddressIds.stream()
-            .collect(Collectors.toMap(Function.identity(), this::resolveStandardAddressFullName, (a, b) -> a));
+        Map<String, String> fullNameMap = standardAddressService.listStandardAddressStandNameMapBySegmIds(standardAddressSegmIds);
         for (InstallationAddressVo vo : list) {
-            String fullName = fullNameMap.get(vo.getStandardAddressId());
+            String fullName = vo.getStandardAddressId() == null ? null : fullNameMap.get(String.valueOf(vo.getStandardAddressId()));
             vo.setHasStandardAddress(StringUtils.isNotBlank(fullName));
             vo.setStandardAddressFullName(fullName);
         }
-    }
-
-    private String resolveStandardAddressFullName(Long standardAddressId) {
-        if (standardAddressId == null) {
-            return null;
-        }
-        StandardAddressVo vo = standardAddressService.getStandardAddressBySegmId(String.valueOf(standardAddressId));
-        return vo == null ? null : vo.getStandName();
     }
 }

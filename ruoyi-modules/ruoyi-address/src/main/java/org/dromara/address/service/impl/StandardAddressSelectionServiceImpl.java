@@ -3,16 +3,14 @@ package org.dromara.address.service.impl;
 import com.baomidou.dynamic.datasource.annotation.DS;
 import lombok.RequiredArgsConstructor;
 import org.dromara.address.domain.bo.StandardAddressSelectionRoomBo;
-import org.dromara.address.domain.bo.StandardAddressBo;
 import org.dromara.address.domain.vo.StandardAddressSelectionResultVo;
 import org.dromara.address.domain.vo.StandardAddressVo;
 import org.dromara.address.service.IStandardAddressSelectionService;
-import org.dromara.address.service.IStandardAddressService;
 import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.utils.StringUtils;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -31,30 +29,41 @@ public class StandardAddressSelectionServiceImpl implements IStandardAddressSele
 
     private static final int DEFAULT_LEVEL_MAX = 10;
     private static final int DEFAULT_LIMIT = 50;
+    private static final String ACTIVE_STATUS = "2140900";
 
-    private final IStandardAddressService addressStandardService;
+    private final StandardAddressQueryService queryService;
 
     @Override
     /**
      * 执行选址平台模糊查询。
      *
      * @param keyword 关键字（名称或完整名称）
-     * @param levelMax 最大层级（为空使用默认值 10）
+     * @param levelMax 最大业务级别（为空使用默认值 10）
      * @param limit 最大返回条数（为空使用默认值 50）
      * @return 符合条件的标准地址列表
      *
-     * 关键约束：仅返回状态正常、层级不高于 levelMax 的地址。
+     * 关键约束：仅返回状态正常、业务级别不高于 levelMax 的地址。
      */
     public List<StandardAddressVo> searchStandardAddresses(String keyword, Integer levelMax, Integer limit) {
         int maxLevel = levelMax == null ? DEFAULT_LEVEL_MAX : levelMax;
         int pageSize = limit == null ? DEFAULT_LIMIT : limit;
         Map<String, StandardAddressVo> result = new LinkedHashMap<>();
-        for (int levelId = 1; levelId <= Math.min(maxLevel, 2); levelId++) {
-            collectRegionMatches(result, keyword, levelId, pageSize);
+        for (int addrLevel = 1; addrLevel <= Math.min(maxLevel, 2); addrLevel++) {
+            collectRegionMatches(result, keyword, addrLevel, pageSize);
+            if (result.size() >= pageSize) {
+                return sortResult(result, pageSize);
+            }
         }
         collectAddrSegmMatches(result, keyword, maxLevel, pageSize);
+        return sortResult(result, pageSize);
+    }
+
+    private List<StandardAddressVo> sortResult(Map<String, StandardAddressVo> result, int pageSize) {
+        if (result.isEmpty()) {
+            return Collections.emptyList();
+        }
         return result.values().stream()
-            .sorted(Comparator.comparing(StandardAddressVo::getLevelId, Comparator.nullsLast(Integer::compareTo))
+            .sorted(Comparator.comparing(StandardAddressVo::getAddrLevel, Comparator.nullsLast(Integer::compareTo))
                 .thenComparing(StandardAddressVo::getSegmId, Comparator.nullsLast(String::compareTo)))
             .limit(pageSize)
             .toList();
@@ -75,37 +84,29 @@ public class StandardAddressSelectionServiceImpl implements IStandardAddressSele
         throw new ServiceException("选址房间创建接口仍基于旧 Long 主键语义，尚未迁移到 segmId 体系，暂未实现");
     }
 
-    private void collectRegionMatches(Map<String, StandardAddressVo> result, String keyword, int levelId, int limit) {
-        StandardAddressBo bo = new StandardAddressBo();
-        bo.setLevelId(levelId);
-        bo.setSegmName(keyword);
-        putResult(result, addressStandardService.queryStandardAddressList(bo), limit);
+    private void collectRegionMatches(Map<String, StandardAddressVo> result, String keyword, int addrLevel, int limit) {
+        int remainingLimit = limit - result.size();
+        if (remainingLimit <= 0) {
+            return;
+        }
+        putResult(result, queryService.searchRegionCandidates(keyword, addrLevel, remainingLimit), limit);
     }
 
     private void collectAddrSegmMatches(Map<String, StandardAddressVo> result, String keyword, int maxLevel, int limit) {
-        StandardAddressBo bo = new StandardAddressBo();
-        bo.setStandName(keyword);
-        List<StandardAddressVo> list = new ArrayList<>(addressStandardService.queryStandardAddressList(bo));
-        for (StandardAddressVo item : list) {
-            if (item == null || item.getLevelId() == null || item.getLevelId() > maxLevel) {
-                continue;
-            }
-            if (StringUtils.isBlank(item.getStatus()) || "2140900".equals(item.getStatus())) {
-                result.putIfAbsent(item.getSegmId(), item);
-            }
-            if (result.size() >= limit) {
-                return;
-            }
+        int remainingLimit = limit - result.size();
+        if (remainingLimit <= 0) {
+            return;
         }
+        putResult(result, queryService.searchAddrSegmCandidates(keyword, maxLevel, ACTIVE_STATUS, remainingLimit), limit);
     }
 
-    private void putResult(Map<String, StandardAddressVo> result, List<StandardAddressVo> list, int limit) {
+    private void putResult(Map<String, StandardAddressVo> result, List<StandardAddressVo> list, int totalLimit) {
         for (StandardAddressVo item : list) {
             if (item == null || StringUtils.isBlank(item.getSegmId())) {
                 continue;
             }
             result.putIfAbsent(item.getSegmId(), item);
-            if (result.size() >= limit) {
+            if (result.size() >= totalLimit) {
                 return;
             }
         }

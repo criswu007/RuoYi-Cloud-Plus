@@ -4,90 +4,168 @@
     "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.dromara.address.mapper.AddrSegmMapper">
 
-    <select id="selectStandardAddressList" resultType="org.dromara.address.domain.vo.StandardAddressVo">
-        select
-            segm_id as segmId,
-            parent_segm_id as parentSegmId,
-            segm_name as segmName,
-            stand_name as standName,
-            segm_no as segmNo,
-            stand_no as standNo,
-            segm_type as segmType,
-            region_id as regionId,
-            district_id as districtId,
-            service_region_id as serviceRegionId,
-            station_id as stationId,
-            installstation_id as installStationId,
-            busstation_id as busStationId,
-            status as status,
-            notes as notes,
-            create_date as createDate
-        from ADDR_SEGM
+    <sql id="addrSegmColumns">
+        a.segm_id as segmId,
+        a.parent_segm_id as parentSegmId,
+        a.segm_name as segmName,
+        a.stand_name as standName,
+        a.segm_no as segmNo,
+        a.stand_no as standNo,
+        a.segm_type as segmType,
+        a.region_id as regionId,
+        a.district_id as districtId,
+        a.service_region_id as serviceRegionId,
+        a.station_id as stationId,
+        a.installstation_id as installStationId,
+        a.busstation_id as busStationId,
+        a.post_code as singleProjectCode,
+        a.segm_name_fir as supportingFeeCommunityFlag,
+        a.is_city as isCity,
+        a.place_type as placeType,
+        a.cover_num as coverNum,
+        a.addr_in_type_ftth as addrInTypeFtth,
+        a.ftth_pon_type as ftthPonType,
+        a.addr_in_type_lan as addrInTypeLan,
+        a.area_type as areaType,
+        a.status as status,
+        a.notes as notes,
+        a.create_date as createDate
+    </sql>
+
+    <sql id="addrSegmWhere">
         <where>
-            and ifnull(delete_state, '0') = '0'
+            coalesce(a.delete_state, '0') = '0'
             <if test="bo != null and bo.segmId != null and bo.segmId != ''">
-                and segm_id = #{bo.segmId}
+                and a.segm_id = #{bo.segmId}
             </if>
             <if test="bo != null and bo.parentSegmId != null and bo.parentSegmId != ''">
-                and parent_segm_id = #{bo.parentSegmId}
+                and a.parent_segm_id = #{bo.parentSegmId}
             </if>
             <if test="bo != null and bo.segmName != null and bo.segmName != ''">
-                and segm_name like concat('%', #{bo.segmName}, '%')
+                <bind name="segmNameLike" value="'%' + bo.segmName + '%'" />
+                and a.segm_name like #{segmNameLike}
             </if>
             <if test="bo != null and bo.standName != null and bo.standName != ''">
-                and stand_name like concat('%', #{bo.standName}, '%')
+                <bind name="standNameLike" value="'%' + bo.standName + '%'" />
+                and a.stand_name like #{standNameLike}
+            </if>
+            <if test="bo != null and bo.regionId != null and bo.regionId != ''">
+                and a.region_id = #{bo.regionId}
             </if>
             <if test="bo != null and bo.status != null and bo.status != ''">
-                and status = #{bo.status}
+                and a.status = #{bo.status}
             </if>
-            <if test="segmTypes != null and segmTypes.size() > 0">
-                and segm_type in
+            <if test="bo != null and bo.segmType != null and bo.segmType != ''">
+                and a.segm_type = #{bo.segmType}
+            </if>
+            <if test="(bo == null or bo.segmType == null or bo.segmType == '') and segmTypes != null and segmTypes.size() > 0">
+                and a.segm_type in
                 <foreach collection="segmTypes" item="segmType" open="(" separator="," close=")">
                     #{segmType}
                 </foreach>
             </if>
         </where>
-        order by create_date desc
+    </sql>
+
+    <select id="selectStandardAddressList" resultType="org.dromara.address.domain.vo.StandardAddressVo">
+        select
+            <include refid="addrSegmColumns" />
+        from ADDR_SEGM a
+        <include refid="addrSegmWhere" />
+        order by a.create_date desc
+    </select>
+
+    <select id="selectStandardAddressPage" resultType="org.dromara.address.domain.vo.StandardAddressVo">
+        select
+            <include refid="addrSegmColumns" />
+        from ADDR_SEGM a
+        <include refid="addrSegmWhere" />
+        order by a.create_date desc
     </select>
 
     <select id="selectStandardAddressBySegmId" resultType="org.dromara.address.domain.vo.StandardAddressVo">
         select
-            segm_id as segmId,
-            parent_segm_id as parentSegmId,
-            segm_name as segmName,
-            stand_name as standName,
-            segm_no as segmNo,
-            stand_no as standNo,
-            segm_type as segmType,
-            region_id as regionId,
-            district_id as districtId,
-            service_region_id as serviceRegionId,
-            station_id as stationId,
-            installstation_id as installStationId,
-            busstation_id as busStationId,
-            status as status,
-            notes as notes,
-            create_date as createDate
-        from ADDR_SEGM
-        where segm_id = #{segmId}
-          and ifnull(delete_state, '0') = '0'
-        limit 1
+            <include refid="addrSegmColumns" />
+        from ADDR_SEGM a
+        where a.segm_id = #{segmId}
+          and coalesce(a.delete_state, '0') = '0'
     </select>
 
-    <select id="countChildren" resultType="java.lang.Long">
+    <select id="selectActiveByStandName" resultType="org.dromara.address.domain.AddrSegm">
+        select *
+        from ADDR_SEGM
+        where coalesce(delete_state, '0') = '0'
+          and stand_name = #{standName}
+    </select>
+
+    <select id="selectActiveByParentAndSegmName" resultType="org.dromara.address.domain.AddrSegm">
+        select *
+        from ADDR_SEGM
+        where coalesce(delete_state, '0') = '0'
+          and parent_segm_id = #{parentSegmId}
+          and segm_name = #{segmName}
+    </select>
+
+    <select id="selectSearchCandidatePage" resultType="org.dromara.address.domain.vo.StandardAddressVo">
+        select
+            a.segm_id as segmId,
+            a.parent_segm_id as parentSegmId,
+            a.segm_name as segmName,
+            a.stand_name as standName,
+            a.segm_no as segmNo,
+            a.segm_type as segmType,
+            a.region_id as regionId,
+            a.status as status
+        from ADDR_SEGM a
+        <where>
+            coalesce(a.delete_state, '0') = '0'
+            <if test="keyword != null and keyword != ''">
+                <bind name="keywordLike" value="'%' + keyword + '%'" />
+                and (
+                    a.segm_name like #{keywordLike}
+                    or a.stand_name like #{keywordLike}
+                )
+            </if>
+            <if test="segmTypes != null and segmTypes.size() > 0">
+                and a.segm_type in
+                <foreach collection="segmTypes" item="segmType" open="(" separator="," close=")">
+                    #{segmType}
+                </foreach>
+            </if>
+            <if test="status != null and status != ''">
+                and a.status = #{status}
+            </if>
+        </where>
+        <choose>
+            <when test="segmTypes != null and segmTypes.size() > 0">
+                order by case
+                <foreach collection="segmTypes" item="segmType" index="index">
+                    when a.segm_type = #{segmType} then ${index}
+                </foreach>
+                else 999999
+                end,
+                a.segm_id asc
+            </when>
+            <otherwise>
+                order by a.segm_id asc
+            </otherwise>
+        </choose>
+    </select>
+
+        <select id="countChildren" resultType="java.lang.Long">
         select count(1)
         from ADDR_SEGM
-        where ifnull(delete_state, '0') = '0'
+        where coalesce(delete_state, '0') = '0'
           and parent_segm_id in
           <foreach collection="segmIds" item="segmId" open="(" separator="," close=")">
               #{segmId}
           </foreach>
     </select>
 
-    <select id="selectChildrenByParentSegmId" resultType="org.dromara.address.domain.AddrSegm">
+        <select id="selectChildrenByParentSegmId" resultType="org.dromara.address.domain.AddrSegm">
         select *
         from ADDR_SEGM
-        where ifnull(delete_state, '0') = '0'
+        where coalesce(delete_state, '0') = '0'
           and parent_segm_id = #{parentSegmId}
         order by segm_id
     </select>
@@ -95,11 +173,22 @@
     <update id="logicalDeleteBySegmIds">
         update ADDR_SEGM
         set delete_state = '1',
-            delete_time = now(),
-            modify_date = now()
-        where ifnull(delete_state, '0') = '0'
+            delete_time = current_timestamp,
+            modify_date = current_timestamp
+        where coalesce(delete_state, '0') = '0'
           and segm_id in
           <foreach collection="segmIds" item="segmId" open="(" separator="," close=")">
+              #{segmId}
+          </foreach>
+    </update>
+
+    <update id="moveChildrenToTarget">
+        update ADDR_SEGM
+        set parent_segm_id = #{targetSegmId},
+            modify_date = current_timestamp
+        where coalesce(delete_state, '0') = '0'
+          and parent_segm_id in
+          <foreach collection="sourceSegmIds" item="segmId" open="(" separator="," close=")">
               #{segmId}
           </foreach>
     </update>

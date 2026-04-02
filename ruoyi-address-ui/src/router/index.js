@@ -1,6 +1,7 @@
 import Vue from 'vue';
 import Router from 'vue-router';
 
+import StandardDetail from '../views/StandardDetail.vue';
 import StandardList from '../views/StandardList.vue';
 import StandardMerge from '../views/StandardMerge.vue';
 import StandardSplit from '../views/StandardSplit.vue';
@@ -20,6 +21,7 @@ export default new Router({
   routes: [
     { path: '/', redirect: '/standard/list' },
     { path: '/standard/list', component: StandardList },
+    { path: '/standard/detail/:segmId', component: StandardDetail },
     { path: '/standard/merge', component: StandardMerge },
     { path: '/standard/split', component: StandardSplit },
     { path: '/import/records', component: ImportRecords },

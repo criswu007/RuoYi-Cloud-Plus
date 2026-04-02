@@ -9,7 +9,6 @@ import org.dromara.address.domain.StandardAddressMonitorRecord;
 import org.dromara.address.domain.StandardAddressMonitorRule;
 import org.dromara.address.domain.bo.StandardAddressMonitorRecordBo;
 import org.dromara.address.domain.vo.StandardAddressMonitorRecordVo;
-import org.dromara.address.domain.vo.StandardAddressVo;
 import org.dromara.address.mapper.StandardAddressMonitorRuleMapper;
 import org.dromara.address.mapper.StandardAddressMonitorRecordMapper;
 import org.dromara.address.service.IStandardAddressService;
@@ -22,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -122,10 +122,7 @@ public class StandardAddressMonitorRecordServiceImpl implements IStandardAddress
             .distinct()
             .toList();
 
-        Map<Long, String> addressNameMap = standardAddressIds.isEmpty()
-            ? Collections.emptyMap()
-            : standardAddressIds.stream()
-                .collect(Collectors.toMap(id -> id, this::resolveStandardAddressFullName, (left, right) -> left));
+        Map<Long, String> addressNameMap = buildStandardAddressNameMap(standardAddressIds);
 
         Map<Long, String> ruleNameMap = ruleIds.isEmpty()
             ? Collections.emptyMap()
@@ -142,11 +139,24 @@ public class StandardAddressMonitorRecordServiceImpl implements IStandardAddress
         }
     }
 
-    private String resolveStandardAddressFullName(Long standardAddressId) {
-        if (standardAddressId == null) {
-            return null;
+    /**
+     * 目的：批量构建监控记录中的标准地址名称映射。
+     * 入参：标准地址 Long 主键集合。
+     * 出参：`standardAddressId -> standName` 映射。
+     * 关键约束：必须走批量标准地址名称查询，禁止逐条调用标准地址详情形成 N+1。
+     * 异常与副作用：无写入副作用。
+     */
+    private Map<Long, String> buildStandardAddressNameMap(List<Long> standardAddressIds) {
+        if (standardAddressIds == null || standardAddressIds.isEmpty()) {
+            return Collections.emptyMap();
         }
-        StandardAddressVo vo = standardAddressService.getStandardAddressBySegmId(String.valueOf(standardAddressId));
-        return vo == null ? null : vo.getStandName();
+        Map<String, String> standNameMap = standardAddressService.listStandardAddressStandNameMapBySegmIds(
+            standardAddressIds.stream().map(String::valueOf).toList()
+        );
+        Map<Long, String> result = new LinkedHashMap<>();
+        for (Long standardAddressId : standardAddressIds) {
+            result.put(standardAddressId, standNameMap.get(String.valueOf(standardAddressId)));
+        }
+        return result;
     }
 }

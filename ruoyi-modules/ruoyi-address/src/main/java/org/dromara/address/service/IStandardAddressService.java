@@ -1,8 +1,11 @@
 package org.dromara.address.service;
 
 import org.dromara.address.domain.bo.StandardAddressBatchAddBo;
+import org.dromara.address.domain.bo.StandardAddressAdminBo;
 import org.dromara.address.domain.bo.StandardAddressBo;
+import org.dromara.address.domain.bo.StandardAddressSplitItemBo;
 import org.dromara.address.domain.vo.StandardAddressAdminVo;
+import org.dromara.address.domain.vo.StandardAddressImportResultVo;
 import org.dromara.address.domain.vo.StandardAddressImportVo;
 import org.dromara.address.domain.vo.StandardAddressVo;
 import org.dromara.common.mybatis.core.page.PageQuery;
@@ -10,6 +13,7 @@ import org.dromara.common.mybatis.core.page.TableDataInfo;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 public interface IStandardAddressService {
 
@@ -42,12 +46,54 @@ public interface IStandardAddressService {
     TableDataInfo<StandardAddressVo> queryStandardAddressPageList(StandardAddressBo bo, PageQuery pageQuery);
 
     /**
+     * 查询标准地址级别选项。
+     *
+     * @return 标准地址级别选项列表
+     *
+     * 关键约束：选项必须与线上 `segm_addr_type` 保持一致，供前端筛选和展示统一复用。
+     * 异常与副作用：无写入副作用。
+     */
+    List<StandardAddressAdminVo.LevelOptionVo> listStandardAddressLevelOptions();
+
+    /**
+     * 查询标准地址编辑页聚合字典。
+     *
+     * @return 编辑页聚合字典
+     *
+     * 关键约束：字典值必须直接来源于线上 `pub_restriction`，按标准地址表单字段固定分组返回。
+     * 异常与副作用：无写入副作用。
+     */
+    StandardAddressAdminVo.FormOptionsVo listStandardAddressFormOptions();
+
+    /**
+     * 查询标准地址编辑页管理站候选。
+     *
+     * @param bo 管理站候选查询条件
+     * @return 管理站候选列表
+     *
+     * 关键约束：候选必须直接来源于线上 `spc_station`，并显式按 `manageType` 区分维修/安装/营业。
+     * 异常与副作用：无写入副作用。
+     */
+    List<StandardAddressAdminVo.StationOptionVo> listStandardAddressStationOptions(StandardAddressAdminBo.StationOptionQueryBo bo);
+
+    /**
      * 查询标准地址列表（不分页）。
      *
      * @param bo 查询条件
      * @return 标准地址列表
      */
     List<StandardAddressVo> queryStandardAddressList(StandardAddressBo bo);
+
+    /**
+     * 批量查询标准地址名称映射。
+     *
+     * @param segmIds 标准地址主键集合
+     * @return `segmId -> standName` 映射
+     *
+     * 关键约束：必须以批量方式补齐名称，避免列表类场景逐条回查标准地址详情导致 N+1 问题。
+     * 异常与副作用：无写入副作用。
+     */
+    Map<String, String> listStandardAddressStandNameMapBySegmIds(Collection<String> segmIds);
 
     /**
      * 新增标准地址。
@@ -77,20 +123,20 @@ public interface IStandardAddressService {
     /**
      * 合并地址
      *
-     * @param sourceStandardAddressIds 源标准地址ID集合
-     * @param targetStandardAddressId  目标标准地址ID
+     * @param sourceSegmIds 源标准地址 `segmId` 集合
+     * @param targetSegmId  目标标准地址 `segmId`
      * @return 结果
      */
-    Boolean mergeStandardAddresses(List<Long> sourceStandardAddressIds, Long targetStandardAddressId);
+    Boolean mergeStandardAddresses(List<String> sourceSegmIds, String targetSegmId);
 
     /**
      * 拆分地址
      *
-     * @param sourceStandardAddressId 源标准地址ID
-     * @param newAddresses 新地址集合
+     * @param sourceSegmId 源标准地址 `segmId`
+     * @param splitItems 拆分项集合
      * @return 结果
      */
-    Boolean splitStandardAddress(Long sourceStandardAddressId, List<StandardAddressBo> newAddresses);
+    Boolean splitStandardAddress(String sourceSegmId, List<StandardAddressSplitItemBo> splitItems);
 
     /**
      * 批量预览新增下级标准地址结果。
@@ -115,7 +161,7 @@ public interface IStandardAddressService {
      * @param updateSupport 是否更新支持（预留）
      * @param operName 操作人
      * @param fileName 文件名
-     * @return 导入结果描述
+     * @return 导入结果摘要
      */
-    String importStandardAddressData(List<StandardAddressImportVo> list, Boolean updateSupport, String operName, String fileName);
+    StandardAddressImportResultVo importStandardAddressData(List<StandardAddressImportVo> list, Boolean updateSupport, String operName, String fileName);
 }

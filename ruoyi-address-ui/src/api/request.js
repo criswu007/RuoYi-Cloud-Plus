@@ -27,4 +27,62 @@ instance.interceptors.response.use(
   }
 );
 
-export default instance;
+function toFormBody(data = {}) {
+  const body = new URLSearchParams();
+  Object.entries(data).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') {
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach(item => {
+        if (item !== undefined && item !== null && item !== '') {
+          body.append(key, item);
+        }
+      });
+      return;
+    }
+    body.append(key, value);
+  });
+  return body;
+}
+
+const request = {
+  get(url, config) {
+    return instance.get(url, config);
+  },
+  post(url, data, config) {
+    return instance.post(url, data, config);
+  },
+  put(url, data, config) {
+    return instance.put(url, data, config);
+  },
+  delete(url, config) {
+    return instance.delete(url, config);
+  },
+  postForm(url, data = {}, config = {}) {
+    return instance.post(url, toFormBody(data), {
+      ...config,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        ...(config.headers || {})
+      }
+    });
+  },
+  postMultipart(url, data, config = {}) {
+    return instance.post(url, data, {
+      ...config,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        ...(config.headers || {})
+      }
+    });
+  },
+  postDownload(url, data = {}, config = {}) {
+    return instance.post(url, data, {
+      ...config,
+      responseType: 'blob'
+    });
+  }
+};
+
+export default request;

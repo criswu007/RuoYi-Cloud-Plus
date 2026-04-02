@@ -4,4 +4,23 @@
     "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.dromara.address.mapper.SpcStationMapper">
 
+    <select id="selectStationOptions" resultType="org.dromara.address.domain.SpcStation">
+        SELECT station_id,
+               station_name,
+               region_id,
+               manage_type
+        FROM spc_station
+        WHERE manage_type = #{manageType}
+        <if test="regionId != null and regionId != ''">
+            AND region_id = #{regionId}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            <bind name="keywordLike" value="'%' + keyword + '%'" />
+            AND (
+                station_name LIKE #{keywordLike}
+                OR station_id LIKE #{keywordLike}
+            )
+        </if>
+        ORDER BY region_id ASC, station_name ASC
+    </select>
 </mapper>

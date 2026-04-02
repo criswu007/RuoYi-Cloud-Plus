@@ -4,7 +4,7 @@ import lombok.Data;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 import java.util.List;
 
 /**
@@ -15,15 +15,15 @@ import java.util.List;
 public class StandardAddressSplitBo {
 
     /**
-     * 源标准地址ID
+     * 源标准地址 `segmId`
      */
-    @NotNull(message = "源标准地址ID不能为空")
-    private Long sourceStandardAddressId;
+    @NotBlank(message = "待拆分地址不能为空")
+    private String sourceSegmId;
 
     /**
-     * 拆分后的新地址列表
+     * 拆分后的新地址最小配置项列表
      */
-    @NotEmpty(message = "新地址列表不能为空")
+    @NotEmpty(message = "拆分地址项不能为空")
     @Valid
-    private List<StandardAddressBo> newAddresses;
+    private List<StandardAddressSplitItemBo> splitItems;
 }

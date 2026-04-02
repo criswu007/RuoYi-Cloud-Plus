@@ -40,7 +40,7 @@ public class StandardAddressSelectionController extends BaseController {
      * 关键约束：仅返回状态正常的地址。
      */
     @SaCheckPermission("address:selection:query")
-    @GetMapping("/search")
+    @PostMapping("/search")
     public R<List<StandardAddressVo>> searchStandardAddresses(@RequestParam(required = false) String keyword,
                                              @RequestParam(required = false) Integer levelMax,
                                              @RequestParam(required = false) Integer limit) {

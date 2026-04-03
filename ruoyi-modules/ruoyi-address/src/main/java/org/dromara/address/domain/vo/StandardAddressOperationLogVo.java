@@ -23,12 +23,22 @@ public class StandardAddressOperationLogVo implements Serializable {
     /**
      * 关联标准地址ID
      */
-    private Long standardAddressId;
+    private String standardAddressId;
 
     /**
      * 操作类型
      */
     private String operationType;
+
+    /**
+     * 操作对象。
+     */
+    private String operationObject;
+
+    /**
+     * 操作结果。
+     */
+    private String operationResult;
 
     /**
      * 操作人

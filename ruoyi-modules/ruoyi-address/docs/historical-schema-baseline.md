@@ -20,7 +20,7 @@
   - 结构/字典表：`segm_addr_type`、`pub_restriction`
   - 旁证表：`spc_region`、`spc_station`、`spc_regional_company`、`getpageVol`、`sync_set_addr_info`
 - 归档的南京批次专题可补充以下信息：历史值域、空值率、安装地址挂接现象、迁移兼容链路、旧系统字段口径。见 [archive/README.md](./archive/README.md)。
-- 需求书明确要求 `1/2` 级行政区划按 `spec_region` 查询，其余层级按 `segm_addr` 查询；当前在线结构文档写作 `spc_region`，实现前必须核对联调库实际表名。
+- 需求书中旧写法 `spec_region` 统一按线上实表 `spc_region` 理解；标准地址查询口径固定为 `1/2` 级行政区划按 `spc_region` 查询，其余层级按 `ADDR_SEGM` 查询。
 
 ### 2.2 网格
 

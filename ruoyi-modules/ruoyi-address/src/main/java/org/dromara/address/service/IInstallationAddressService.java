@@ -13,10 +13,10 @@ public interface IInstallationAddressService {
     /**
      * 查询安装地址详情。
      *
-     * @param id 主键ID
+     * @param setAddrId 安装地址主键
      * @return 安装地址详情
      */
-    InstallationAddressVo queryById(Long id);
+    InstallationAddressVo queryById(String setAddrId);
 
     /**
      * 分页查询安装地址。
@@ -54,9 +54,9 @@ public interface IInstallationAddressService {
     /**
      * 删除安装地址。
      *
-     * @param ids 主键集合
+     * @param setAddrIds 主键集合
      * @param isValid 是否校验业务逻辑
      * @return 是否成功
      */
-    Boolean deleteWithValidByIds(Collection<Long> ids, Boolean isValid);
+    Boolean deleteWithValidByIds(Collection<String> setAddrIds, Boolean isValid);
 }

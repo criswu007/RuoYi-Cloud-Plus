@@ -218,10 +218,11 @@ public class StandardAddressDictionaryService {
         if (rows == null || rows.isEmpty()) {
             return Collections.emptyList();
         }
+        Map<Integer, Integer> addrLevelMap = buildAddrLevelMap(rows);
         return rows.stream()
             .sorted(Comparator.comparing(SegmAddrType::getLevelId, Comparator.nullsLast(Integer::compareTo))
                 .thenComparing(SegmAddrType::getAddrTypeId, Comparator.nullsLast(String::compareTo)))
-            .map(this::toLevelOption)
+            .map(row -> toLevelOption(row, addrLevelMap))
             .toList();
     }
 
@@ -281,11 +282,11 @@ public class StandardAddressDictionaryService {
             .toList();
     }
 
-    private StandardAddressAdminVo.LevelOptionVo toLevelOption(SegmAddrType row) {
+    private StandardAddressAdminVo.LevelOptionVo toLevelOption(SegmAddrType row, Map<Integer, Integer> addrLevelMap) {
         StandardAddressAdminVo.LevelOptionVo option = new StandardAddressAdminVo.LevelOptionVo();
         option.setAddrTypeId(row.getAddrTypeId());
         option.setName(row.getAddrTypeName());
-        option.setAddrLevel(resolveAddrLevel(row.getAddrTypeId()));
+        option.setAddrLevel(row.getLevelId() == null ? null : addrLevelMap.get(row.getLevelId()));
         option.setLevelId(row.getLevelId());
         return option;
     }
@@ -341,7 +342,11 @@ public class StandardAddressDictionaryService {
     }
 
     private Map<Integer, Integer> buildAddrLevelMap() {
-        List<Integer> orderedLevelIds = listSegmAddrTypes().stream()
+        return buildAddrLevelMap(listSegmAddrTypes());
+    }
+
+    private Map<Integer, Integer> buildAddrLevelMap(List<SegmAddrType> rows) {
+        List<Integer> orderedLevelIds = rows.stream()
             .map(SegmAddrType::getLevelId)
             .filter(Objects::nonNull)
             .distinct()

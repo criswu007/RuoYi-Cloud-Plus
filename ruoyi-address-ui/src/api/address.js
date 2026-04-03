@@ -56,16 +56,22 @@ export const exportImportFailDetails = batchId =>
   request.postDownload(`/address/import-record/failure/export/${batchId}`);
 
 export const getOperationLogs = params =>
-  request.get('/address/operation-log/list', { params });
+  request.postForm('/address/operation-log/list', params);
 
 export const getOperationLogDetail = id =>
-  request.get(`/address/operation-log/${id}`);
+  request.post(`/address/operation-log/${id}`);
 
 export const getInstallationList = params =>
-  request.get('/address/installation/list', { params });
+  request.postForm('/address/installation/list', params);
 
-export const getInstallationDetail = id =>
-  request.get(`/address/installation/${id}`);
+export const getInstallationDetail = setAddrId =>
+  request.post(`/address/installation/${setAddrId}`);
+
+export const updateInstallationAddress = data =>
+  request.post('/address/installation/update', data);
+
+export const deleteInstallationAddresses = setAddrIds =>
+  request.post(`/address/installation/remove/${setAddrIds}`);
 
 export const searchSelectionStandardAddresses = params =>
   request.postForm('/address/selection/search', params);
@@ -74,28 +80,40 @@ export const createRoomStandardAddress = data =>
   request.post('/address/selection/room', data);
 
 export const getTagList = params =>
-  request.get('/address/tag/list', { params });
+  request.postForm('/address/tag/list', params);
 
 export const getTagDetail = id =>
-  request.get(`/address/tag/${id}`);
+  request.post(`/address/tag/${id}`);
 
 export const createTag = data =>
   request.post('/address/tag', data);
 
 export const updateTag = data =>
-  request.put('/address/tag', data);
+  request.post('/address/tag/update', data);
 
 export const deleteTag = ids =>
-  request.delete(`/address/tag/${ids}`);
+  request.post(`/address/tag/remove/${ids}`);
 
-export const getStandardAddressTags = standardAddressId =>
-  request.get(`/address/tag/standard-address/${standardAddressId}`);
+export const getStandardAddressTags = segmId =>
+  request.post(`/address/tag/standardAddress/${segmId}`);
 
 export const bindTagsToStandardAddresses = data =>
   request.post('/address/tag/bind', data);
 
 export const unbindTagsFromStandardAddresses = data =>
   request.post('/address/tag/unbind', data);
+
+export const getManagementStationList = params =>
+  request.postForm('/address/station/list', params);
+
+export const createManagementStation = data =>
+  request.post('/address/station', data);
+
+export const updateManagementStation = data =>
+  request.post('/address/station/update', data);
+
+export const deleteManagementStation = ids =>
+  request.post(`/address/station/remove/${ids}`);
 
 export const getMonitorRules = params =>
   request.get('/address/monitor/rule/list', { params });

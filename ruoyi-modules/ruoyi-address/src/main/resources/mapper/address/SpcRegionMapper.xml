@@ -10,35 +10,36 @@
         r.region_name as segmName,
         r.region_name as standName,
         r.region_no as segmNo,
-        case
-            when r.super_region_id is null or r.super_region_id = '' then '180000'
-            else '180001'
-        end as segmType,
-        case
-            when r.super_region_id is null or r.super_region_id = '' then 1
-            else 2
-        end as addrLevel,
+        null as segmType,
+        null as addrLevel,
+        r.grade_id as gradeId,
         r.region_id as regionId,
         r.notes as notes
+    </sql>
+
+    <sql id="regionEntityColumns">
+        region_id,
+        super_region_id,
+        region_name,
+        region_no,
+        notes
     </sql>
 
     <sql id="regionLevelFilter">
         <choose>
             <when test="bo != null and bo.segmType == '180000'">
-                and (r.super_region_id is null or r.super_region_id = '')
+                and r.grade_id = 2000002
             </when>
             <when test="bo != null and bo.segmType == '180001'">
-                and r.super_region_id is not null
-                and r.super_region_id != ''
+                and r.grade_id = 2000004
             </when>
             <when test="bo != null and bo.addrLevel != null">
                 <choose>
                     <when test="bo.addrLevel == 1">
-                        and (r.super_region_id is null or r.super_region_id = '')
+                        and r.grade_id = 2000002
                     </when>
                     <when test="bo.addrLevel == 2">
-                        and r.super_region_id is not null
-                        and r.super_region_id != ''
+                        and r.grade_id = 2000004
                     </when>
                 </choose>
             </when>
@@ -52,29 +53,6 @@
         <where>
             coalesce(r.delete_state, '0') = '0'
             <include refid="regionLevelFilter" />
-            <if test="bo != null and bo.regionId != null and bo.regionId != ''">
-                <choose>
-                    <when test="bo.segmType == '180000' or bo.addrLevel == 1">
-                        and r.region_id = coalesce(
-                            (
-                                select max(
-                                    case
-                                        when current_region.super_region_id is null or current_region.super_region_id = '' then null
-                                        else current_region.super_region_id
-                                    end
-                                )
-                                from spc_region current_region
-                                where current_region.region_id = #{bo.regionId}
-                                  and coalesce(current_region.delete_state, '0') = '0'
-                            ),
-                            #{bo.regionId}
-                        )
-                    </when>
-                    <otherwise>
-                        and r.region_id = #{bo.regionId}
-                    </otherwise>
-                </choose>
-            </if>
             <if test="bo != null and bo.segmId != null and bo.segmId != ''">
                 and r.region_id = #{bo.segmId}
             </if>
@@ -90,7 +68,6 @@
                 and r.region_name like #{standNameLike}
             </if>
         </where>
-        order by r.region_no
     </select>
 
     <select id="selectStandardAddressPage" resultType="org.dromara.address.domain.vo.StandardAddressVo">
@@ -100,29 +77,6 @@
         <where>
             coalesce(r.delete_state, '0') = '0'
             <include refid="regionLevelFilter" />
-            <if test="bo != null and bo.regionId != null and bo.regionId != ''">
-                <choose>
-                    <when test="bo.segmType == '180000' or bo.addrLevel == 1">
-                        and r.region_id = coalesce(
-                            (
-                                select max(
-                                    case
-                                        when current_region.super_region_id is null or current_region.super_region_id = '' then null
-                                        else current_region.super_region_id
-                                    end
-                                )
-                                from spc_region current_region
-                                where current_region.region_id = #{bo.regionId}
-                                  and coalesce(current_region.delete_state, '0') = '0'
-                            ),
-                            #{bo.regionId}
-                        )
-                    </when>
-                    <otherwise>
-                        and r.region_id = #{bo.regionId}
-                    </otherwise>
-                </choose>
-            </if>
             <if test="bo != null and bo.segmId != null and bo.segmId != ''">
                 and r.region_id = #{bo.segmId}
             </if>
@@ -138,7 +92,6 @@
                 and r.region_name like #{standNameLike}
             </if>
         </where>
-        order by r.region_no
     </select>
 
     <select id="selectStandardAddressByRegionId" resultType="org.dromara.address.domain.vo.StandardAddressVo">
@@ -150,7 +103,8 @@
     </select>
 
     <select id="selectActiveByRegionName" resultType="org.dromara.address.domain.SpcRegion">
-        select *
+        select
+            <include refid="regionEntityColumns" />
         from spc_region
         where coalesce(delete_state, '0') = '0'
           and region_name = #{regionName}
@@ -165,11 +119,10 @@
             <if test="addrLevel != null">
                 <choose>
                     <when test="addrLevel == 1">
-                        and (r.super_region_id is null or r.super_region_id = '')
+                        and r.grade_id = 2000002
                     </when>
                     <when test="addrLevel == 2">
-                        and r.super_region_id is not null
-                        and r.super_region_id != ''
+                        and r.grade_id = 2000004
                     </when>
                 </choose>
             </if>
@@ -178,7 +131,6 @@
                 and r.region_name like #{keywordLike}
             </if>
         </where>
-        order by r.region_no
     </select>
 
 </mapper>

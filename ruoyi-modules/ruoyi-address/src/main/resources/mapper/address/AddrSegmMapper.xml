@@ -32,6 +32,36 @@
         a.create_date as createDate
     </sql>
 
+    <sql id="addrSegmEntityColumns">
+        segm_id,
+        parent_segm_id,
+        segm_name,
+        segm_no,
+        stand_name,
+        stand_no,
+        segm_type,
+        region_id,
+        district_id,
+        service_region_id,
+        station_id,
+        installstation_id,
+        busstation_id,
+        status,
+        post_code,
+        is_city,
+        segm_name_fir,
+        place_type,
+        cover_num,
+        notes,
+        addr_in_type_ftth,
+        ftth_pon_type,
+        addr_in_type_lan,
+        area_type,
+        create_date,
+        delete_state,
+        delete_time
+    </sql>
+
     <sql id="addrSegmWhere">
         <where>
             coalesce(a.delete_state, '0') = '0'
@@ -72,7 +102,6 @@
             <include refid="addrSegmColumns" />
         from ADDR_SEGM a
         <include refid="addrSegmWhere" />
-        order by a.create_date desc
     </select>
 
     <select id="selectStandardAddressPage" resultType="org.dromara.address.domain.vo.StandardAddressVo">
@@ -80,7 +109,6 @@
             <include refid="addrSegmColumns" />
         from ADDR_SEGM a
         <include refid="addrSegmWhere" />
-        order by a.create_date desc
     </select>
 
     <select id="selectStandardAddressBySegmId" resultType="org.dromara.address.domain.vo.StandardAddressVo">
@@ -92,14 +120,16 @@
     </select>
 
     <select id="selectActiveByStandName" resultType="org.dromara.address.domain.AddrSegm">
-        select *
+        select
+            <include refid="addrSegmEntityColumns" />
         from ADDR_SEGM
         where coalesce(delete_state, '0') = '0'
           and stand_name = #{standName}
     </select>
 
     <select id="selectActiveByParentAndSegmName" resultType="org.dromara.address.domain.AddrSegm">
-        select *
+        select
+            <include refid="addrSegmEntityColumns" />
         from ADDR_SEGM
         where coalesce(delete_state, '0') = '0'
           and parent_segm_id = #{parentSegmId}
@@ -138,13 +168,7 @@
         </where>
         <choose>
             <when test="segmTypes != null and segmTypes.size() > 0">
-                order by case
-                <foreach collection="segmTypes" item="segmType" index="index">
-                    when a.segm_type = #{segmType} then ${index}
-                </foreach>
-                else 999999
-                end,
-                a.segm_id asc
+                order by a.segm_id asc
             </when>
             <otherwise>
                 order by a.segm_id asc
@@ -162,8 +186,9 @@
           </foreach>
     </select>
 
-        <select id="selectChildrenByParentSegmId" resultType="org.dromara.address.domain.AddrSegm">
-        select *
+    <select id="selectChildrenByParentSegmId" resultType="org.dromara.address.domain.AddrSegm">
+        select
+            <include refid="addrSegmEntityColumns" />
         from ADDR_SEGM
         where coalesce(delete_state, '0') = '0'
           and parent_segm_id = #{parentSegmId}
@@ -173,8 +198,7 @@
     <update id="logicalDeleteBySegmIds">
         update ADDR_SEGM
         set delete_state = '1',
-            delete_time = current_timestamp,
-            modify_date = current_timestamp
+            delete_time = current_timestamp
         where coalesce(delete_state, '0') = '0'
           and segm_id in
           <foreach collection="segmIds" item="segmId" open="(" separator="," close=")">
@@ -184,8 +208,7 @@
 
     <update id="moveChildrenToTarget">
         update ADDR_SEGM
-        set parent_segm_id = #{targetSegmId},
-            modify_date = current_timestamp
+        set parent_segm_id = #{targetSegmId}
         where coalesce(delete_state, '0') = '0'
           and parent_segm_id in
           <foreach collection="sourceSegmIds" item="segmId" open="(" separator="," close=")">

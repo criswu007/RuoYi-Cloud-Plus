@@ -1,6 +1,7 @@
 package org.dromara.address.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +16,12 @@ import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.web.core.BaseController;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -41,7 +47,7 @@ public class StandardAddressTagController extends BaseController {
      * @return 分页结果
      */
     @SaCheckPermission("address:tag:list")
-    @GetMapping("/list")
+    @RequestMapping(value = "/list", method = {RequestMethod.GET, RequestMethod.POST})
     public TableDataInfo<StandardAddressTagVo> list(StandardAddressTagBo bo, PageQuery pageQuery) {
         return addressTagService.queryPageList(bo, pageQuery);
     }
@@ -55,7 +61,7 @@ public class StandardAddressTagController extends BaseController {
      * 异常：主键为空时触发参数校验错误。
      */
     @SaCheckPermission("address:tag:query")
-    @GetMapping("/{id}")
+    @RequestMapping(value = "/{id}", method = {RequestMethod.GET, RequestMethod.POST})
     public R<StandardAddressTagVo> getInfo(@NotNull(message = "主键不能为空") @PathVariable Long id) {
         return R.ok(addressTagService.queryById(id));
     }
@@ -88,7 +94,7 @@ public class StandardAddressTagController extends BaseController {
      */
     @SaCheckPermission("address:tag:edit")
     @Log(title = "地址标签", businessType = BusinessType.UPDATE)
-    @PutMapping
+    @RequestMapping(value = "/update", method = {RequestMethod.PUT, RequestMethod.POST})
     public R<Void> edit(@Validated @RequestBody StandardAddressTagBo bo) {
         return toAjax(addressTagService.updateByBo(bo));
     }
@@ -103,7 +109,7 @@ public class StandardAddressTagController extends BaseController {
      */
     @SaCheckPermission("address:tag:remove")
     @Log(title = "地址标签", businessType = BusinessType.DELETE)
-    @DeleteMapping("/{ids}")
+    @RequestMapping(value = "/remove/{ids}", method = {RequestMethod.DELETE, RequestMethod.POST})
     public R<Void> remove(@NotEmpty(message = "主键不能为空") @PathVariable Long[] ids) {
         return toAjax(addressTagService.deleteWithValidByIds(List.of(ids), true));
     }
@@ -115,8 +121,11 @@ public class StandardAddressTagController extends BaseController {
      * @return 标签列表
      */
     @SaCheckPermission("address:tag:query")
-    @GetMapping("/standard-address/{standardAddressId}")
-    public R<List<StandardAddressTagVo>> listTagsByStandardAddressId(@NotNull(message = "标准地址不能为空") @PathVariable Long standardAddressId) {
+    @RequestMapping(
+        value = {"/standard-address/{standardAddressId}", "/standardAddress/{standardAddressId}"},
+        method = {RequestMethod.GET, RequestMethod.POST}
+    )
+    public R<List<StandardAddressTagVo>> listTagsByStandardAddressId(@NotBlank(message = "标准地址不能为空") @PathVariable String standardAddressId) {
         return R.ok(addressTagService.listTagsByStandardAddressId(standardAddressId));
     }
 

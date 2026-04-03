@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.dromara.address.mapper.StandardAddressImportFailDetailMapper">
+
+    <sql id="failDetailColumns">
+        d.id as id,
+        d.batch_id as batchId,
+        b.batch_no as batchNo,
+        b.file_name as fileName,
+        d.row_num,
+        d.parent_stand_name as parentStandName,
+        d.segm_name as segmName,
+        d.addr_level as addrLevel,
+        d.segm_type as segmType,
+        d.status as status,
+        d.fail_reason as failReason,
+        d.create_by as createBy,
+        d.create_time as createTime
+    </sql>
+
+    <select id="selectFailDetailPage" resultType="org.dromara.address.domain.vo.StandardAddressImportRecordVo">
+        select
+            <include refid="failDetailColumns" />
+        from address_standard_import_fail_detail d
+        left join address_standard_import_record b on b.id = d.batch_id and coalesce(b.del_flag, '0') = '0'
+        <where>
+            coalesce(d.del_flag, '0') = '0'
+            <if test="bo != null and bo.batchId != null">
+                and d.batch_id = #{bo.batchId}
+            </if>
+            <if test="bo != null and bo.fileName != null and bo.fileName != ''">
+                <bind name="fileNameLike" value="'%' + bo.fileName + '%'" />
+                and b.file_name like #{fileNameLike}
+            </if>
+            <if test="bo != null and bo.status != null and bo.status != ''">
+                and d.status = #{bo.status}
+            </if>
+            <if test="bo != null and bo.segmName != null and bo.segmName != ''">
+                <bind name="segmNameLike" value="'%' + bo.segmName + '%'" />
+                and d.segm_name like #{segmNameLike}
+            </if>
+            <if test="bo != null and bo.createBy != null">
+                and d.create_by = #{bo.createBy}
+            </if>
+            <if test="bo != null and bo.params != null and bo.params.get('beginTime') != null and bo.params.get('endTime') != null">
+                and d.create_time between #{bo.params.beginTime} and #{bo.params.endTime}
+            </if>
+        </where>
+        order by d.create_time desc, d.id desc
+    </select>
+
+    <select id="selectFailDetailListByBatchId" resultType="org.dromara.address.domain.vo.StandardAddressImportRecordVo">
+        select
+            <include refid="failDetailColumns" />
+        from address_standard_import_fail_detail d
+        left join address_standard_import_record b on b.id = d.batch_id and coalesce(b.del_flag, '0') = '0'
+        where coalesce(d.del_flag, '0') = '0'
+          and d.batch_id = #{batchId}
+        order by d.row_num asc, d.id asc
+    </select>
+
+</mapper>

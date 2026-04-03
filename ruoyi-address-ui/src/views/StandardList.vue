@@ -447,6 +447,59 @@
     </el-dialog>
 
     <el-dialog
+      :visible.sync="tagDialogVisible"
+      :title="tagDialogTitle()"
+      width="760px"
+      @close="resetTagDialog"
+    >
+      <div v-loading="tagOptionLoading" class="tag-dialog-body">
+        <div class="tag-section">
+          <div class="panel-title">已选地址（共{{ tagDialogRows.length }}条）</div>
+          <el-table :data="tagDialogRows" border size="small" max-height="220">
+            <el-table-column label="标准地址名称" min-width="320" show-overflow-tooltip>
+              <template #default="{ row }">
+                {{ row.standName || row.segmName || row.segmId }}
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="100" align="center">
+              <template #default="{ row }">
+                <el-button size="mini" type="text" @click="removeTagDialogRow(row)">移除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div class="tag-selected-actions">
+            <el-button size="mini" @click="clearTagDialogRows">一键清空</el-button>
+          </div>
+        </div>
+
+        <div class="tag-section">
+          <div class="panel-title">{{ tagDialogOptionTitle() }}</div>
+          <el-checkbox-group v-if="tagOptions.length" v-model="selectedTagIds" class="tag-checkbox-group">
+            <el-checkbox
+              v-for="item in tagOptions"
+              :key="item.id"
+              :label="item.id"
+            >
+              {{ item.name }}
+            </el-checkbox>
+          </el-checkbox-group>
+          <div v-else class="tag-empty-tip">{{ tagDialogEmptyText() }}</div>
+        </div>
+      </div>
+      <div slot="footer" class="dialog-actions">
+        <el-button @click="tagDialogVisible = false">取 消</el-button>
+        <el-button
+          type="primary"
+          :disabled="!tagDialogRows.length || !selectedTagIds.length || tagOptionLoading"
+          :loading="tagSubmitLoading"
+          @click="submitTagDialog"
+        >
+          {{ tagDialogConfirmText() }}
+        </el-button>
+      </div>
+    </el-dialog>
+
+    <el-dialog
       :visible.sync="importDialogVisible"
       title="批量导入"
       width="620px"
@@ -494,6 +547,7 @@
 
 <script>
 import {
+  bindTagsToStandardAddresses,
   batchAddStandardAddressChildren,
   createStandardAddress,
   deleteStandardAddresses,
@@ -503,10 +557,13 @@ import {
   getStandardAddressFormOptions,
   getStandardAddressLevelOptions,
   getStandardAddressList,
+  getStandardAddressTags,
   getStandardAddressStationOptions,
+  getTagList,
   importStandardAddressData,
   previewStandardAddressChildren,
   searchSelectionStandardAddresses,
+  unbindTagsFromStandardAddresses,
   updateStandardAddress
 } from '../api/address';
 import {
@@ -523,6 +580,7 @@ import {
 import { buildLevelMaps, normalizeLevelOptions, resolveLevelLabel } from '../utils/standard-level';
 
 const ACTIVE_STATUS = '2140900';
+const READONLY_REGION_ADDR_TYPES = ['180000', '180001'];
 
 function createEmptyEditor(parent = null) {
   return {
@@ -560,6 +618,19 @@ function createEmptyBatchAdd() {
     endNum: '',
     suffix: ''
   };
+}
+
+function isReadonlyRegionSegmType(segmType, levelOptions = []) {
+  const normalizedSegmType = segmType === null || segmType === undefined ? '' : String(segmType).trim();
+  if (!normalizedSegmType) {
+    return false;
+  }
+  if (READONLY_REGION_ADDR_TYPES.includes(normalizedSegmType)) {
+    return true;
+  }
+  const matchedOption = (levelOptions || []).find(item => String(item?.addrTypeId || '').trim() === normalizedSegmType);
+  const addrLevel = Number(matchedOption?.addrLevel);
+  return addrLevel === 1 || addrLevel === 2;
 }
 
 function dedupeBySegmId(rows = []) {
@@ -632,7 +703,14 @@ export default {
       importFile: null,
       importFileList: [],
       importResult: null,
-      importUpdateSupport: false
+      importUpdateSupport: false,
+      tagDialogVisible: false,
+      tagDialogMode: 'bind',
+      tagDialogRows: [],
+      tagOptionLoading: false,
+      tagSubmitLoading: false,
+      tagOptions: [],
+      selectedTagIds: []
     };
   },
   mounted() {
@@ -669,6 +747,28 @@ export default {
         ...this.stationOptions,
         [field]: mergeStationOptions(this.stationOptions[field], options, currentValue)
       };
+    },
+    seedEditorStationOptions(detail = {}) {
+      const stationFieldMap = {
+        stationId: 'stationName',
+        installStationId: 'installStationName',
+        busStationId: 'busStationName'
+      };
+      Object.entries(stationFieldMap).forEach(([field, nameField]) => {
+        const stationId = detail?.[field];
+        if (!stationId) {
+          return;
+        }
+        this.stationOptions = {
+          ...this.stationOptions,
+          [field]: mergeStationOptions(this.stationOptions[field], [{
+            stationId,
+            stationName: detail?.[nameField] || stationId,
+            regionId: '',
+            manageType: ''
+          }], stationId)
+        };
+      });
     },
     async loadLevelOptions() {
       try {
@@ -753,21 +853,27 @@ export default {
         ...this.list
       ]).slice(0, 50);
     },
+    buildListQueryParams() {
+      const params = {
+        pageNum: this.pageNum,
+        pageSize: this.pageSize
+      };
+      if (this.query.standName) {
+        params.standName = this.query.standName.trim();
+      }
+      if (this.query.segmType !== '' && this.query.segmType !== null) {
+        params.segmType = String(this.query.segmType).trim();
+      }
+      if (!isReadonlyRegionSegmType(params.segmType, this.levelOptions)) {
+        params.orderByColumn = 'createDate';
+        params.isAsc = 'desc';
+      }
+      return params;
+    },
     async fetchList() {
       this.loading = true;
       try {
-        const params = {
-          pageNum: this.pageNum,
-          pageSize: this.pageSize,
-          orderByColumn: 'createDate',
-          isAsc: 'desc'
-        };
-        if (this.query.standName) {
-          params.standName = this.query.standName.trim();
-        }
-        if (this.query.segmType !== '' && this.query.segmType !== null) {
-          params.segmType = String(this.query.segmType).trim();
-        }
+        const params = this.buildListQueryParams();
         const res = await getStandardAddressList(params);
         this.list = res.rows || [];
         this.total = res.total || 0;
@@ -931,6 +1037,7 @@ export default {
           supportingFeeCommunityFlag: detail.supportingFeeCommunityFlag || '',
           isCity: detail.isCity || ''
         };
+        this.seedEditorStationOptions(detail);
         await this.loadFormOptions();
         await this.loadEditorStationOptions();
         this.editorVisible = true;
@@ -1069,11 +1176,146 @@ export default {
         return;
       }
       if (command === 'bindTag') {
-        this.$message.info('批量打标签能力将在后续联调中继续接入');
+        this.openBindTagDialog();
         return;
       }
       if (command === 'unbindTag') {
-        this.$message.info('批量删标签能力将在后续联调中继续接入');
+        this.openUnbindTagDialog();
+      }
+    },
+    tagDialogTitle() {
+      return this.tagDialogMode === 'unbind' ? '批量删标签' : '批量打标签';
+    },
+    tagDialogOptionTitle() {
+      if (this.tagDialogMode === 'unbind') {
+        return '选择要删除的标签（仅显示选中地址已绑定的标签）';
+      }
+      return '选择标签';
+    },
+    tagDialogEmptyText() {
+      if (this.tagDialogMode === 'unbind') {
+        return '选中地址暂无已绑定标签';
+      }
+      return '暂无可选标签';
+    },
+    tagDialogConfirmText() {
+      return this.tagDialogMode === 'unbind' ? '确认删标签' : '确认打标签';
+    },
+    buildTagDialogRows(rows = []) {
+      return dedupeBySegmId(rows)
+        .filter(item => item?.segmId)
+        .map(item => ({ ...item }));
+    },
+    async openTagDialog(mode) {
+      if (!this.selectedRows.length) {
+        this.$message.warning('请先勾选一条或多条标准地址记录');
+        return;
+      }
+      this.tagDialogMode = mode;
+      this.tagDialogRows = this.buildTagDialogRows(this.selectedRows);
+      this.tagDialogVisible = true;
+      this.selectedTagIds = [];
+      this.tagOptions = [];
+      if (mode === 'unbind') {
+        await this.loadBoundTagOptions();
+        return;
+      }
+      await this.loadTagOptions();
+    },
+    openBindTagDialog() {
+      return this.openTagDialog('bind');
+    },
+    openUnbindTagDialog() {
+      return this.openTagDialog('unbind');
+    },
+    async loadTagOptions() {
+      this.tagOptionLoading = true;
+      try {
+        const res = await getTagList({
+          pageNum: 1,
+          pageSize: 1000
+        });
+        this.tagOptions = res.rows || [];
+      } catch (err) {
+        this.tagOptions = [];
+        this.$message.error(err?.friendlyMessage || err?.message || '标签加载失败');
+      } finally {
+        this.tagOptionLoading = false;
+      }
+    },
+    async loadBoundTagOptions() {
+      this.tagOptionLoading = true;
+      try {
+        const results = await Promise.all(
+          this.tagDialogRows.map(row => getStandardAddressTags(row.segmId))
+        );
+        const optionMap = new Map();
+        results.forEach(res => {
+          const rows = res?.data || [];
+          rows.forEach(item => {
+            if (item?.id && !optionMap.has(item.id)) {
+              optionMap.set(item.id, item);
+            }
+          });
+        });
+        this.tagOptions = [...optionMap.values()];
+      } catch (err) {
+        this.tagOptions = [];
+        this.$message.error(err?.friendlyMessage || err?.message || '已绑标签加载失败');
+      } finally {
+        this.tagOptionLoading = false;
+      }
+    },
+    async removeTagDialogRow(row) {
+      this.tagDialogRows = this.tagDialogRows.filter(item => item.segmId !== row.segmId);
+      if (this.tagDialogMode === 'unbind') {
+        this.selectedTagIds = [];
+        await this.loadBoundTagOptions();
+      }
+    },
+    async clearTagDialogRows() {
+      this.tagDialogRows = [];
+      this.selectedTagIds = [];
+      this.tagOptions = [];
+    },
+    resetTagDialog() {
+      this.tagDialogVisible = false;
+      this.tagDialogMode = 'bind';
+      this.tagDialogRows = [];
+      this.tagOptionLoading = false;
+      this.tagSubmitLoading = false;
+      this.tagOptions = [];
+      this.selectedTagIds = [];
+    },
+    async submitTagDialog() {
+      if (!this.tagDialogRows.length) {
+        this.$message.warning('请先勾选一条或多条标准地址记录');
+        return;
+      }
+      if (!this.selectedTagIds.length) {
+        this.$message.warning('请选择标签');
+        return;
+      }
+      this.tagSubmitLoading = true;
+      try {
+        const payload = {
+          standardAddressIds: this.tagDialogRows.map(item => item.segmId),
+          tagIds: this.selectedTagIds
+        };
+        if (this.tagDialogMode === 'unbind') {
+          await unbindTagsFromStandardAddresses(payload);
+          this.$message.success('批量删标签成功');
+        } else {
+          await bindTagsToStandardAddresses(payload);
+          this.$message.success('批量打标签成功');
+        }
+        this.tagDialogVisible = false;
+        this.resetTagDialog();
+        await this.fetchList();
+      } catch (err) {
+        this.$message.error(err?.friendlyMessage || err?.message || '标签操作失败');
+      } finally {
+        this.tagSubmitLoading = false;
       }
     },
     openImportDialog() {
@@ -1375,6 +1617,34 @@ export default {
 
 .preview-title {
   margin-top: 16px;
+}
+
+.tag-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.tag-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tag-selected-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.tag-checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+}
+
+.tag-empty-tip {
+  color: #909399;
+  font-size: 13px;
 }
 
 .import-panel {

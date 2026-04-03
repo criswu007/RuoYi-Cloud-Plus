@@ -147,7 +147,7 @@ public abstract class StandardAddressAdminApiSupport extends BaseController impl
     }
 
     @Override
-    public R<List<StandardAddressTagVo>> listTagsByStandardAddressId(Long standardAddressId) {
+    public R<List<StandardAddressTagVo>> listTagsByStandardAddressId(String standardAddressId) {
         throw unsupportedOperation();
     }
 

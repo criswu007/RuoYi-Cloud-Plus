@@ -1,10 +1,14 @@
 <template>
-  <div>
-    <el-card class="panel-card">
+  <div class="label-page">
+    <el-card class="panel-card" shadow="never">
       <div class="toolbar">
         <div class="filters">
-          <el-input v-model="query.name" placeholder="标签名称" clearable @keyup.enter.native="fetchList" />
-          <el-input v-model="query.code" placeholder="标签编码" clearable @keyup.enter.native="fetchList" />
+          <el-input
+            v-model="query.name"
+            placeholder="标签名称"
+            clearable
+            @keyup.enter.native="fetchList"
+          />
           <el-button type="primary" @click="fetchList">查询</el-button>
           <el-button @click="reset">重置</el-button>
         </div>
@@ -12,24 +16,18 @@
       </div>
     </el-card>
 
-    <el-card class="table-card">
-      <el-table :data="list" border stripe size="small">
-        <el-table-column prop="id" label="ID" width="90" />
-        <el-table-column prop="name" label="标签名称" min-width="160" />
-        <el-table-column prop="code" label="标签编码" min-width="140" />
-        <el-table-column label="标签颜色" width="120">
-          <template #default="{ row }">
-            <div class="color-cell">
-              <span class="color-dot" :style="{ background: row.color || '#5b6b7b' }" />
-              <span>{{ row.color || '-' }}</span>
-            </div>
+    <el-card class="table-card" shadow="never">
+      <el-table v-loading="loading" :data="list" border size="small">
+        <el-table-column label="序号" width="80">
+          <template #default="{ $index }">
+            {{ (pageNum - 1) * pageSize + $index + 1 }}
           </template>
         </el-table-column>
-        <el-table-column prop="remark" label="备注" min-width="220" show-overflow-tooltip />
+        <el-table-column prop="name" label="标签名称" min-width="240" show-overflow-tooltip />
         <el-table-column prop="createTime" label="创建时间" width="180" />
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
-            <el-button size="mini" type="primary" plain @click="openEditor(row)">编辑</el-button>
+            <el-button size="mini" type="primary" plain @click="openEditor(row)">修改</el-button>
             <el-button size="mini" type="danger" plain @click="removeRow(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -46,31 +44,10 @@
       </div>
     </el-card>
 
-    <el-dialog :visible.sync="editorVisible" :title="editor.id ? '编辑标签' : '新增标签'" width="520px">
+    <el-dialog :visible.sync="editorVisible" :title="editor.id ? '修改标签' : '新增标签'" width="520px">
       <el-form ref="editorForm" :model="editor" :rules="rules" label-width="100px">
         <el-form-item label="标签名称" prop="name">
           <el-input v-model="editor.name" maxlength="100" show-word-limit />
-        </el-form-item>
-        <el-form-item label="标签编码">
-          <el-input v-model="editor.code" maxlength="100" show-word-limit />
-        </el-form-item>
-        <el-form-item label="标签颜色">
-          <div class="color-picker">
-            <el-input v-model="editor.color" placeholder="#79c49a / red / rgb()" />
-            <div class="preset-group">
-              <button
-                v-for="item in presetColors"
-                :key="item"
-                type="button"
-                class="preset-color"
-                :style="{ background: item }"
-                @click="editor.color = item"
-              />
-            </div>
-          </div>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="editor.remark" type="textarea" :rows="3" maxlength="500" show-word-limit />
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-actions">
@@ -88,22 +65,18 @@ export default {
   data() {
     return {
       query: {
-        name: '',
-        code: ''
+        name: ''
       },
       list: [],
       total: 0,
       pageNum: 1,
       pageSize: 10,
+      loading: false,
       editorVisible: false,
       editor: {
         id: null,
-        name: '',
-        code: '',
-        color: '#79c49a',
-        remark: ''
+        name: ''
       },
-      presetColors: ['#79c49a', '#d9a75f', '#4d88ff', '#f56c6c', '#8a6fd1', '#4ca998'],
       rules: {
         name: [{ required: true, message: '请输入标签名称', trigger: 'blur' }]
       }
@@ -114,16 +87,23 @@ export default {
   },
   methods: {
     async fetchList() {
-      const res = await getTagList({
-        ...this.query,
-        pageNum: this.pageNum,
-        pageSize: this.pageSize
-      });
-      this.list = res.rows || [];
-      this.total = res.total || 0;
+      this.loading = true;
+      try {
+        const res = await getTagList({
+          ...this.query,
+          pageNum: this.pageNum,
+          pageSize: this.pageSize
+        });
+        this.list = res.rows || [];
+        this.total = res.total || 0;
+      } catch (err) {
+        this.$message.error(err?.friendlyMessage || err?.message || '标签查询失败');
+      } finally {
+        this.loading = false;
+      }
     },
     reset() {
-      this.query = { name: '', code: '' };
+      this.query = { name: '' };
       this.pageNum = 1;
       this.fetchList();
     },
@@ -133,8 +113,8 @@ export default {
     },
     openEditor(row) {
       this.editor = row
-        ? { id: row.id, name: row.name, code: row.code, color: row.color, remark: row.remark }
-        : { id: null, name: '', code: '', color: '#79c49a', remark: '' };
+        ? { id: row.id, name: row.name }
+        : { id: null, name: '' };
       this.editorVisible = true;
       this.$nextTick(() => this.$refs.editorForm && this.$refs.editorForm.clearValidate());
     },
@@ -143,22 +123,30 @@ export default {
         if (!valid) {
           return;
         }
-        if (this.editor.id) {
-          await updateTag(this.editor);
-          this.$message.success('标签已更新');
-        } else {
-          await createTag(this.editor);
-          this.$message.success('标签已创建');
+        try {
+          if (this.editor.id) {
+            await updateTag({ id: this.editor.id, name: this.editor.name });
+            this.$message.success('标签已更新');
+          } else {
+            await createTag({ name: this.editor.name });
+            this.$message.success('标签已创建');
+          }
+          this.editorVisible = false;
+          this.fetchList();
+        } catch (err) {
+          this.$message.error(err?.friendlyMessage || err?.message || '标签保存失败');
         }
-        this.editorVisible = false;
-        this.fetchList();
       });
     },
     async removeRow(row) {
       await this.$confirm(`确认删除标签“${row.name}”吗？`, '提示', { type: 'warning' });
-      await deleteTag(row.id);
-      this.$message.success('标签已删除');
-      this.fetchList();
+      try {
+        await deleteTag(row.id);
+        this.$message.success('标签已删除');
+        this.fetchList();
+      } catch (err) {
+        this.$message.error(err?.friendlyMessage || err?.message || '标签删除失败');
+      }
     }
   }
 };
@@ -184,35 +172,6 @@ export default {
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
-}
-.color-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.color-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  box-shadow: 0 0 0 2px rgba(16, 36, 51, 0.08);
-}
-.color-picker {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.preset-group {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.preset-color {
-  width: 24px;
-  height: 24px;
-  border-radius: 999px;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 0 0 2px rgba(16, 36, 51, 0.08);
 }
 .pager {
   margin-top: 16px;

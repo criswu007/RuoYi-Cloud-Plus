@@ -39,6 +39,10 @@ public class LogEventListener {
      */
     @EventListener
     public void saveLog(OperLogEvent operLogEvent) {
+        if (remoteLogService == null) {
+            log.warn("远程日志服务不可用，跳过操作日志写入");
+            return;
+        }
         RemoteOperLogBo sysOperLog = BeanUtil.toBean(operLogEvent, RemoteOperLogBo.class);
         remoteLogService.saveLog(sysOperLog);
     }
@@ -48,13 +52,21 @@ public class LogEventListener {
      */
     @EventListener
     public void saveLogininfor(LogininforEvent logininforEvent) {
+        if (remoteLogService == null) {
+            log.warn("远程日志服务不可用，跳过登录日志写入");
+            return;
+        }
         HttpServletRequest request = ServletUtils.getRequest();
+        if (request == null) {
+            log.warn("当前请求上下文缺失，跳过登录日志写入");
+            return;
+        }
         final UserAgent userAgent = UserAgentUtil.parse(request.getHeader("User-Agent"));
         final String ip = ServletUtils.getClientIP(request);
         // 客户端信息
         String clientId = request.getHeader(LoginHelper.CLIENT_KEY);
         RemoteClientVo clientVo = null;
-        if (StringUtils.isNotBlank(clientId)) {
+        if (StringUtils.isNotBlank(clientId) && remoteClientService != null) {
             clientVo = remoteClientService.queryByClientId(clientId);
         }
 

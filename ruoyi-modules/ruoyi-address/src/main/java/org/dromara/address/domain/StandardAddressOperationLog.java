@@ -33,7 +33,7 @@ public class StandardAddressOperationLog extends TenantEntity {
     /**
      * 关联标准地址ID
      */
-    private Long standardAddressId;
+    private String standardAddressId;
 
     /**
      * 操作类型（MERGE, SPLIT, DELETE, IMPORT）

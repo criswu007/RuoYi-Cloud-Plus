@@ -105,8 +105,8 @@
 | --- | --- | --- |
 | `pageNum` | `Integer` | 当前页，从 1 开始 |
 | `pageSize` | `Integer` | 每页条数 |
-| `orderByColumn` | `String` | 排序字段 |
-| `isAsc` | `String` | 排序方向，`asc` / `desc` |
+| `orderByColumn` | `String` | 排序字段；查询一二级标准地址时不传 |
+| `isAsc` | `String` | 排序方向，`asc` / `desc`；查询一二级标准地址时不传 |
 
 查询接口推荐提交格式：
 
@@ -118,6 +118,12 @@ Content-Type: application/x-www-form-urlencoded
 
 ```http
 pageNum=1&pageSize=20&orderByColumn=createTime&isAsc=desc
+```
+
+一二级标准地址分页查询示例：
+
+```http
+pageNum=1&pageSize=20&segmType=180001
 ```
 
 ### 2.4 常见格式要求
@@ -201,8 +207,8 @@ pageNum=1&pageSize=20&orderByColumn=createTime&isAsc=desc
 | --- | --- | --- | --- | --- | --- | --- |
 | `pageNum` | form | `Integer` | 列表接口建议必填 | 从 `1` 开始的正整数 | 分页查询 | `1` |
 | `pageSize` | form | `Integer` | 列表接口建议必填 | 建议 `1-200` | 分页查询 | `20` |
-| `orderByColumn` | form | `String` | 选填 | 白名单排序字段 | 分页查询 | `createTime` |
-| `isAsc` | form | `String` | 选填 | `asc` 或 `desc` | 分页查询 | `desc` |
+| `orderByColumn` | form | `String` | 选填 | 白名单排序字段；一二级标准地址分页查询不传 | 分页查询 | `createTime` |
+| `isAsc` | form | `String` | 选填 | `asc` 或 `desc`；一二级标准地址分页查询不传 | 分页查询 | `desc` |
 | `id` | path | `Long` | 必填 | 正整数主键 | 标签、监控规则、日志、工单、组织、网格等明确数值主键资源的详情或单对象操作 | `10001` |
 | `ids` | path | `Long[]` | 必填 | 逗号分隔的 `Long` 集合 | 标签、监控任务、异常忽略等明确数值主键资源的批量操作 | `10001,10002` |
 | `batchId` | path | `Long` | 必填 | 正整数主键 | 导入批次详情、失败明细导出 | `9001` |
@@ -219,6 +225,12 @@ pageNum=1&pageSize=20&orderByColumn=createTime&isAsc=desc
 
 ```http
 pageNum=1&pageSize=20&orderByColumn=createTime&isAsc=desc
+```
+
+若标准地址列表查询条件命中一二级行政区划，则请求参数改为：
+
+```http
+pageNum=1&pageSize=20&segmType=180001
 ```
 
 ### 3.3 标准地址主资源参数
@@ -318,10 +330,10 @@ pageNum=1&pageSize=20&orderByColumn=createTime&isAsc=desc
 | 字段 | 类型 | 格式说明 | 说明 |
 | --- | --- | --- | --- |
 | `createDate` | `Date` | `yyyy-MM-dd HH:mm:ss` | 创建日期，对应 `ADDR_SEGM.create_date` |
-| `tagNames` | `List<String>` | 字符串数组 | 地址标签名称列表 |
-| `stationName` | `String` | 普通字符串 | 维修管理站名称 |
-| `installStationName` | `String` | 普通字符串 | 安装管理站名称 |
-| `busStationName` | `String` | 普通字符串 | 营业管理站名称 |
+| `tagNames` | `List<String>` | 字符串数组 | 展示衍生字段，由 `address_standard_tag_rel + address_standard_tag.name` 聚合得到的地址标签名称列表 |
+| `stationName` | `String` | 普通字符串 | 展示衍生字段，由 `stationId` 映射 `spc_station.china_name` 得到的维修管理站名称 |
+| `installStationName` | `String` | 普通字符串 | 展示衍生字段，由 `installStationId` 映射 `spc_station.china_name` 得到的安装管理站名称 |
+| `busStationName` | `String` | 普通字符串 | 展示衍生字段，由 `busStationId` 映射 `spc_station.china_name` 得到的营业管理站名称 |
 
 #### `StandardAddressMergeBo`
 

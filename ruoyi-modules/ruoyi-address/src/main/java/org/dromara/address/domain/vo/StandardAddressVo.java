@@ -42,7 +42,7 @@ public class StandardAddressVo implements Serializable {
     private String parentSegmId;
 
     /**
-     * 父级标准地址名称。
+     * 父级标准地址名称，展示衍生字段，由 `parentSegmId` 回查标准地址名称后补齐。
      */
     private String parentStandName;
 
@@ -104,6 +104,11 @@ public class StandardAddressVo implements Serializable {
      * 数据库真实层级 ID，来源于 `segm_addr_type.level_id`。
      */
     private Integer levelId;
+
+    /**
+     * 区域等级 ID，来源于 `spc_region.grade_id`，仅用于一二级区域投影的程序层判定。
+     */
+    private Integer gradeId;
 
     /**
      * 区域 ID。
@@ -181,17 +186,17 @@ public class StandardAddressVo implements Serializable {
     private Integer coverNum;
 
     /**
-     * 管理站名称。
+     * 维修管理站名称，展示衍生字段，来源 `stationId -> spc_station.china_name` 的映射结果。
      */
     private String stationName;
 
     /**
-     * 安装站名称。
+     * 安装管理站名称，展示衍生字段，来源 `installStationId -> spc_station.china_name` 的映射结果。
      */
     private String installStationName;
 
     /**
-     * 营业站名称。
+     * 营业管理站名称，展示衍生字段，来源 `busStationId -> spc_station.china_name` 的映射结果。
      */
     private String busStationName;
 
@@ -280,7 +285,7 @@ public class StandardAddressVo implements Serializable {
     private Date createTime;
 
     /**
-     * 标签名称集合
+     * 标签名称集合，展示衍生字段，由标签关系表与标签主表聚合补齐。
      */
     private List<String> tagNames;
 

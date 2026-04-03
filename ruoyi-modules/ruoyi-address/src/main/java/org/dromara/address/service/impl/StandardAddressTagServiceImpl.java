@@ -102,13 +102,13 @@ public class StandardAddressTagServiceImpl implements IStandardAddressTagService
     }
 
     @Override
-    public List<StandardAddressTagVo> listTagsByStandardAddressId(Long standardAddressId) {
+    public List<StandardAddressTagVo> listTagsByStandardAddressId(String standardAddressId) {
         return mapTagsByStandardAddressIds(Collections.singleton(standardAddressId))
             .getOrDefault(standardAddressId, Collections.emptyList());
     }
 
     @Override
-    public Map<Long, List<StandardAddressTagVo>> mapTagsByStandardAddressIds(Collection<Long> standardAddressIds) {
+    public Map<String, List<StandardAddressTagVo>> mapTagsByStandardAddressIds(Collection<String> standardAddressIds) {
         if (CollUtil.isEmpty(standardAddressIds)) {
             return Collections.emptyMap();
         }
@@ -127,7 +127,7 @@ public class StandardAddressTagServiceImpl implements IStandardAddressTagService
             .map(item -> MapstructUtils.convert(item, StandardAddressTagVo.class))
             .collect(Collectors.toMap(StandardAddressTagVo::getId, item -> item, (left, right) -> left, LinkedHashMap::new));
 
-        Map<Long, List<StandardAddressTagVo>> result = new LinkedHashMap<>();
+        Map<String, List<StandardAddressTagVo>> result = new LinkedHashMap<>();
         for (StandardAddressTagRel rel : relList) {
             StandardAddressTagVo tag = tagMap.get(rel.getTagId());
             if (tag == null) {
@@ -140,8 +140,8 @@ public class StandardAddressTagServiceImpl implements IStandardAddressTagService
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Boolean bindTagsToStandardAddresses(Collection<Long> standardAddressIds, Collection<Long> tagIds) {
-        Set<Long> normalizedStandardAddressIds = normalizeIds(standardAddressIds, "标准地址");
+    public Boolean bindTagsToStandardAddresses(Collection<String> standardAddressIds, Collection<Long> tagIds) {
+        Set<String> normalizedStandardAddressIds = normalizeStandardAddressIds(standardAddressIds);
         Set<Long> normalizedTagIds = normalizeIds(tagIds, "标签");
         validateStandardAddressIds(normalizedStandardAddressIds);
         validateTagIds(normalizedTagIds);
@@ -156,7 +156,7 @@ public class StandardAddressTagServiceImpl implements IStandardAddressTagService
             .collect(Collectors.toSet());
 
         boolean changed = false;
-        for (Long standardAddressId : normalizedStandardAddressIds) {
+        for (String standardAddressId : normalizedStandardAddressIds) {
             for (Long tagId : normalizedTagIds) {
                 String relKey = buildRelKey(standardAddressId, tagId);
                 if (existingKeys.contains(relKey)) {
@@ -174,8 +174,8 @@ public class StandardAddressTagServiceImpl implements IStandardAddressTagService
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Boolean unbindTagsFromStandardAddresses(Collection<Long> standardAddressIds, Collection<Long> tagIds) {
-        Set<Long> normalizedStandardAddressIds = normalizeIds(standardAddressIds, "标准地址");
+    public Boolean unbindTagsFromStandardAddresses(Collection<String> standardAddressIds, Collection<Long> tagIds) {
+        Set<String> normalizedStandardAddressIds = normalizeStandardAddressIds(standardAddressIds);
         Set<Long> normalizedTagIds = normalizeIds(tagIds, "标签");
         int deleted = addressTagRelMapper.delete(
             Wrappers.<StandardAddressTagRel>lambdaQuery()
@@ -245,19 +245,41 @@ public class StandardAddressTagServiceImpl implements IStandardAddressTagService
     }
 
     /**
+     * 规范化并校验标准地址主键集合。
+     *
+     * @param standardAddressIds 标准地址主键集合
+     * @return 去重后的标准地址主键集合
+     *
+     * 关键约束：主键以线上 `segmId` 字符串口径传递，不能为空字符串。
+     * 异常：集合为空或全部为空白字符串时抛出业务异常。
+     */
+    private Set<String> normalizeStandardAddressIds(Collection<String> standardAddressIds) {
+        if (CollUtil.isEmpty(standardAddressIds)) {
+            throw new ServiceException("标准地址不能为空");
+        }
+        Set<String> normalized = standardAddressIds.stream()
+            .map(StringUtils::trim)
+            .filter(StringUtils::isNotBlank)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (normalized.isEmpty()) {
+            throw new ServiceException("标准地址不能为空");
+        }
+        return normalized;
+    }
+
+    /**
      * 校验标准地址是否全部存在。
      *
      * @param standardAddressIds 标准地址ID集合
      *
      * 异常：存在缺失地址时抛出业务异常。
      */
-    private void validateStandardAddressIds(Collection<Long> standardAddressIds) {
+    private void validateStandardAddressIds(Collection<String> standardAddressIds) {
         List<String> segmIds = standardAddressIds.stream()
-            .filter(Objects::nonNull)
-            .map(String::valueOf)
+            .filter(StringUtils::isNotBlank)
             .toList();
         Map<String, String> standardAddressMap = standardAddressService.listStandardAddressStandNameMapBySegmIds(segmIds);
-        long validCount = segmIds.stream()
+        long validCount = standardAddressIds.stream()
             .filter(standardAddressMap::containsKey)
             .count();
         if (validCount != standardAddressIds.size()) {
@@ -288,7 +310,7 @@ public class StandardAddressTagServiceImpl implements IStandardAddressTagService
      * @param tagId 标签ID
      * @return 关系键
      */
-    private String buildRelKey(Long standardAddressId, Long tagId) {
+    private String buildRelKey(String standardAddressId, Long tagId) {
         return standardAddressId + "_" + tagId;
     }
 }

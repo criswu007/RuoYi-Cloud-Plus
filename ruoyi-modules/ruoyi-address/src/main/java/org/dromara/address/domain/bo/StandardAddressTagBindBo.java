@@ -17,7 +17,7 @@ public class StandardAddressTagBindBo {
      * 标准地址ID集合
      */
     @NotEmpty(message = "标准地址不能为空")
-    private List<Long> standardAddressIds;
+    private List<String> standardAddressIds;
 
     /**
      * 标签ID集合

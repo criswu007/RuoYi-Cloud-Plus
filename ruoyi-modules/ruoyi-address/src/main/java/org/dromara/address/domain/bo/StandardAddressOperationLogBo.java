@@ -19,7 +19,7 @@ public class StandardAddressOperationLogBo extends BaseEntity {
     /**
      * 关联标准地址ID
      */
-    private Long standardAddressId;
+    private String standardAddressId;
 
     /**
      * 操作类型（MERGE, SPLIT, DELETE, IMPORT, UPDATE, INSERT）

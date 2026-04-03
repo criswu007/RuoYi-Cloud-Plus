@@ -12,10 +12,15 @@ import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.web.core.BaseController;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 import java.util.List;
 
 /**
@@ -39,7 +44,7 @@ public class InstallationAddressController extends BaseController {
      * @return 分页结果
      */
     @SaCheckPermission("address:installation:list")
-    @GetMapping("/list")
+    @RequestMapping(value = "/list", method = {RequestMethod.GET, RequestMethod.POST})
     public TableDataInfo<InstallationAddressVo> list(InstallationAddressBo bo, PageQuery pageQuery) {
         return addressInstallationService.queryPageList(bo, pageQuery);
     }
@@ -47,13 +52,13 @@ public class InstallationAddressController extends BaseController {
     /**
      * 获取安装地址详细信息。
      *
-     * @param id 主键
+     * @param setAddrId 安装地址主键
      * @return 安装地址详情
      */
     @SaCheckPermission("address:installation:query")
-    @GetMapping("/{id}")
-    public R<InstallationAddressVo> getInfo(@NotNull(message = "主键不能为空") @PathVariable Long id) {
-        return R.ok(addressInstallationService.queryById(id));
+    @RequestMapping(value = "/{setAddrId}", method = {RequestMethod.GET, RequestMethod.POST})
+    public R<InstallationAddressVo> getInfo(@NotBlank(message = "主键不能为空") @PathVariable String setAddrId) {
+        return R.ok(addressInstallationService.queryById(setAddrId));
     }
 
     /**
@@ -77,7 +82,7 @@ public class InstallationAddressController extends BaseController {
      */
     @SaCheckPermission("address:installation:edit")
     @Log(title = "安装地址", businessType = BusinessType.UPDATE)
-    @PutMapping
+    @RequestMapping(value = "/update", method = {RequestMethod.PUT, RequestMethod.POST})
     public R<Void> edit(@Validated @RequestBody InstallationAddressBo bo) {
         return toAjax(addressInstallationService.updateByBo(bo));
     }
@@ -85,13 +90,13 @@ public class InstallationAddressController extends BaseController {
     /**
      * 删除安装地址。
      *
-     * @param ids 主键串
+     * @param setAddrIds 主键串
      * @return 操作结果
      */
     @SaCheckPermission("address:installation:remove")
     @Log(title = "安装地址", businessType = BusinessType.DELETE)
-    @DeleteMapping("/{ids}")
-    public R<Void> remove(@NotEmpty(message = "主键不能为空") @PathVariable Long[] ids) {
-        return toAjax(addressInstallationService.deleteWithValidByIds(List.of(ids), true));
+    @RequestMapping(value = "/remove/{setAddrIds}", method = {RequestMethod.DELETE, RequestMethod.POST})
+    public R<Void> remove(@NotEmpty(message = "主键不能为空") @PathVariable String[] setAddrIds) {
+        return toAjax(addressInstallationService.deleteWithValidByIds(List.of(setAddrIds), true));
     }
 }

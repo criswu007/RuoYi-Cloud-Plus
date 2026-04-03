@@ -2,7 +2,7 @@
 <!DOCTYPE mapper
 PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="org.dromara.address.mapper.AddressManagementStationMapper">
+<mapper namespace="org.dromara.address.mapper.StandardAddressManagementStationMapper">
     <!-- 地址管理站点Mapper扩展SQL：当前使用通用BaseMapperPlus，无自定义SQL -->
 
 </mapper>

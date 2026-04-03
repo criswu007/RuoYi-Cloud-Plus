@@ -17,7 +17,7 @@
 
 - 自本版起，标准地址与网格开发一律优先基于“当前线上非备份表结构 + 南京历史批次专题 + `0323` 需求书备注”三类材料联合判定，不再以旧版目标模型设计稿作为主依据。
 - 业务规则仍以 `/Users/criswu/Desktop/广电/需求/技术需求书_标准地址_待明确问题0323.docx` 及备注为最高优先级；但若要落库、建模、兼容 legacy 接口，必须先回到历史结构核实。
-- 标准地址查询口径需兼容 legacy：`1/2` 级行政区划统一按 `spc_region` 口径处理，其余层级按 `ADDR_SEGM` / 历史标准地址事实表处理，层级定义以 `segm_addr_type.level_id` 为准。
+- 标准地址查询口径统一按线上库执行：`1/2` 级行政区划统一按 `spc_region` 口径处理，其余层级按 `ADDR_SEGM` / 历史标准地址事实表处理；`spc_region` 内部的一二级判定直接按 `grade_id` 执行，`2000002` 视为一级、`2000004` 视为二级，不再保留旧结构回退分支。
 - `城区/非城区` 与 `城乡属性` 必须拆开理解：前者复用 `ADDR_SEGM.is_city`，后者复用 `ADDR_SEGM.area_type`。
 - 安装地址正常业务口径下默认必须关联标准地址；未关联视图仅用于历史迁移、脏数据治理和异常清理。
 - 管理站主数据当前参考 `spc_station`，并按 `region_id` 划分；业务角色需在关系层补齐 `维修/安装/营业` 三类。
@@ -78,6 +78,7 @@
 - 性能指标：需面向全省场景，支持至少 `3000` 人同时使用；登录时间 `<=3s`，页面查询渲染 `<=5s`，在线事务处理 `<=5s`。
 - 可用性与冗余：系统整体可用性目标 `99.99%`；应用层和数据层不得单点部署；需支持热备、异地容灾和故障切换。
 - 数据库适配：实现上需尽量采用标准 SQL 和通用 JDBC 能力，避免把 `ruoyi-address` 写死到单一数据库语法；项目目标要求至少适配两款主流国产关系型数据库。
+- 标准地址核心链路若遇到数据库差异场景，优先保持 Mapper SQL 为通用写法，并把特殊差异收口到程序层适配；禁止在业务 XML 中扩散数据库专有语法、厂商函数或方言分页/排序技巧。
 - 接口与文档：需求书明确要求对外提供完整 RESTful API 等接口说明文档，并对本系统接口及外联系统平台接口做健康度监控报警。
 - 源码交付要求：关键函数和复杂逻辑要有清晰注释，并配套架构文档、模块说明文档；源码需可独立编译运行，且与最终交付版本一致。
 
@@ -91,6 +92,22 @@
 - 管理站、接入能力、城乡属性、房屋属性、覆盖户数等扩展字段命名应优先使用 `stationId/installStationId/busStationId/addrInTypeFtth/ftthPonType/addrInTypeLan/areaType/placeType/coverNum/singleProjectCode/supportingFeeCommunityFlag`，避免使用容易误读的抽象名。
 - 若线上物理字段名本身存在历史遗留歧义，例如 `post_code`、`segm_name_fir`、`installstation_id`、`busstation_id`，代码层应采用“语义清晰的变量名 + 注释标注物理字段与释义”的方式收口，不能只沿用含义模糊的物理名或旧泛化名。
 - legacy 兼容层可保留 `standardAddressId/fullName/accessMethod` 等旧字段名以满足外部协议，但内部主模型、Mapper 别名、SQL 列别名和新增接口合同不得继续扩散这类泛化命名；若路径占位名暂时仍为 `id` 或 `standardAddressId`，实现中必须在注释和变量命名上明确其真实语义分别是 `segmId` 或 `setAddrId`。
+
+### 6.2 standalone 联调配置约束
+
+- 当前单体联调统一使用 `standalone` profile，并默认直连线上标准地址库 `ftth_cloud_address`；不再保留内置 H2 样例库回退链路。
+- 后端优先识别 `ADDRESS_DATASOURCE_URL / ADDRESS_DATASOURCE_USERNAME / ADDRESS_DATASOURCE_PASSWORD`；若未提供，也兼容 `ADDRESS_DB_URL / ADDRESS_DB_USERNAME / ADDRESS_DB_PASSWORD` 这组历史脚本变量名。
+- standalone 自动登录态的区域过滤允许通过 `ADDRESS_STANDALONE_REGION_ID` 或 JVM 参数 `-Daddress.standalone.region-id=...` 覆盖；未显式指定时默认使用 `000102140000000021128049（南京市区）`，避免首屏因旧区域编码失效而查空。
+- `standalone` 不再执行本地 schema/data 初始化脚本，所有标准地址查询、字典、管理站联调都以线上库实时数据为准。
+- 当前已验证可达的标准地址线上库基线为 `ftth_cloud_address`，核心大表包括 `ADDR_SEGM`、`ADDR_SET_SEGM`、`segm_addr_type`、`pub_restriction`、`spc_region`、`spc_station`；标准地址模块开发、联调和字段释义统一以这套实表为准。
+- 对接线上库启动前必须先确认 `ADDR_SEGM`、`segm_addr_type` 等核心表可连通，并用实际行数或字段注释核对已接入真实库表，而不是旧样例数据。
+
+### 6.3 联调异常收口约束
+
+- 联调过程中若出现“本轮暂时无法处理”的异常问题，必须在当轮收口前统一登记到 [`todo.md`](./todo.md)。
+- TODO 记录最少包含：发现日期、现象、影响范围、复现线索、临时规避、下一步建议、当前状态。
+- 同类问题后续新增证据时，只更新同一条 TODO，不再散落到聊天记录、临时脚本输出或其他过程文档。
+- 阶段性汇报、交接或继续开发时，未解决异常统一以 `todo.md` 作为唯一待办来源。
 
 ## 7. 标后测试门槛
 

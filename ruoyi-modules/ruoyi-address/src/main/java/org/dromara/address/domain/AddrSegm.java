@@ -160,5 +160,6 @@ public class AddrSegm implements Serializable {
     /**
      * 修改时间。
      */
+    @TableField(exist = false)
     private Date modifyDate;
 }

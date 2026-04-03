@@ -10,6 +10,7 @@ import OperationLogs from '../views/OperationLogs.vue';
 import InstallationList from '../views/InstallationList.vue';
 import SelectionTools from '../views/SelectionTools.vue';
 import AddressLabels from '../views/AddressLabels.vue';
+import ManagementStation from '../views/ManagementStation.vue';
 import MonitorRecords from '../views/MonitorRecords.vue';
 import MonitorRules from '../views/MonitorRules.vue';
 import MonitorTask from '../views/MonitorTask.vue';
@@ -29,6 +30,7 @@ export default new Router({
     { path: '/installation/list', component: InstallationList },
     { path: '/selection/tools', component: SelectionTools },
     { path: '/standard/labels', component: AddressLabels },
+    { path: '/management/station', component: ManagementStation },
     { path: '/monitor/records', component: MonitorRecords },
     { path: '/monitor/rules', component: MonitorRules },
     { path: '/monitor/task', component: MonitorTask }

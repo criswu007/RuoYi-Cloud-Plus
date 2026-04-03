@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -86,6 +87,7 @@ class StandardAddressDictionaryServiceTest {
         assertEquals("180007", second.getPropertyValue("addrTypeId"));
         assertEquals(2, second.getPropertyValue("addrLevel"));
         assertTrue(((Integer) second.getPropertyValue("levelId")) > ((Integer) first.getPropertyValue("levelId")));
+        verify(segmAddrTypeMapper, times(1)).selectList(any());
     }
 
     @Test

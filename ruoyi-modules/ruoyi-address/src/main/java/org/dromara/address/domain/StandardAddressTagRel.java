@@ -21,7 +21,7 @@ public class StandardAddressTagRel implements Serializable {
     /**
      * 标准地址ID
      */
-    private Long standardAddressId;
+    private String standardAddressId;
 
     /**
      * 标签ID

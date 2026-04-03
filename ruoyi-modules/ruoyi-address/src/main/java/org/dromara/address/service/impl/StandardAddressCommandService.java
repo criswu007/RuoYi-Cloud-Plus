@@ -11,6 +11,7 @@ import org.dromara.address.domain.vo.StandardAddressAdminVo;
 import org.dromara.address.mapper.AddrSegmMapper;
 import org.dromara.address.mapper.AddrSetSegmMapper;
 import org.dromara.address.mapper.SpcRegionMapper;
+import org.dromara.address.support.StandardAddressOperationLogRecorder;
 import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.utils.StringUtils;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,11 @@ public class StandardAddressCommandService {
 
     private static final String ACTIVE_STATUS = "2140900";
     private static final String NOT_DELETED = "0";
+    private static final String OPERATION_TYPE_INSERT = "INSERT";
+    private static final String OPERATION_TYPE_UPDATE = "UPDATE";
+    private static final String OPERATION_TYPE_DELETE = "DELETE";
+    private static final String OPERATION_TYPE_MERGE = "MERGE";
+    private static final String OPERATION_TYPE_SPLIT = "SPLIT";
 
     private final AddrSegmMapper addrSegmMapper;
     private final AddrSetSegmMapper addrSetSegmMapper;
@@ -44,6 +50,7 @@ public class StandardAddressCommandService {
     private final StandardAddressDictionaryService dictionaryService;
     private final StandardAddressNameService nameService;
     private final StandardAddressIdGenerator idGenerator;
+    private final StandardAddressOperationLogRecorder operationLogRecorder;
 
     /**
      * 目的：新增标准地址。
@@ -54,6 +61,22 @@ public class StandardAddressCommandService {
      */
     @Transactional(rollbackFor = Exception.class)
     public Boolean addStandardAddress(StandardAddressBo bo) {
+        return addStandardAddressInternal(bo, true);
+    }
+
+    /**
+     * 目的：供导入链路复用标准地址新增能力，但避免额外写入默认 `INSERT` 审计日志。
+     * 入参：标准地址业务对象。
+     * 出参：新增是否成功。
+     * 关键约束：仅供导入服务在成功后转写 `IMPORT` 类型日志时调用，其他场景仍应走默认新增入口。
+     * 异常与副作用：会写入线上标准地址主表，但不会落默认新增日志。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean addStandardAddressForImport(StandardAddressBo bo) {
+        return addStandardAddressInternal(bo, false);
+    }
+
+    private Boolean addStandardAddressInternal(StandardAddressBo bo, boolean recordInsertLog) {
         Integer requestedAddrLevel = bo.getAddrLevel();
         if (requestedAddrLevel == null) {
             requestedAddrLevel = dictionaryService.resolveAddrLevel(bo.getSegmType());
@@ -70,6 +93,9 @@ public class StandardAddressCommandService {
             bo.setStandName(entity.getStandName());
             bo.setStandNo(entity.getStandNo());
             bo.setSegmNo(entity.getSegmNo());
+            if (recordInsertLog) {
+                operationLogRecorder.record(entity.getSegmId(), OPERATION_TYPE_INSERT, entity.getStandName(), "新增标准地址成功");
+            }
         }
         return success;
     }
@@ -83,6 +109,22 @@ public class StandardAddressCommandService {
      */
     @Transactional(rollbackFor = Exception.class)
     public Boolean updateStandardAddress(StandardAddressBo bo) {
+        return updateStandardAddressInternal(bo, true);
+    }
+
+    /**
+     * 目的：供导入链路复用标准地址修改能力，但避免额外写入默认 `UPDATE` 审计日志。
+     * 入参：标准地址业务对象。
+     * 出参：修改是否成功。
+     * 关键约束：仅供导入服务在成功后补写 `IMPORT` 类型日志时调用，其他场景仍应走默认修改入口。
+     * 异常与副作用：会更新线上标准地址主表，但不会落默认修改日志。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean updateStandardAddressForImport(StandardAddressBo bo) {
+        return updateStandardAddressInternal(bo, false);
+    }
+
+    private Boolean updateStandardAddressInternal(StandardAddressBo bo, boolean recordUpdateLog) {
         if (StringUtils.isBlank(bo.getSegmId())) {
             throw new ServiceException("标准地址ID不能为空");
         }
@@ -96,7 +138,13 @@ public class StandardAddressCommandService {
         AddrSegm update = buildEntity(bo, existing, parent, addrLevel);
         boolean success = addrSegmMapper.updateById(update) > 0;
         if (success) {
+            bo.setStandName(update.getStandName());
+            bo.setStandNo(update.getStandNo());
+            bo.setSegmNo(update.getSegmNo());
             refreshChildrenStandInfo(update);
+            if (recordUpdateLog) {
+                operationLogRecorder.record(update.getSegmId(), OPERATION_TYPE_UPDATE, update.getStandName(), "修改标准地址成功");
+            }
         }
         return success;
     }
@@ -126,7 +174,13 @@ public class StandardAddressCommandService {
         if (installCount != null && installCount > 0 && !confirm) {
             throw new ServiceException("删除失败：存在关联安装地址，请确认后重试");
         }
-        return addrSegmMapper.logicalDeleteBySegmIds(segmIds) > 0;
+        boolean success = addrSegmMapper.logicalDeleteBySegmIds(segmIds) > 0;
+        if (success) {
+            for (AddrSegm item : current) {
+                operationLogRecorder.record(item.getSegmId(), OPERATION_TYPE_DELETE, item.getStandName(), "删除标准地址成功");
+            }
+        }
+        return success;
     }
 
     /**
@@ -160,7 +214,29 @@ public class StandardAddressCommandService {
         }
         addrSegmMapper.moveChildrenToTarget(normalizedSourceIds, targetSegmId);
         addrSetSegmMapper.rebindSegmIds(normalizedSourceIds, targetSegmId);
-        return addrSegmMapper.logicalDeleteBySegmIds(normalizedSourceIds) == normalizedSourceIds.size();
+        boolean success = addrSegmMapper.logicalDeleteBySegmIds(normalizedSourceIds) == normalizedSourceIds.size();
+        if (success) {
+            List<String> sourceStandNames = normalizedSourceIds.stream()
+                .map(sourceId -> addressMap.get(sourceId).getStandName())
+                .filter(StringUtils::isNotBlank)
+                .toList();
+            operationLogRecorder.record(
+                target.getSegmId(),
+                OPERATION_TYPE_MERGE,
+                target.getStandName(),
+                "合并来源地址成功：" + String.join("、", sourceStandNames)
+            );
+            for (String sourceSegmId : normalizedSourceIds) {
+                AddrSegm source = addressMap.get(sourceSegmId);
+                operationLogRecorder.record(
+                    source.getSegmId(),
+                    OPERATION_TYPE_MERGE,
+                    source.getStandName(),
+                    "已合并到：" + target.getStandName()
+                );
+            }
+        }
+        return success;
     }
 
     /**
@@ -183,12 +259,35 @@ public class StandardAddressCommandService {
         AddrSegm parent = requireParent(source.getParentSegmId(), "拆分");
         validateSplitItems(splitItems);
         int inserted = 0;
+        List<AddrSegm> createdAddresses = new ArrayList<>();
         for (StandardAddressSplitItemBo splitItem : splitItems) {
             AddrSegm entity = buildSplitEntity(source, parent, splitItem.getSegmName());
             inserted += addrSegmMapper.insert(entity);
+            createdAddresses.add(entity);
         }
         boolean deleted = addrSegmMapper.logicalDeleteBySegmIds(List.of(sourceSegmId)) == 1;
-        return inserted == splitItems.size() && deleted;
+        boolean success = inserted == splitItems.size() && deleted;
+        if (success) {
+            List<String> createdStandNames = createdAddresses.stream()
+                .map(AddrSegm::getStandName)
+                .filter(StringUtils::isNotBlank)
+                .toList();
+            operationLogRecorder.record(
+                source.getSegmId(),
+                OPERATION_TYPE_SPLIT,
+                source.getStandName(),
+                "已拆分为：" + String.join("、", createdStandNames)
+            );
+            for (AddrSegm createdAddress : createdAddresses) {
+                operationLogRecorder.record(
+                    createdAddress.getSegmId(),
+                    OPERATION_TYPE_SPLIT,
+                    createdAddress.getStandName(),
+                    "由 " + source.getStandName() + " 拆分创建"
+                );
+            }
+        }
+        return success;
     }
 
     /**

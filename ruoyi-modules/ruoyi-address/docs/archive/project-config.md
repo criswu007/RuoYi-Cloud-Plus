@@ -60,7 +60,7 @@
       ```yaml
         url: jdbc:mysql://82.156.6.111:4000/ftth_cloud_address?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8&rewriteBatchedStatements=true&allowPublicKeyRetrieval=true
         username: address
-        password: Wetry2328!ß
+        password: Wetry2328!
       ```
 - 性能要求
   - 系统支持同一时间至少3000人共同使用的并发。

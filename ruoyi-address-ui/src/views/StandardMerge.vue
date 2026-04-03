@@ -110,6 +110,8 @@ import {
   mergeStandardAddresses
 } from '../api/address';
 
+const READONLY_REGION_ADDR_TYPES = ['180000', '180001'];
+
 function dedupeBySegmId(rows = []) {
   const rowMap = new Map();
   rows.forEach(item => {
@@ -148,17 +150,50 @@ export default {
   methods: {
     async initializePage() {
       await this.loadLevelOptions();
-      await this.fetchList();
     },
     async loadLevelOptions() {
-      const res = await getStandardAddressLevelOptions();
-      this.levelOptions = res.data || [];
-      this.levelMap = (res.data || []).reduce((accumulator, item) => {
-        accumulator[item.addrTypeId] = item.name;
-        return accumulator;
-      }, {});
+      try {
+        const res = await getStandardAddressLevelOptions();
+        this.levelOptions = (res.data || []).filter(item => !this.isReadonlyRegionLevelOption(item));
+        this.levelMap = this.levelOptions.reduce((accumulator, item) => {
+          accumulator[item.addrTypeId] = item.name;
+          return accumulator;
+        }, {});
+      } catch (err) {
+        this.levelOptions = [];
+        this.levelMap = {};
+        this.$message.error(err?.friendlyMessage || err?.message || '级别字典加载失败');
+      }
+    },
+    isReadonlyRegionLevelOption(option) {
+      if (!option) {
+        return false;
+      }
+      const segmType = String(option.addrTypeId || '').trim();
+      const addrLevel = Number(option.addrLevel);
+      return READONLY_REGION_ADDR_TYPES.includes(segmType) || addrLevel === 1 || addrLevel === 2;
+    },
+    isReadonlyRegionSegmType(segmType) {
+      return READONLY_REGION_ADDR_TYPES.includes(String(segmType || '').trim());
+    },
+    hasQueryCondition() {
+      return !!(this.query?.standName?.trim() || this.query?.segmType);
+    },
+    clearListResult() {
+      this.list = [];
+      this.total = 0;
     },
     async fetchList() {
+      if (!this.hasQueryCondition()) {
+        this.clearListResult();
+        this.$message.warning('请输入标准地址关键词或选择级别后再查询');
+        return;
+      }
+      if (this.isReadonlyRegionSegmType(this.query?.segmType)) {
+        this.clearListResult();
+        this.$message.warning('一二级标准地址不支持合并，请选择三级及以下标准地址');
+        return;
+      }
       this.loading = true;
       try {
         const res = await getStandardAddressList({
@@ -177,7 +212,7 @@ export default {
     reset() {
       this.query = { standName: '', segmType: '' };
       this.pageNum = 1;
-      this.fetchList();
+      this.clearListResult();
     },
     changePage(page) {
       this.pageNum = page;

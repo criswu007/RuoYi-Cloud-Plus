@@ -10,24 +10,22 @@
       </div>
       <el-menu :default-active="$route.path" router class="menu" background-color="transparent" text-color="#d6e1ee" active-text-color="#ffffff">
         <el-submenu index="standard">
-          <template slot="title">标准地址</template>
-          <el-menu-item index="/standard/list">地址列表</el-menu-item>
-          <el-menu-item index="/standard/merge">地址归并</el-menu-item>
+          <template slot="title">标准地址管理</template>
+          <el-menu-item index="/standard/list">标准地址列表</el-menu-item>
+          <el-menu-item index="/standard/merge">地址合并</el-menu-item>
           <el-menu-item index="/standard/split">地址拆分</el-menu-item>
-          <el-menu-item index="/standard/labels">地址标签</el-menu-item>
+          <el-menu-item index="/installation/list">安装地址列表</el-menu-item>
+          <el-menu-item index="/selection/tools">选址平台</el-menu-item>
+          <el-menu-item index="/import/records">导入记录查询</el-menu-item>
+          <el-menu-item index="/operation/logs">地址操作日志</el-menu-item>
+          <el-menu-item index="/standard/labels">标签库管理</el-menu-item>
+          <el-menu-item index="/management/station">管理站管理</el-menu-item>
         </el-submenu>
-        <el-submenu index="governance">
-          <template slot="title">治理审计</template>
-          <el-menu-item index="/import/records">导入记录</el-menu-item>
-          <el-menu-item index="/operation/logs">操作日志</el-menu-item>
+        <el-submenu index="monitor">
+          <template slot="title">质量监控</template>
           <el-menu-item index="/monitor/records">异常地址</el-menu-item>
           <el-menu-item index="/monitor/rules">规则配置</el-menu-item>
           <el-menu-item index="/monitor/task">监控任务</el-menu-item>
-        </el-submenu>
-        <el-submenu index="support">
-          <template slot="title">关联支撑</template>
-          <el-menu-item index="/installation/list">安装地址</el-menu-item>
-          <el-menu-item index="/selection/tools">选址工具</el-menu-item>
         </el-submenu>
       </el-menu>
     </el-aside>
@@ -67,13 +65,14 @@ export default {
       titleMap: {
         '/standard/list': '标准地址列表',
         '/standard/detail': '标准地址详情',
-        '/standard/merge': '标准地址归并',
+        '/standard/merge': '标准地址合并',
         '/standard/split': '标准地址拆分',
-        '/standard/labels': '地址标签管理',
+        '/standard/labels': '标签库管理',
         '/import/records': '导入记录查询',
         '/operation/logs': '地址操作日志',
-        '/installation/list': '安装地址台账',
-        '/selection/tools': '选址平台工具',
+        '/installation/list': '安装地址列表',
+        '/selection/tools': '选址平台',
+        '/management/station': '管理站管理',
         '/monitor/records': '异常地址治理',
         '/monitor/rules': '非标监控规则',
         '/monitor/task': '监控任务摘要'

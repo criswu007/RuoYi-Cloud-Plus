@@ -10,9 +10,9 @@ import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.web.core.BaseController;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.constraints.NotNull;
@@ -37,7 +37,7 @@ public class StandardAddressOperationLogController extends BaseController {
      * @return 分页结果
      */
     @SaCheckPermission("address:operation:log:list")
-    @GetMapping("/list")
+    @RequestMapping(value = "/list", method = {RequestMethod.GET, RequestMethod.POST})
     public TableDataInfo<StandardAddressOperationLogVo> list(StandardAddressOperationLogBo bo, PageQuery pageQuery) {
         return operationLogService.queryPageList(bo, pageQuery);
     }
@@ -49,7 +49,7 @@ public class StandardAddressOperationLogController extends BaseController {
      * @return 日志详情
      */
     @SaCheckPermission("address:operation:log:query")
-    @GetMapping("/{id}")
+    @RequestMapping(value = "/{id}", method = {RequestMethod.GET, RequestMethod.POST})
     public R<StandardAddressOperationLogVo> getInfo(@NotNull(message = "主键不能为空") @PathVariable Long id) {
         return R.ok(operationLogService.queryById(id));
     }

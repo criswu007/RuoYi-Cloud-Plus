@@ -25,8 +25,9 @@ public class SpcStation implements Serializable {
     private String stationId;
 
     /**
-     * 管理站名称。
+     * 管理站名称，对应线上 `spc_station.china_name`。
      */
+    @TableField("china_name")
     private String stationName;
 
     /**

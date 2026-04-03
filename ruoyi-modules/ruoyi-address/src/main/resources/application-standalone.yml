@@ -29,10 +29,10 @@ spring:
       seata: false
       datasource:
         address:
-          driver-class-name: org.h2.Driver
-          url: jdbc:h2:mem:ruoyi_address;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE
-          username: sa
-          password:
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          url: ${ADDRESS_DATASOURCE_URL:${ADDRESS_DB_URL:jdbc:mysql://82.156.6.111:4000/ftth_cloud_address?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8&rewriteBatchedStatements=true&allowPublicKeyRetrieval=true}}
+          username: ${ADDRESS_DATASOURCE_USERNAME:${ADDRESS_DB_USERNAME:address}}
+          password: ${ADDRESS_DATASOURCE_PASSWORD:${ADDRESS_DB_PASSWORD:Wetry2328!}}
   cloud:
     discovery:
       enabled: false
@@ -48,14 +48,6 @@ spring:
     redis:
       repositories:
         enabled: false
-  sql:
-    init:
-      mode: always
-      schema-locations:
-        - classpath:standalone/schema-standalone.sql
-      data-locations:
-        - classpath:standalone/data-standalone.sql
-
 sa-token:
   check-same-token: false
   jwt-secret-key: standalone-address-local-jwt-secret

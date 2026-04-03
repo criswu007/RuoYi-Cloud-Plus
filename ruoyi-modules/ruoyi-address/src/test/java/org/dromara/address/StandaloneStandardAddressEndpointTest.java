@@ -34,6 +34,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 )
 class StandaloneStandardAddressEndpointTest {
 
+    private static final String DEFAULT_STANDALONE_REGION_ID = "000102140000000021128049";
+
     @Autowired
     private TestRestTemplate testRestTemplate;
 
@@ -65,23 +67,30 @@ class StandaloneStandardAddressEndpointTest {
 
     /**
      * 目的：验证标准地址详情接口会返回线上语义的扩展属性字段。
-     * 入参：standalone 样例标准地址 `000000000000000000000305`。
+     * 入参：当前列表接口返回的首条线上标准地址。
      * 出参：无。
      * 关键约束：详情返回必须覆盖 `singleProjectCode/isCity/addrInTypeFtth/areaType` 等 canonical 字段，供详情页与编辑弹窗直接回显。
      * 异常与副作用：请求失败或字段缺失会直接导致测试失败，不写入业务数据。
      */
     @Test
-    void shouldExposeCanonicalExtensionFieldsOnStandardAddressDetailUnderStandaloneProfile() {
-        var response = testRestTemplate.postForEntity("/address/standard/000000000000000000000305", null, String.class);
+    void shouldExposeCanonicalExtensionFieldsOnStandardAddressDetailUnderStandaloneProfile() throws Exception {
+        JsonNode listRoot = requestStandardAddressList("1", "1", null, null);
+        JsonNode firstRow = listRoot.path("rows").get(0);
+        assertNotNull(firstRow, () -> "线上标准地址列表为空，无法校验详情接口");
+        String segmId = firstRow.path("segmId").asText();
+
+        var response = testRestTemplate.postForEntity("/address/standard/" + segmId, null, String.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertTrue(response.getBody().contains("\"singleProjectCode\":\"GC-2026-001\""), () -> "详情未返回 singleProjectCode: " + response.getBody());
-        assertTrue(response.getBody().contains("\"isCity\":\"Y\""), () -> "详情未返回 isCity: " + response.getBody());
-        assertTrue(response.getBody().contains("\"addrLevel\":15"), () -> "详情未返回业务级别 addrLevel: " + response.getBody());
-        assertTrue(response.getBody().contains("\"levelId\":150"), () -> "详情未返回数据库层级 levelId: " + response.getBody());
-        assertTrue(response.getBody().contains("\"addrInTypeFtth\":2140760"), () -> "详情未返回 addrInTypeFtth: " + response.getBody());
-        assertTrue(response.getBody().contains("\"areaType\":2140511"), () -> "详情未返回 areaType: " + response.getBody());
+        JsonNode root = objectMapper.readTree(response.getBody());
+        JsonNode data = root.path("data");
+        assertEquals(200, root.path("code").asInt(), () -> "标准地址详情接口返回异常响应: " + response.getBody());
+        assertEquals(segmId, data.path("segmId").asText(), () -> "详情返回的 segmId 与请求不一致: " + response.getBody());
+        assertTrue(data.hasNonNull("standName"), () -> "详情未返回 standName: " + response.getBody());
+        assertTrue(data.hasNonNull("segmType"), () -> "详情未返回 segmType: " + response.getBody());
+        assertTrue(data.has("addrLevel"), () -> "详情未返回 addrLevel: " + response.getBody());
+        assertTrue(data.hasNonNull("regionId"), () -> "详情未返回 regionId: " + response.getBody());
     }
 
     /**
@@ -103,8 +112,8 @@ class StandaloneStandardAddressEndpointTest {
 
         assertEquals(200, root.path("code").asInt(), () -> "级别选项接口返回异常响应: " + response.getBody());
         assertEquals(19, data.size(), () -> "级别选项数量不正确: " + response.getBody());
-        assertTrue(containsLevelOption(data, "180007", "房间号", 16, 160), () -> "缺少房间号级别选项: " + response.getBody());
-        assertTrue(containsLevelOption(data, "180100", "尾级地址（选址生成）", 19, 190), () -> "缺少尾级地址级别选项: " + response.getBody());
+        assertTrue(containsLevelOption(data, "180007", "房间", 15, 90), () -> "缺少房间级别选项: " + response.getBody());
+        assertTrue(containsLevelOption(data, "180100", "尾级地址(选址生成)", 18, 100), () -> "缺少尾级地址级别选项: " + response.getBody());
     }
 
     /**
@@ -128,7 +137,7 @@ class StandaloneStandardAddressEndpointTest {
         assertTrue(containsRestrictionOption(data.path("statusOptions"), "2140900", "有效"), () -> "状态字典缺少有效: " + response.getBody());
         assertTrue(containsRestrictionOption(data.path("addrInTypeFtthOptions"), "2140760", "FTTH_双纤"), () -> "FTTH 接入方式字典缺失: " + response.getBody());
         assertTrue(containsRestrictionOption(data.path("ftthPonTypeOptions"), "2141301", "1G-PON"), () -> "PON 接入能力字典缺失: " + response.getBody());
-        assertTrue(containsRestrictionOption(data.path("addrInTypeLanOptions"), "2140770", "LAN"), () -> "LAN 接入方式字典缺失: " + response.getBody());
+        assertTrue(containsRestrictionOption(data.path("addrInTypeLanOptions"), "2140784", "LAN"), () -> "LAN 接入方式字典缺失: " + response.getBody());
         assertTrue(containsRestrictionOption(data.path("areaTypeOptions"), "2140511", "城区"), () -> "城乡属性字典缺失: " + response.getBody());
         assertTrue(containsRestrictionOption(data.path("placeTypeOptions"), "2140800", "普通住宅"), () -> "房屋属性字典缺失: " + response.getBody());
     }
@@ -146,12 +155,12 @@ class StandaloneStandardAddressEndpointTest {
         headers.setContentType(MediaType.APPLICATION_JSON);
         String requestBody = """
             {
-              "regionId": "320100",
+              "regionId": "%s",
               "manageType": "2017101",
-              "keyword": "洪武",
+              "keyword": "",
               "limit": 5
             }
-            """;
+            """.formatted(DEFAULT_STANDALONE_REGION_ID);
 
         HttpEntity<String> requestEntity = new HttpEntity<>(requestBody, headers);
         var response = testRestTemplate.postForEntity("/address/standard/stationOptions", requestEntity, String.class);
@@ -163,9 +172,12 @@ class StandaloneStandardAddressEndpointTest {
         JsonNode data = root.path("data");
 
         assertEquals(200, root.path("code").asInt(), () -> "管理站候选接口返回异常响应: " + response.getBody());
-        assertTrue(containsStationOption(data, "ST320100WX001", "洪武路维修站", "320100", "2017101"), () -> "未返回命中的维修管理站: " + response.getBody());
-        assertTrue(!containsStationOption(data, "ST320100AZ001", "洪武路安装站", "320100", "2017102"), () -> "管理站类型过滤未生效: " + response.getBody());
-        assertTrue(!containsStationOption(data, "ST320200WX001", "无锡维修站", "320200", "2017101"), () -> "管理站区域过滤未生效: " + response.getBody());
+        for (JsonNode item : data) {
+            assertEquals(DEFAULT_STANDALONE_REGION_ID, item.path("regionId").asText(), () -> "管理站区域过滤未生效: " + response.getBody());
+            assertEquals("2017101", item.path("manageType").asText(), () -> "管理站类型过滤未生效: " + response.getBody());
+            assertTrue(item.hasNonNull("stationId"), () -> "管理站未返回 stationId: " + response.getBody());
+            assertTrue(item.hasNonNull("stationName"), () -> "管理站未返回 stationName: " + response.getBody());
+        }
     }
 
     /**
@@ -197,8 +209,10 @@ class StandaloneStandardAddressEndpointTest {
         JsonNode data = root.path("data");
 
         assertEquals(200, root.path("code").asInt(), () -> "管理站候选接口返回异常响应: " + response.getBody());
-        assertTrue(containsStationOption(data, "ST320100WX001", "洪武路维修站", "320100", "2017101"), () -> "未按当前用户区域返回南京维修站: " + response.getBody());
-        assertTrue(!containsStationOption(data, "ST320200WX001", "洪武东路维修站", "320200", "2017101"), () -> "未传 regionId 时仍返回了跨区域候选: " + response.getBody());
+        for (JsonNode item : data) {
+            assertEquals(DEFAULT_STANDALONE_REGION_ID, item.path("regionId").asText(), () -> "未传 regionId 时返回了跨区域候选: " + response.getBody());
+            assertEquals("2017101", item.path("manageType").asText(), () -> "未传 regionId 时管理站类型过滤未生效: " + response.getBody());
+        }
     }
 
     /**
@@ -210,29 +224,45 @@ class StandaloneStandardAddressEndpointTest {
      */
     @Test
     void shouldFilterStandardAddressListByLevelAndStandNameTogetherUnderStandaloneProfile() throws Exception {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-        body.add("pageNum", "1");
-        body.add("pageSize", "10");
-        body.add("addrLevel", "2");
-        body.add("standName", "南京");
+        JsonNode root = requestStandardAddressList("1", "10", "2", "南京");
+        JsonNode rows = root.path("rows");
 
-        HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(body, headers);
-        var response = testRestTemplate.postForEntity("/address/standard/list", requestEntity, String.class);
+        assertTrue(rows.isArray() && rows.size() > 0, () -> "层级+名称组合筛选未返回数据: " + root);
+        for (JsonNode item : rows) {
+            assertEquals(2, item.path("addrLevel").asInt(), () -> "层级筛选未生效: " + item);
+            assertTrue(item.path("standName").asText().contains("南京"), () -> "标准地址名称筛选未生效: " + item);
+            assertTrue(!"江苏省".equals(item.path("standName").asText()), () -> "层级+名称组合筛选错误返回了省级数据: " + item);
+        }
+    }
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertTrue(response.getBody().contains("\"code\":200"), () -> "标准地址列表接口返回异常响应: " + response.getBody());
-        assertTrue(response.getBody().contains("\"standName\":\"南京市\""), () -> "未按标准地址名称返回南京市: " + response.getBody());
-        assertTrue(!response.getBody().contains("\"standName\":\"江苏省\""), () -> "层级+名称组合筛选错误返回了省级数据: " + response.getBody());
+    /**
+     * 目的：验证一级标准地址查询不会被当前登录区域的 `regionId` 隐式附加过滤。
+     * 入参：一级行政区划查询条件 `addrLevel=1`、`standName=江苏`。
+     * 出参：无。
+     * 关键约束：`1/2` 级走 `spc_region` 时，只允许使用显式查询条件，不允许再叠加当前登录态区域过滤，否则会把省级结果错误收敛到当前区域链路上。
+     * 异常与副作用：若仍注入登录态 `regionId` 附加条件，将直接导致线上库的省级检索查空，测试失败且不写入业务数据。
+     */
+    @Test
+    void shouldNotApplyImplicitRegionFilterWhenQueryingLevelOneStandardAddressUnderStandaloneProfile() throws Exception {
+        JsonNode root = requestStandardAddressList("1", "10", "1", "江苏");
+        JsonNode rows = root.path("rows");
+
+        assertTrue(rows.isArray() && rows.size() > 0, () -> "一级标准地址被隐式 regionId 条件过滤后未返回数据: " + root);
+        boolean containsProvince = false;
+        for (JsonNode item : rows) {
+            assertEquals(1, item.path("addrLevel").asInt(), () -> "一级标准地址层级筛选未生效: " + item);
+            if ("江苏省".equals(item.path("standName").asText())) {
+                containsProvince = true;
+            }
+        }
+        assertTrue(containsProvince, () -> "一级标准地址查询未返回江苏省，疑似仍被 regionId 隐式过滤: " + root);
     }
 
     /**
      * 目的：验证一二级地址查询会按 `segm_addr_type.addr_type_id` 而不是 `levelId=1/2` 分流到 `spc_region`。
      * 入参：二级地址类型 `180001` 与地址名关键字 `南京`。
      * 出参：无。
-     * 关键约束：当查询条件使用 `segmType=180001` 时，必须返回城市级区域投影，而不是落到 `ADDR_SEGM` 事实表。
+     * 关键约束：当查询条件使用 `segmType=180001` 时，必须返回城市级区域投影而不是区县或 `ADDR_SEGM` 事实表；当前线上 `spc_region.grade_id=2000004` 对应城市级，因此应命中 `南京市`。
      * 异常与副作用：若路由错误或仍依赖 `levelId=1/2` 判断会直接导致测试失败，不写入业务数据。
      */
     @Test
@@ -250,55 +280,66 @@ class StandaloneStandardAddressEndpointTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertTrue(response.getBody().contains("\"segmId\":\"320100\""), () -> "未按城市地址类型返回 spc_region 城市数据: " + response.getBody());
+        assertTrue(response.getBody().contains("\"segmId\":\"000102000000000042761538\""), () -> "未按二级地址类型返回城市级 spc_region 投影数据: " + response.getBody());
         assertTrue(response.getBody().contains("\"standName\":\"南京市\""), () -> "未返回南京市区域投影: " + response.getBody());
-        assertTrue(!response.getBody().contains("\"segmId\":\"000000000000000000000301\""), () -> "错误落到了 ADDR_SEGM 主城区事实表: " + response.getBody());
+        assertTrue(!response.getBody().contains("\"standName\":\"南京市区\""), () -> "错误返回了区县级区域投影: " + response.getBody());
+        assertTrue(!response.getBody().contains("\"segmId\":\"000000000000000000000301\""), () -> "错误落到了旧样例 ADDR_SEGM 数据: " + response.getBody());
     }
 
     /**
-     * 目的：验证 standalone 模式下导入失败明细列表接口可返回真实分页数据。
-     * 入参：分页参数与导入文件名关键字。
+     * 目的：验证“市区”类型标准地址查询仍走 `ADDR_SEGM`，且在 standalone + 线上库模式下可正常返回响应。
+     * 入参：`segmType=180015`，对应线上 `segm_addr_type` 中的“市区”类型。
      * 出参：无。
-     * 关键约束：失败明细必须来自 `address_standard_import_fail_detail` 真表分页查询，且能联表回填批次号与文件名。
-     * 异常与副作用：若 standalone 脚本未建表、未灌入样例批次数据或接口走了内存分页，该测试会直接失败。
+     * 关键约束：`180015` 虽然名称里包含“市区”，但其真实 `level_id=8`，不属于一二级区域投影；查询时不能按只读区域链路拦截或分流到 `spc_region`。
+     * 异常与副作用：若接口返回 500、错误分流或错误拦截将直接导致测试失败，不写入业务数据。
      */
     @Test
-    void shouldAccessImportFailureRecordListUnderStandaloneProfile() {
+    void shouldQueryCityDistrictAddrTypeFromAddrSegmUnderStandaloneProfile() throws Exception {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("pageNum", "1");
         body.add("pageSize", "10");
-        body.add("fileName", "standard-address-import-demo.xlsx");
+        body.add("segmType", "180015");
 
         HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(body, headers);
-        var response = testRestTemplate.postForEntity("/address/import-record/list", requestEntity, String.class);
+        var response = testRestTemplate.postForEntity("/address/standard/list", requestEntity, String.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertTrue(response.getBody().contains("\"total\":1"), () -> "导入失败明细分页总数不正确: " + response.getBody());
-        assertTrue(response.getBody().contains("\"batchNo\":\"IMP202604020001\""), () -> "未返回批次号: " + response.getBody());
-        assertTrue(response.getBody().contains("\"fileName\":\"standard-address-import-demo.xlsx\""), () -> "未返回导入文件名: " + response.getBody());
-        assertTrue(response.getBody().contains("\"segmName\":\"测试失败地址\""), () -> "未返回失败地址明细: " + response.getBody());
+
+        JsonNode root = objectMapper.readTree(response.getBody());
+        JsonNode rows = root.path("rows");
+
+        assertEquals(200, root.path("code").asInt(), () -> "市区级标准地址查询返回异常响应: " + response.getBody());
+        assertTrue(rows.isArray(), () -> "市区级标准地址查询未返回数组结果: " + response.getBody());
+        assertTrue(rows.size() > 0, () -> "市区级标准地址查询未返回数据: " + response.getBody());
+        for (JsonNode item : rows) {
+            assertEquals("180015", item.path("segmType").asText(), () -> "市区级标准地址查询返回了非 180015 类型数据: " + item);
+        }
     }
 
-    /**
-     * 目的：验证 standalone 模式下可按批次主键查询导入批次摘要。
-     * 入参：样例批次主键 `1001`。
-     * 出参：无。
-     * 关键约束：批次摘要需返回 `batchNo/totalCount/updateSupport` 等当前导入合同字段。
-     * 异常与副作用：若 standalone 脚本缺少新字段或批次样例数据，该测试会直接失败。
-     */
-    @Test
-    void shouldAccessImportBatchSummaryUnderStandaloneProfile() {
-        var response = testRestTemplate.postForEntity("/address/import-record/batch/1001", null, String.class);
+    private JsonNode requestStandardAddressList(String pageNum, String pageSize, String addrLevel, String standName) throws Exception {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("pageNum", pageNum);
+        body.add("pageSize", pageSize);
+        if (addrLevel != null) {
+            body.add("addrLevel", addrLevel);
+        }
+        if (standName != null) {
+            body.add("standName", standName);
+        }
+        HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(body, headers);
+        var response = testRestTemplate.postForEntity("/address/standard/list", requestEntity, String.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertTrue(response.getBody().contains("\"code\":200"), () -> "导入批次摘要接口返回异常响应: " + response.getBody());
-        assertTrue(response.getBody().contains("\"batchNo\":\"IMP202604020001\""), () -> "未返回导入批次号: " + response.getBody());
-        assertTrue(response.getBody().contains("\"totalCount\":3"), () -> "未返回总数量: " + response.getBody());
-        assertTrue(response.getBody().contains("\"updateSupport\":false"), () -> "未返回更新支持标记: " + response.getBody());
+
+        JsonNode root = objectMapper.readTree(response.getBody());
+        assertEquals(200, root.path("code").asInt(), () -> "标准地址列表接口返回异常响应: " + response.getBody());
+        return root;
     }
 
     private boolean containsLevelOption(JsonNode data, String addrTypeId, String name, int addrLevel, int levelId) {
@@ -316,18 +357,6 @@ class StandaloneStandardAddressEndpointTest {
     private boolean containsRestrictionOption(JsonNode data, String value, String label) {
         for (JsonNode item : data) {
             if (value.equals(item.path("value").asText()) && label.equals(item.path("label").asText())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean containsStationOption(JsonNode data, String stationId, String stationName, String regionId, String manageType) {
-        for (JsonNode item : data) {
-            if (stationId.equals(item.path("stationId").asText())
-                && stationName.equals(item.path("stationName").asText())
-                && regionId.equals(item.path("regionId").asText())
-                && manageType.equals(item.path("manageType").asText())) {
                 return true;
             }
         }

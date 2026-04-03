@@ -6,7 +6,7 @@
 
     <select id="selectStationOptions" resultType="org.dromara.address.domain.SpcStation">
         SELECT station_id,
-               station_name,
+               china_name AS stationName,
                region_id,
                manage_type
         FROM spc_station
@@ -17,10 +17,10 @@
         <if test="keyword != null and keyword != ''">
             <bind name="keywordLike" value="'%' + keyword + '%'" />
             AND (
-                station_name LIKE #{keywordLike}
+                china_name LIKE #{keywordLike}
                 OR station_id LIKE #{keywordLike}
             )
         </if>
-        ORDER BY region_id ASC, station_name ASC
+        ORDER BY region_id ASC, china_name ASC
     </select>
 </mapper>

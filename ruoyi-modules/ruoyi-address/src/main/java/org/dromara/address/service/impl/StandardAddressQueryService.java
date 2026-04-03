@@ -1,14 +1,18 @@
 package org.dromara.address.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.dromara.address.domain.AddrSegm;
-import org.dromara.address.domain.SpcRegion;
+import org.dromara.address.domain.StandardAddressTagRel;
 import org.dromara.address.domain.bo.StandardAddressBo;
 import org.dromara.address.domain.vo.StandardAddressVo;
 import org.dromara.address.mapper.AddrSegmMapper;
 import org.dromara.address.mapper.SpcRegionMapper;
+import org.dromara.address.mapper.SpcStationMapper;
+import org.dromara.address.mapper.StandardAddressTagMapper;
+import org.dromara.address.mapper.StandardAddressTagRelMapper;
 import org.dromara.address.support.AddressRegionContext;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.core.page.PageQuery;
@@ -16,8 +20,10 @@ import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.springframework.stereotype.Service;
 
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -37,6 +43,9 @@ public class StandardAddressQueryService {
     private final SpcRegionMapper spcRegionMapper;
     private final StandardAddressDictionaryService dictionaryService;
     private final AddressRegionContext addressRegionContext;
+    private final SpcStationMapper spcStationMapper;
+    private final StandardAddressTagRelMapper standardAddressTagRelMapper;
+    private final StandardAddressTagMapper standardAddressTagMapper;
 
     /**
      * 目的：分页查询标准地址列表。
@@ -49,7 +58,7 @@ public class StandardAddressQueryService {
         StandardAddressBo queryBo = normalizeQueryBo(bo);
         Integer addrLevel = resolveReadonlyRegionAddrLevel(queryBo);
         if (isRegionLevel(addrLevel)) {
-            Page<StandardAddressVo> page = buildPage(pageQuery);
+            Page<StandardAddressVo> page = buildPage(pageQuery, false);
             Page<StandardAddressVo> result = spcRegionMapper.selectStandardAddressPage(page, queryBo);
             if (result == null) {
                 result = page;
@@ -59,7 +68,7 @@ public class StandardAddressQueryService {
             return TableDataInfo.build(result);
         }
         List<String> segmTypes = resolveAddrSegmTypes(queryBo);
-        Page<StandardAddressVo> page = buildPage(pageQuery);
+        Page<StandardAddressVo> page = buildPage(pageQuery, true);
         Page<StandardAddressVo> result = addrSegmMapper.selectStandardAddressPage(page, queryBo, CollUtil.isEmpty(segmTypes) ? null : segmTypes);
         if (result == null) {
             result = page;
@@ -105,7 +114,7 @@ public class StandardAddressQueryService {
         }
         StandardAddressVo vo = addrSegmMapper.selectStandardAddressBySegmId(segmId);
         if (vo != null) {
-            enrichAddrSegmRows(Collections.singletonList(vo));
+            enrichAddrSegmDetail(vo);
             return applyWritableFlags(Collections.singletonList(vo)).get(0);
         }
         StandardAddressVo region = spcRegionMapper.selectStandardAddressByRegionId(segmId);
@@ -150,6 +159,7 @@ public class StandardAddressQueryService {
         Page<StandardAddressVo> result = addrSegmMapper.selectSearchCandidatePage(page, keyword, CollUtil.isEmpty(segmTypes) ? null : segmTypes, status);
         List<StandardAddressVo> rows = result == null ? Collections.emptyList() : result.getRecords();
         enrichAddrSegmRows(rows);
+        sortAddrSegmCandidateRows(rows);
         return applyWritableFlags(rows);
     }
 
@@ -217,6 +227,23 @@ public class StandardAddressQueryService {
         fillLevelFields(rows);
     }
 
+    /**
+     * 目的：补齐标准地址详情页与编辑弹窗依赖的扩展展示字段。
+     * 入参：单条 `ADDR_SEGM` 标准地址详情。
+     * 出参：无，直接在原对象上补齐父级名称、层级、管理站展示名称与标签展示名称。
+     * 关键约束：`stationName/installStationName/busStationName/tagNames` 均为展示衍生字段，必须走批量/映射式查询补齐，不能误当物理列直接读取。
+     * 异常与副作用：无写入副作用。
+     */
+    private void enrichAddrSegmDetail(StandardAddressVo vo) {
+        if (vo == null) {
+            return;
+        }
+        List<StandardAddressVo> rows = Collections.singletonList(vo);
+        enrichAddrSegmRows(rows);
+        fillStationNames(rows);
+        fillTagNames(rows);
+    }
+
     private void enrichRegionRows(List<StandardAddressVo> rows) {
         if (CollUtil.isEmpty(rows)) {
             return;
@@ -278,8 +305,110 @@ public class StandardAddressQueryService {
         });
     }
 
+    private void fillStationNames(List<StandardAddressVo> rows) {
+        List<String> stationIds = rows.stream()
+            .filter(Objects::nonNull)
+            .flatMap(row -> java.util.stream.Stream.of(row.getStationId(), row.getInstallStationId(), row.getBusStationId()))
+            .filter(StringUtils::isNotBlank)
+            .distinct()
+            .toList();
+        if (stationIds.isEmpty()) {
+            return;
+        }
+        Map<String, String> stationNameMap = spcStationMapper.selectByIds(stationIds).stream()
+            .filter(Objects::nonNull)
+            .filter(item -> StringUtils.isNotBlank(item.getStationId()))
+            .collect(LinkedHashMap::new,
+                (result, item) -> result.put(item.getStationId(), item.getStationName()),
+                LinkedHashMap::putAll);
+        rows.forEach(row -> {
+            if (row == null) {
+                return;
+            }
+            if (StringUtils.isBlank(row.getStationName()) && StringUtils.isNotBlank(row.getStationId())) {
+                row.setStationName(stationNameMap.get(row.getStationId()));
+            }
+            if (StringUtils.isBlank(row.getInstallStationName()) && StringUtils.isNotBlank(row.getInstallStationId())) {
+                row.setInstallStationName(stationNameMap.get(row.getInstallStationId()));
+            }
+            if (StringUtils.isBlank(row.getBusStationName()) && StringUtils.isNotBlank(row.getBusStationId())) {
+                row.setBusStationName(stationNameMap.get(row.getBusStationId()));
+            }
+        });
+    }
+
+    private void fillTagNames(List<StandardAddressVo> rows) {
+        List<String> segmIds = rows.stream()
+            .filter(Objects::nonNull)
+            .map(StandardAddressVo::getSegmId)
+            .filter(StringUtils::isNotBlank)
+            .distinct()
+            .toList();
+        if (segmIds.isEmpty()) {
+            return;
+        }
+        List<StandardAddressTagRel> relList = standardAddressTagRelMapper.selectList(
+            Wrappers.<StandardAddressTagRel>lambdaQuery().in(StandardAddressTagRel::getStandardAddressId, segmIds)
+        );
+        if (CollUtil.isEmpty(relList)) {
+            return;
+        }
+        List<Long> tagIds = relList.stream()
+            .map(StandardAddressTagRel::getTagId)
+            .filter(Objects::nonNull)
+            .distinct()
+            .toList();
+        if (tagIds.isEmpty()) {
+            return;
+        }
+        Map<Long, String> tagNameMap = standardAddressTagMapper.selectBatchIds(tagIds).stream()
+            .filter(Objects::nonNull)
+            .filter(item -> item.getId() != null && StringUtils.isNotBlank(item.getName()))
+            .collect(LinkedHashMap::new,
+                (result, item) -> result.put(item.getId(), item.getName()),
+                LinkedHashMap::putAll);
+        Map<String, List<String>> standardAddressTagNameMap = new LinkedHashMap<>();
+        relList.forEach(rel -> {
+            if (rel == null || StringUtils.isBlank(rel.getStandardAddressId()) || rel.getTagId() == null) {
+                return;
+            }
+            String tagName = tagNameMap.get(rel.getTagId());
+            if (StringUtils.isBlank(tagName)) {
+                return;
+            }
+            standardAddressTagNameMap.computeIfAbsent(rel.getStandardAddressId(), key -> new java.util.ArrayList<>()).add(tagName);
+        });
+        rows.forEach(row -> {
+            if (row == null || StringUtils.isBlank(row.getSegmId())) {
+                return;
+            }
+            List<String> tagNames = standardAddressTagNameMap.get(row.getSegmId());
+            if (CollUtil.isEmpty(tagNames)) {
+                return;
+            }
+            row.setTagNames(new java.util.ArrayList<>(new LinkedHashSet<>(tagNames)));
+        });
+    }
+
     private String resolveRegionSegmType(StandardAddressVo row) {
-        return StringUtils.isBlank(row.getParentSegmId()) ? PROVINCE_ADDR_TYPE : CITY_ADDR_TYPE;
+        if (row == null || row.getGradeId() == null) {
+            return null;
+        }
+        if (row.getGradeId() == 2000002) {
+            return PROVINCE_ADDR_TYPE;
+        }
+        if (row.getGradeId() == 2000004) {
+            return CITY_ADDR_TYPE;
+        }
+        return null;
+    }
+
+    private void sortAddrSegmCandidateRows(List<StandardAddressVo> rows) {
+        if (CollUtil.isEmpty(rows)) {
+            return;
+        }
+        rows.sort(Comparator.comparing(StandardAddressVo::getAddrLevel, Comparator.nullsLast(Integer::compareTo))
+            .thenComparing(StandardAddressVo::getSegmId, Comparator.nullsLast(String::compareTo)));
     }
 
     private List<StandardAddressVo> applyRegionFlags(List<StandardAddressVo> rows, Integer addrLevel) {
@@ -324,11 +453,24 @@ public class StandardAddressQueryService {
         return region;
     }
 
-    private Page<StandardAddressVo> buildPage(PageQuery pageQuery) {
+    /**
+     * 目的：构建标准地址分页对象，并按查询场景决定是否保留前端传入的排序条件。
+     * 入参：分页请求对象、是否保留排序参数。
+     * 出参：可直接传给 MyBatis-Plus 的分页对象。
+     * 关键约束：一二级 `spc_region` 查询不允许继续附带统一排序参数，其余 `ADDR_SEGM` 查询保持现有排序能力。
+     * 异常与副作用：无写入副作用；仅做内存态分页参数收口。
+     */
+    private Page<StandardAddressVo> buildPage(PageQuery pageQuery, boolean keepOrderBy) {
         if (pageQuery == null) {
             return new PageQuery().build();
         }
-        return pageQuery.build();
+        if (keepOrderBy) {
+            return pageQuery.build();
+        }
+        PageQuery sanitizedPageQuery = new PageQuery();
+        sanitizedPageQuery.setPageNum(pageQuery.getPageNum());
+        sanitizedPageQuery.setPageSize(pageQuery.getPageSize());
+        return sanitizedPageQuery.build();
     }
 
     private Page<StandardAddressVo> buildLimitPage(int limit) {

@@ -4,6 +4,80 @@
     "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.dromara.address.mapper.AddrSetSegmMapper">
 
+    <sql id="installationColumns">
+        set_addr_id as setAddrId,
+        set_addr_name as setAddrName,
+        set_addr_no as setAddrNo,
+        set_type as setType,
+        segm_id as segmId,
+        segm_type as segmType,
+        region_id as regionId,
+        org_id as orgId,
+        notes as notes,
+        boss_op as bossOp,
+        create_date as createDate,
+        synchronous_date as syncDate
+    </sql>
+
+    <sql id="installationWhere">
+        <where>
+            coalesce(delete_state, '0') = '0'
+            <if test="bo != null and bo.setAddrName != null and bo.setAddrName != ''">
+                <bind name="setAddrNameLike" value="'%' + bo.setAddrName + '%'" />
+                and set_addr_name like #{setAddrNameLike}
+            </if>
+            <if test="bo != null and bo.setType != null and bo.setType != ''">
+                and set_type = #{bo.setType}
+            </if>
+            <if test="bo != null and bo.segmId != null and bo.segmId != ''">
+                and segm_id = #{bo.segmId}
+            </if>
+            <if test="bo != null and bo.regionId != null and bo.regionId != ''">
+                and region_id = #{bo.regionId}
+            </if>
+            <if test="bo != null and bo.orgId != null and bo.orgId != ''">
+                and org_id = #{bo.orgId}
+            </if>
+            <if test="bo != null and bo.associationStatus != null and bo.associationStatus != ''">
+                <choose>
+                    <when test="bo.associationStatus == 'BOUND'">
+                        and segm_id is not null and segm_id != ''
+                    </when>
+                    <when test="bo.associationStatus == 'UNBOUND'">
+                        and (segm_id is null or segm_id = '')
+                    </when>
+                </choose>
+            </if>
+            <if test="bo != null and bo.params != null and bo.params.get('beginTime') != null and bo.params.get('endTime') != null">
+                and create_date between #{bo.params.beginTime} and #{bo.params.endTime}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectInstallationPage" resultType="org.dromara.address.domain.vo.InstallationAddressVo">
+        select
+            <include refid="installationColumns" />
+        from ADDR_SET_SEGM
+        <include refid="installationWhere" />
+        order by create_date desc, set_addr_id desc
+    </select>
+
+    <select id="selectInstallationList" resultType="org.dromara.address.domain.vo.InstallationAddressVo">
+        select
+            <include refid="installationColumns" />
+        from ADDR_SET_SEGM
+        <include refid="installationWhere" />
+        order by create_date desc, set_addr_id desc
+    </select>
+
+    <select id="selectInstallationBySetAddrId" resultType="org.dromara.address.domain.vo.InstallationAddressVo">
+        select
+            <include refid="installationColumns" />
+        from ADDR_SET_SEGM
+        where coalesce(delete_state, '0') = '0'
+          and set_addr_id = #{setAddrId}
+    </select>
+
     <select id="countBySegmIds" resultType="java.lang.Long">
         select count(1)
         from ADDR_SET_SEGM

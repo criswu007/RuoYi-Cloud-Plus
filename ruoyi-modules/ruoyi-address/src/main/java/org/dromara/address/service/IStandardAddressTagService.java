@@ -86,7 +86,7 @@ public interface IStandardAddressTagService {
      * @param standardAddressId 标准地址ID
      * @return 标签列表
      */
-    List<StandardAddressTagVo> listTagsByStandardAddressId(Long standardAddressId);
+    List<StandardAddressTagVo> listTagsByStandardAddressId(String standardAddressId);
 
     /**
      * 查询指定地址集合的标签映射。
@@ -94,7 +94,7 @@ public interface IStandardAddressTagService {
      * @param standardAddressIds 标准地址ID集合
      * @return 标准地址ID到标签列表的映射
      */
-    Map<Long, List<StandardAddressTagVo>> mapTagsByStandardAddressIds(Collection<Long> standardAddressIds);
+    Map<String, List<StandardAddressTagVo>> mapTagsByStandardAddressIds(Collection<String> standardAddressIds);
 
     /**
      * 批量绑定标签。
@@ -107,7 +107,7 @@ public interface IStandardAddressTagService {
      * 异常：地址或标签不存在时抛出业务异常。
      * 副作用：写入地址标签关联表。
      */
-    Boolean bindTagsToStandardAddresses(Collection<Long> standardAddressIds, Collection<Long> tagIds);
+    Boolean bindTagsToStandardAddresses(Collection<String> standardAddressIds, Collection<Long> tagIds);
 
     /**
      * 批量解绑标签。
@@ -118,5 +118,5 @@ public interface IStandardAddressTagService {
      *
      * 副作用：删除地址标签关联表中命中的关系。
      */
-    Boolean unbindTagsFromStandardAddresses(Collection<Long> standardAddressIds, Collection<Long> tagIds);
+    Boolean unbindTagsFromStandardAddresses(Collection<String> standardAddressIds, Collection<Long> tagIds);
 }

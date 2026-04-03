@@ -263,7 +263,7 @@ public interface StandardAddressAdminApi {
      * 异常与副作用：地址不存在时返回业务异常，无写入副作用。
      */
     @PostMapping("/address/tag/standardAddress/{standardAddressId}")
-    R<List<StandardAddressTagVo>> listTagsByStandardAddressId(@NotNull(message = "标准地址不能为空") @PathVariable Long standardAddressId);
+    R<List<StandardAddressTagVo>> listTagsByStandardAddressId(@NotBlank(message = "标准地址不能为空") @PathVariable String standardAddressId);
 
     /**
      * 目的：批量给标准地址绑定标签。

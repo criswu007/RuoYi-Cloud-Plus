@@ -108,7 +108,7 @@ public final class StandardAddressAdminVo {
         private String stationId;
 
         /**
-         * 管理站名称，面向线上 `spc_station.station_name` 契约。
+         * 管理站名称，接口展示字段，来源线上 `spc_station.china_name`。
          */
         private String stationName;
 

@@ -113,7 +113,7 @@ public class StandardAddressController extends StandardAddressAdminApiSupport {
     /**
      * 获取标准地址详细信息。
      *
-     * @param id 主键
+     * @param segmId 主键
      * @return 标准地址详情
      *
      * 异常：主键为空时触发参数校验错误。
@@ -261,7 +261,10 @@ public class StandardAddressController extends StandardAddressAdminApiSupport {
             FileUtils.setAttachmentResponseHeader(response, ExcelUtil.encodingFilename("标准地址"));
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8");
             ExcelUtil.exportExcel(StandardAddressVo.class, response.getOutputStream(), writer -> writeStandardAddressExportRows(bo, writer));
-        } catch (IOException e) {
+        } catch (Exception e) {
+            if (!response.isCommitted()) {
+                response.reset();
+            }
             throw new RuntimeException("导出标准地址异常", e);
         }
     }

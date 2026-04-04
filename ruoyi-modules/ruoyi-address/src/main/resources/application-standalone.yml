@@ -30,9 +30,9 @@ spring:
       datasource:
         address:
           driver-class-name: com.mysql.cj.jdbc.Driver
-          url: ${ADDRESS_DATASOURCE_URL:${ADDRESS_DB_URL:jdbc:mysql://82.156.6.111:4000/ftth_cloud_address?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8&rewriteBatchedStatements=true&allowPublicKeyRetrieval=true}}
-          username: ${ADDRESS_DATASOURCE_USERNAME:${ADDRESS_DB_USERNAME:address}}
-          password: ${ADDRESS_DATASOURCE_PASSWORD:${ADDRESS_DB_PASSWORD:Wetry2328!}}
+          url: ${ADDRESS_DATASOURCE_URL:${ADDRESS_DB_URL:jdbc:mysql://127.0.0.1:3306/ftth_cloud_address?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8&rewriteBatchedStatements=true&allowPublicKeyRetrieval=true}}
+          username: ${ADDRESS_DATASOURCE_USERNAME:${ADDRESS_DB_USERNAME:root}}
+          password: ${ADDRESS_DATASOURCE_PASSWORD:${ADDRESS_DB_PASSWORD:ruoyi123}}
   cloud:
     discovery:
       enabled: false
@@ -90,3 +90,21 @@ logging:
     org.apache.dubbo: error
     org.mybatis.spring.mapper: error
     org.dromara.address.mapper: debug
+
+easy-es:
+  enable: true
+
+address:
+  search:
+    enabled: true
+    refresh-policy: wait_for
+    rebuild-batch-size: 500
+    pit-keep-alive: 1m
+    standard:
+      alias: address_standard_search
+      read-enabled: false
+      write-enabled: false
+    installation:
+      alias: address_installation_search
+      read-enabled: false
+      write-enabled: false

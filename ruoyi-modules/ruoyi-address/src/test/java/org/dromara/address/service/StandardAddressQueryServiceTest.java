@@ -1,6 +1,7 @@
 package org.dromara.address.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.dromara.address.config.AddressSearchProperties;
 import org.dromara.address.domain.AddrSegm;
 import org.dromara.address.domain.SpcStation;
 import org.dromara.address.domain.StandardAddressTag;
@@ -12,6 +13,7 @@ import org.dromara.address.mapper.SpcRegionMapper;
 import org.dromara.address.mapper.SpcStationMapper;
 import org.dromara.address.mapper.StandardAddressTagMapper;
 import org.dromara.address.mapper.StandardAddressTagRelMapper;
+import org.dromara.address.search.service.StandardAddressSearchGateway;
 import org.dromara.address.support.AddressRegionContext;
 import org.dromara.address.service.impl.StandardAddressDictionaryService;
 import org.dromara.address.service.impl.StandardAddressQueryService;
@@ -25,8 +27,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.List;
 import java.lang.reflect.Method;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -37,6 +39,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @Tag("dev")
@@ -64,10 +67,17 @@ class StandardAddressQueryServiceTest {
     @Mock
     private StandardAddressTagMapper standardAddressTagMapper;
 
+    @Mock
+    private StandardAddressSearchGateway standardAddressSearchGateway;
+
+    private AddressSearchProperties addressSearchProperties;
+
     private StandardAddressQueryService queryService;
 
     @BeforeEach
     void setUp() {
+        addressSearchProperties = new AddressSearchProperties();
+        addressSearchProperties.getStandard().setReadEnabled(Boolean.FALSE);
         queryService = new StandardAddressQueryService(
             addrSegmMapper,
             spcRegionMapper,
@@ -75,7 +85,9 @@ class StandardAddressQueryServiceTest {
             addressRegionContext,
             spcStationMapper,
             standardAddressTagRelMapper,
-            standardAddressTagMapper
+            standardAddressTagMapper,
+            addressSearchProperties,
+            standardAddressSearchGateway
         );
     }
 
@@ -124,6 +136,81 @@ class StandardAddressQueryServiceTest {
         Page<StandardAddressVo> capturedPage = pageCaptor.getValue();
         assertNotNull(capturedPage);
         assertTrue(capturedPage.orders().isEmpty(), "一二级标准地址分页查询不应继续携带前端传入的排序字段");
+    }
+
+    @Test
+    void shouldUseEsGatewayForAddrSegmPageQueryWhenReadSwitchEnabled() {
+        StandardAddressBo bo = new StandardAddressBo();
+        bo.setAddrLevel(3);
+        when(dictionaryService.resolveReadonlyRegionAddrLevel(null)).thenReturn(null);
+        when(dictionaryService.resolveSegmTypesByAddrLevel(3)).thenReturn(List.of("0301"));
+        addressSearchProperties.getStandard().setReadEnabled(Boolean.TRUE);
+
+        StandardAddressVo row = new StandardAddressVo();
+        row.setSegmId("SEG001");
+        row.setSegmType("0301");
+        row.setAddrLevel(3);
+        row.setLevelId(30);
+        TableDataInfo<StandardAddressVo> esPage = new TableDataInfo<>(List.of(row), 1);
+        when(standardAddressSearchGateway.queryPage(bo, List.of("0301"), new PageQuery(20, 1))).thenReturn(esPage);
+
+        TableDataInfo<StandardAddressVo> result = queryService.queryPageList(bo, new PageQuery(20, 1));
+
+        assertEquals(List.of("SEG001"), result.getRows().stream().map(StandardAddressVo::getSegmId).toList());
+        assertTrue(Boolean.TRUE.equals(result.getRows().get(0).getCanEdit()));
+        verify(standardAddressSearchGateway).queryPage(bo, List.of("0301"), new PageQuery(20, 1));
+        verify(addrSegmMapper, never()).selectStandardAddressPage(any(), any(), any());
+    }
+
+    @Test
+    void shouldUseEsGatewayForTailWindowPaginationWhenRequestedPageExceedsHeadWindow() {
+        StandardAddressBo bo = new StandardAddressBo();
+        bo.setAddrLevel(3);
+        when(dictionaryService.resolveReadonlyRegionAddrLevel(null)).thenReturn(null);
+        when(dictionaryService.resolveSegmTypesByAddrLevel(3)).thenReturn(List.of("0301"));
+        addressSearchProperties.getStandard().setReadEnabled(Boolean.TRUE);
+
+        StandardAddressVo row = new StandardAddressVo();
+        row.setSegmId("SEG-TAIL-001");
+        row.setSegmType("0301");
+        row.setAddrLevel(3);
+        row.setLevelId(30);
+        PageQuery pageQuery = new PageQuery(20, 502);
+        TableDataInfo<StandardAddressVo> esPage = new TableDataInfo<>(List.of(row), 10025);
+        when(standardAddressSearchGateway.queryPage(bo, List.of("0301"), pageQuery)).thenReturn(esPage);
+
+        TableDataInfo<StandardAddressVo> result = queryService.queryPageList(bo, pageQuery);
+
+        assertEquals(List.of("SEG-TAIL-001"), result.getRows().stream().map(StandardAddressVo::getSegmId).toList());
+        verify(standardAddressSearchGateway).queryPage(bo, List.of("0301"), pageQuery);
+        verify(addrSegmMapper, never()).selectStandardAddressPage(any(), any(), any());
+    }
+
+    @Test
+    void shouldFallbackToDatabasePaginationWhenEsGatewayRejectsMiddleDeepPage() {
+        StandardAddressBo bo = new StandardAddressBo();
+        bo.setAddrLevel(3);
+        when(dictionaryService.resolveReadonlyRegionAddrLevel(null)).thenReturn(null);
+        when(dictionaryService.resolveSegmTypesByAddrLevel(3)).thenReturn(List.of("0301"));
+        addressSearchProperties.getStandard().setReadEnabled(Boolean.TRUE);
+
+        PageQuery pageQuery = new PageQuery(20, 502);
+        when(standardAddressSearchGateway.queryPage(bo, List.of("0301"), pageQuery))
+            .thenThrow(new UnsupportedOperationException("标准地址分页超出 ES 头尾窗口"));
+        StandardAddressVo row = new StandardAddressVo();
+        row.setSegmId("SEG-DEEP-DB-001");
+        row.setSegmType("0301");
+        row.setAddrLevel(3);
+        row.setLevelId(30);
+        Page<StandardAddressVo> dbPage = new Page<>(502, 20, 20050);
+        dbPage.setRecords(List.of(row));
+        when(addrSegmMapper.selectStandardAddressPage(any(), eq(bo), eq(List.of("0301")))).thenReturn(dbPage);
+
+        TableDataInfo<StandardAddressVo> result = queryService.queryPageList(bo, pageQuery);
+
+        assertEquals(List.of("SEG-DEEP-DB-001"), result.getRows().stream().map(StandardAddressVo::getSegmId).toList());
+        verify(standardAddressSearchGateway).queryPage(bo, List.of("0301"), pageQuery);
+        verify(addrSegmMapper).selectStandardAddressPage(any(), eq(bo), eq(List.of("0301")));
     }
 
     @Test
@@ -176,6 +263,62 @@ class StandardAddressQueryServiceTest {
         assertEquals("江苏省南京市鼓楼区", result.getRows().get(0).getParentStandName());
         verify(addrSegmMapper).selectByIds(any());
         verify(spcRegionMapper).selectByIds(any());
+    }
+
+    @Test
+    void shouldUseEsGatewayForAddrSegmCandidateWhenReadSwitchEnabled() {
+        when(dictionaryService.resolveSegmTypesAtOrBelowAddrLevel(10)).thenReturn(List.of("180010"));
+        when(addressRegionContext.resolveRegionId(null)).thenReturn("320100");
+        addressSearchProperties.getStandard().setReadEnabled(Boolean.TRUE);
+
+        StandardAddressVo row = new StandardAddressVo();
+        row.setSegmId("SEG001");
+        row.setAddrLevel(7);
+        row.setSegmType("180010");
+        when(standardAddressSearchGateway.searchCandidates("鼓楼", List.of("180010"), "2140900", "320100", 10))
+            .thenReturn(List.of(row));
+
+        List<StandardAddressVo> result = queryService.searchAddrSegmCandidates("鼓楼", 10, "2140900", 10);
+
+        assertEquals(List.of("SEG001"), result.stream().map(StandardAddressVo::getSegmId).toList());
+        assertTrue(Boolean.TRUE.equals(result.get(0).getCanEdit()));
+        verify(standardAddressSearchGateway).searchCandidates("鼓楼", List.of("180010"), "2140900", "320100", 10);
+        verify(addrSegmMapper, never()).selectSearchCandidatePage(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void shouldApplyResolvedRegionIdToAddrSegmCandidateDatabaseQuery() {
+        when(dictionaryService.resolveSegmTypesAtOrBelowAddrLevel(10)).thenReturn(List.of("180010"));
+        when(addressRegionContext.resolveRegionId(null)).thenReturn("320100");
+
+        StandardAddressVo row = new StandardAddressVo();
+        row.setSegmId("SEG002");
+        row.setAddrLevel(7);
+        row.setSegmType("180010");
+        Page<StandardAddressVo> page = new Page<>(1, 10, 1);
+        page.setRecords(List.of(row));
+        when(addrSegmMapper.selectSearchCandidatePage(any(), eq("鼓楼"), eq(List.of("180010")), eq("2140900"), eq("320100")))
+            .thenReturn(page);
+
+        List<StandardAddressVo> result = queryService.searchAddrSegmCandidates("鼓楼", 10, "2140900", 10);
+
+        assertEquals(List.of("SEG002"), result.stream().map(StandardAddressVo::getSegmId).toList());
+        verify(addrSegmMapper).selectSearchCandidatePage(any(), eq("鼓楼"), eq(List.of("180010")), eq("2140900"), eq("320100"));
+        verifyNoInteractions(standardAddressSearchGateway);
+    }
+
+    @Test
+    void shouldKeepSpcRegionReadsOnDatabaseEvenWhenEsSwitchEnabled() {
+        StandardAddressBo bo = new StandardAddressBo();
+        bo.setAddrLevel(2);
+        when(dictionaryService.resolveReadonlyRegionAddrLevel(null)).thenReturn(null);
+        addressSearchProperties.getStandard().setReadEnabled(Boolean.TRUE);
+        when(spcRegionMapper.selectStandardAddressPage(any(), any())).thenReturn(new Page<>(1, 20, 0));
+
+        queryService.queryPageList(bo, new PageQuery(20, 1));
+
+        verify(spcRegionMapper).selectStandardAddressPage(any(), any());
+        verifyNoInteractions(standardAddressSearchGateway);
     }
 
     @Test

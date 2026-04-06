@@ -2,15 +2,13 @@ package org.dromara.address.controller;
 
 import org.dromara.address.domain.bo.StandardAddressBo;
 import org.dromara.address.domain.vo.StandardAddressVo;
+import org.dromara.address.search.service.StandardAddressSearchExportService;
 import org.dromara.address.service.IStandardAddressService;
 import org.dromara.common.excel.utils.ExcelUtil;
 import org.dromara.common.excel.utils.ExcelWriterWrapper;
-import org.dromara.common.mybatis.core.page.PageQuery;
-import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -25,10 +23,11 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -39,40 +38,42 @@ class StandardAddressControllerExportTest {
     @Mock
     private IStandardAddressService standardAddressService;
 
+    @Mock
+    private StandardAddressSearchExportService standardAddressSearchExportService;
+
     @InjectMocks
     private StandardAddressController controller;
 
     @Test
-    void shouldExportStandardAddressesByPagingBatchesInsteadOfLoadingWholeList() {
-        TableDataInfo<StandardAddressVo> page1 = new TableDataInfo<>(buildRows(500, 1), 501);
-        TableDataInfo<StandardAddressVo> page2 = new TableDataInfo<>(buildRows(1, 501), 501);
-        when(standardAddressService.queryStandardAddressPageList(any(), any()))
-            .thenReturn(page1, page2);
-
+    void shouldDelegateExportStreamingToSearchExportService() {
+        StandardAddressBo bo = new StandardAddressBo();
         MockHttpServletResponse response = new MockHttpServletResponse();
+        @SuppressWarnings("unchecked")
+        ExcelWriterWrapper<StandardAddressVo> writer = org.mockito.Mockito.mock(ExcelWriterWrapper.class);
+        doAnswer(invocation -> {
+            @SuppressWarnings("unchecked")
+            Consumer<List<StandardAddressVo>> consumer = invocation.getArgument(2);
+            consumer.accept(buildRows(500, 1));
+            consumer.accept(buildRows(1, 501));
+            return null;
+        }).when(standardAddressSearchExportService).writeRows(eq(bo), eq(500), any());
+
         try (var excelUtilMock = org.mockito.Mockito.mockStatic(ExcelUtil.class)) {
             excelUtilMock.when(() -> ExcelUtil.encodingFilename(anyString())).thenReturn("test.xlsx");
             excelUtilMock.when(() -> ExcelUtil.exportExcel(eq(StandardAddressVo.class), any(java.io.OutputStream.class), any(Consumer.class)))
                 .thenAnswer(invocation -> {
                     @SuppressWarnings("unchecked")
                     Consumer<ExcelWriterWrapper<StandardAddressVo>> consumer = invocation.getArgument(2);
-                    @SuppressWarnings("unchecked")
-                    ExcelWriterWrapper<StandardAddressVo> writer = org.mockito.Mockito.mock(ExcelWriterWrapper.class);
                     consumer.accept(writer);
                     return null;
                 });
-            controller.exportStandardAddresses(new StandardAddressBo(), response);
+            controller.exportStandardAddresses(bo, response);
         }
 
-        ArgumentCaptor<PageQuery> pageQueryCaptor = ArgumentCaptor.forClass(PageQuery.class);
-        verify(standardAddressService, times(2)).queryStandardAddressPageList(any(), pageQueryCaptor.capture());
+        verify(standardAddressSearchExportService).writeRows(eq(bo), eq(500), any());
+        verify(writer, org.mockito.Mockito.times(2)).write(anyList(), any());
         verify(standardAddressService, never()).queryStandardAddressList(any());
-
-        List<PageQuery> pageQueries = pageQueryCaptor.getAllValues();
-        assertEquals(1, pageQueries.get(0).getPageNum());
-        assertEquals(500, pageQueries.get(0).getPageSize());
-        assertEquals(2, pageQueries.get(1).getPageNum());
-        assertEquals(500, pageQueries.get(1).getPageSize());
+        verify(standardAddressService, never()).queryStandardAddressPageList(any(), any());
     }
 
     @Test

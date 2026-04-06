@@ -27,6 +27,10 @@
           <el-menu-item index="/monitor/rules">规则配置</el-menu-item>
           <el-menu-item index="/monitor/task">监控任务</el-menu-item>
         </el-submenu>
+        <el-submenu index="ops">
+          <template slot="title">运维支持</template>
+          <el-menu-item index="/ops/search">ES 运维</el-menu-item>
+        </el-submenu>
       </el-menu>
     </el-aside>
     <el-container>
@@ -57,10 +61,14 @@
 </template>
 
 <script>
+const storage = typeof localStorage === 'undefined'
+  ? null
+  : localStorage;
+
 export default {
   data() {
     return {
-      token: localStorage.getItem('AUTH_TOKEN') || '',
+      token: storage ? storage.getItem('AUTH_TOKEN') || '' : '',
       apiBase: import.meta.env.VITE_API_BASE || '代理 /address',
       titleMap: {
         '/standard/list': '标准地址列表',
@@ -75,7 +83,8 @@ export default {
         '/management/station': '管理站管理',
         '/monitor/records': '异常地址治理',
         '/monitor/rules': '非标监控规则',
-        '/monitor/task': '监控任务摘要'
+        '/monitor/task': '监控任务摘要',
+        '/ops/search': 'ES 运维'
       }
     };
   },
@@ -89,12 +98,16 @@ export default {
   },
   methods: {
     saveToken() {
-      localStorage.setItem('AUTH_TOKEN', this.token || '');
+      if (storage) {
+        storage.setItem('AUTH_TOKEN', this.token || '');
+      }
       this.$message.success('Token 已保存');
     },
     clearToken() {
       this.token = '';
-      localStorage.removeItem('AUTH_TOKEN');
+      if (storage) {
+        storage.removeItem('AUTH_TOKEN');
+      }
       this.$message.success('Token 已清除');
     }
   }

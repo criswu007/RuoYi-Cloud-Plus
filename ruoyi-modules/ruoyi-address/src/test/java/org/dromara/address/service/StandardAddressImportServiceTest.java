@@ -113,6 +113,8 @@ class StandardAddressImportServiceTest {
         verify(importFailDetailMapper).insert(failCaptor.capture());
         assertEquals(2, failCaptor.getValue().getRowNum());
         assertEquals("江苏省", failCaptor.getValue().getSegmName());
+        verify(commandService).addStandardAddressForImport(any(StandardAddressBo.class));
+        verify(commandService, never()).updateStandardAddressForImport(any(StandardAddressBo.class));
         verify(operationLogRecorder).record(
             eq("segm-new"),
             eq("IMPORT"),

@@ -66,15 +66,16 @@ public interface AddrSegmMapper extends BaseMapperPlus<AddrSegm, StandardAddress
 
     /**
      * 目的：按关键字分页查询标准地址搜索候选。
-     * 入参：分页参数、关键字、候选地址类型集合与状态过滤。
+     * 入参：分页参数、关键字、候选地址类型集合、状态过滤与区域过滤。
      * 出参：受限的标准地址候选分页结果。
-     * 关键约束：候选限制必须依赖 MyBatis-Plus 分页插件，禁止在 XML 中写数据库方言 `limit`。
+     * 关键约束：候选限制必须依赖 MyBatis-Plus 分页插件，禁止在 XML 中写数据库方言 `limit`；区域条件需与 ES 读链路保持一致。
      * 异常与副作用：无写入副作用。
      */
     Page<StandardAddressVo> selectSearchCandidatePage(@Param("page") Page<StandardAddressVo> page,
                                                       @Param("keyword") String keyword,
                                                       @Param("segmTypes") List<String> segmTypes,
-                                                      @Param("status") String status);
+                                                      @Param("status") String status,
+                                                      @Param("regionId") String regionId);
 
     /**
      * 目的：统计指定父节点集合下的未删除子地址数量。

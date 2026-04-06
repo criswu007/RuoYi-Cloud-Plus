@@ -5,12 +5,17 @@ import com.baomidou.dynamic.datasource.annotation.DS;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
+import org.dromara.address.config.AddressSearchProperties;
 import org.dromara.address.domain.AddrSetSegm;
 import org.dromara.address.domain.bo.InstallationAddressBo;
 import org.dromara.address.domain.vo.InstallationAddressVo;
 import org.dromara.address.mapper.AddrSetSegmMapper;
+import org.dromara.address.search.builder.InstallationAddressSearchDocumentBuilder;
+import org.dromara.address.search.document.InstallationAddressSearchDocument;
 import org.dromara.address.service.IInstallationAddressService;
 import org.dromara.address.service.IStandardAddressService;
+import org.dromara.address.search.service.AddressSearchSyncService;
+import org.dromara.address.search.service.InstallationAddressSearchGateway;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
@@ -36,6 +41,9 @@ public class InstallationAddressServiceImpl implements IInstallationAddressServi
 
     private final AddrSetSegmMapper addrSetSegmMapper;
     private final IStandardAddressService standardAddressService;
+    private final AddressSearchProperties addressSearchProperties;
+    private final InstallationAddressSearchGateway installationAddressSearchGateway;
+    private final AddressSearchSyncService addressSearchSyncService;
 
     /**
      * 查询安装地址详情。
@@ -68,9 +76,15 @@ public class InstallationAddressServiceImpl implements IInstallationAddressServi
      */
     @Override
     public TableDataInfo<InstallationAddressVo> queryPageList(InstallationAddressBo bo, PageQuery pageQuery) {
-        Page<InstallationAddressVo> page = addrSetSegmMapper.selectInstallationPage(pageQuery.build(), bo);
-        fillStandardAddressInfo(page.getRecords());
-        return TableDataInfo.build(page);
+        TableDataInfo<InstallationAddressVo> pageData;
+        if (Boolean.TRUE.equals(addressSearchProperties.getInstallation().getReadEnabled())) {
+            pageData = installationAddressSearchGateway.queryPage(bo, pageQuery);
+        } else {
+            Page<InstallationAddressVo> page = addrSetSegmMapper.selectInstallationPage(pageQuery.build(), bo);
+            pageData = TableDataInfo.build(page);
+        }
+        fillStandardAddressInfo(pageData.getRows());
+        return pageData;
     }
 
     /**
@@ -101,24 +115,15 @@ public class InstallationAddressServiceImpl implements IInstallationAddressServi
      */
     @Override
     public Boolean insertByBo(InstallationAddressBo bo) {
-        AddrSetSegm entity = new AddrSetSegm();
-        entity.setSetAddrId(StringUtils.defaultIfBlank(bo.getSetAddrId(), nextSetAddrId()));
-        entity.setSetAddrName(bo.getSetAddrName());
-        entity.setSetAddrNo(bo.getSetAddrNo());
-        entity.setSetType(bo.getSetType());
-        entity.setSegmId(bo.getSegmId());
-        entity.setSegmType(bo.getSegmType());
-        entity.setRegionId(bo.getRegionId());
-        entity.setOrgId(bo.getOrgId());
-        entity.setNotes(bo.getNotes());
-        entity.setBossOp(bo.getBossOp());
-        entity.setDeleteState("0");
-        entity.setCreateDate(new Date());
-        boolean success = addrSetSegmMapper.insert(entity) > 0;
-        if (success) {
-            bo.setSetAddrId(entity.getSetAddrId());
-        }
-        return success;
+        AddrSetSegm entity = buildEntity(bo, null);
+        InstallationAddressSearchDocument document = InstallationAddressSearchDocumentBuilder.fromEntity(entity, resolveAssociationStatus(entity));
+        return addressSearchSyncService.syncInstallationCreate(document, () -> {
+            boolean success = addrSetSegmMapper.insert(entity) > 0;
+            if (success) {
+                bo.setSetAddrId(entity.getSetAddrId());
+            }
+            return success;
+        });
     }
 
     /**
@@ -137,19 +142,15 @@ public class InstallationAddressServiceImpl implements IInstallationAddressServi
         if (StringUtils.isBlank(bo.getSetAddrId())) {
             return false;
         }
-        AddrSetSegm entity = new AddrSetSegm();
-        entity.setSetAddrId(bo.getSetAddrId());
-        entity.setSetAddrName(bo.getSetAddrName());
-        entity.setSetAddrNo(bo.getSetAddrNo());
-        entity.setSetType(bo.getSetType());
-        entity.setSegmId(bo.getSegmId());
-        entity.setSegmType(bo.getSegmType());
-        entity.setRegionId(bo.getRegionId());
-        entity.setOrgId(bo.getOrgId());
-        entity.setNotes(bo.getNotes());
-        entity.setBossOp(bo.getBossOp());
-        entity.setSyncDate(new Date());
-        return addrSetSegmMapper.updateById(entity) > 0;
+        AddrSetSegm existing = addrSetSegmMapper.selectById(bo.getSetAddrId());
+        if (existing == null) {
+            return false;
+        }
+        AddrSetSegm entity = buildEntity(bo, existing);
+        InstallationAddressSearchDocument beforeDocument = InstallationAddressSearchDocumentBuilder.fromEntity(existing, resolveAssociationStatus(existing));
+        InstallationAddressSearchDocument afterDocument = InstallationAddressSearchDocumentBuilder.fromEntity(entity, resolveAssociationStatus(entity));
+        return addressSearchSyncService.syncInstallationUpdate(beforeDocument, afterDocument,
+            () -> addrSetSegmMapper.updateById(entity) > 0);
     }
 
     /**
@@ -167,12 +168,18 @@ public class InstallationAddressServiceImpl implements IInstallationAddressServi
         if (setAddrIds == null || setAddrIds.isEmpty()) {
             return true;
         }
-        LambdaUpdateWrapper<AddrSetSegm> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.in(AddrSetSegm::getSetAddrId, setAddrIds)
-            .eq(AddrSetSegm::getDeleteState, "0")
-            .set(AddrSetSegm::getDeleteState, "1")
-            .set(AddrSetSegm::getDeleteTime, new Date());
-        return addrSetSegmMapper.update(null, updateWrapper) > 0;
+        List<AddrSetSegm> existingList = addrSetSegmMapper.selectBatchIds(setAddrIds);
+        List<InstallationAddressSearchDocument> beforeDocuments = existingList.stream()
+            .map(entity -> InstallationAddressSearchDocumentBuilder.fromEntity(entity, resolveAssociationStatus(entity)))
+            .toList();
+        return addressSearchSyncService.syncInstallationDelete(beforeDocuments, () -> {
+            LambdaUpdateWrapper<AddrSetSegm> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.in(AddrSetSegm::getSetAddrId, setAddrIds)
+                .eq(AddrSetSegm::getDeleteState, "0")
+                .set(AddrSetSegm::getDeleteState, "1")
+                .set(AddrSetSegm::getDeleteTime, new Date());
+            return addrSetSegmMapper.update(null, updateWrapper) > 0;
+        });
     }
 
     /**
@@ -213,5 +220,27 @@ public class InstallationAddressServiceImpl implements IInstallationAddressServi
      */
     private String nextSetAddrId() {
         return String.format("%024d", IdUtil.getSnowflakeNextId());
+    }
+
+    private AddrSetSegm buildEntity(InstallationAddressBo bo, AddrSetSegm existing) {
+        AddrSetSegm entity = new AddrSetSegm();
+        entity.setSetAddrId(existing == null ? StringUtils.defaultIfBlank(bo.getSetAddrId(), nextSetAddrId()) : existing.getSetAddrId());
+        entity.setSetAddrName(bo.getSetAddrName());
+        entity.setSetAddrNo(bo.getSetAddrNo());
+        entity.setSetType(bo.getSetType());
+        entity.setSegmId(bo.getSegmId());
+        entity.setSegmType(bo.getSegmType());
+        entity.setRegionId(bo.getRegionId());
+        entity.setOrgId(bo.getOrgId());
+        entity.setNotes(bo.getNotes());
+        entity.setBossOp(bo.getBossOp());
+        entity.setDeleteState(existing == null ? "0" : existing.getDeleteState());
+        entity.setCreateDate(existing == null ? new Date() : existing.getCreateDate());
+        entity.setSyncDate(existing == null ? null : new Date());
+        return entity;
+    }
+
+    private String resolveAssociationStatus(AddrSetSegm entity) {
+        return StringUtils.isNotBlank(entity.getSegmId()) ? "BOUND" : "UNBOUND";
     }
 }

@@ -11,9 +11,6 @@ spring:
       - org.apache.seata.spring.boot.autoconfigure.SeataDataSourceAutoConfiguration
       - org.apache.seata.spring.boot.autoconfigure.SeataHttpAutoConfiguration
       - org.apache.seata.spring.boot.autoconfigure.SeataSagaAutoConfiguration
-      - org.redisson.spring.starter.RedissonAutoConfigurationV2
-      - com.baomidou.lock.spring.boot.autoconfigure.LockAutoConfiguration
-      - com.baomidou.lock.spring.boot.autoconfigure.RedissonLockAutoConfiguration
       - org.dromara.common.translation.config.TranslationConfig
       - org.dromara.common.translation.core.impl.DeptNameTranslationImpl
       - org.dromara.common.translation.core.impl.DictTypeTranslationImpl
@@ -46,6 +43,10 @@ spring:
         enabled: false
   data:
     redis:
+      host: 127.0.0.1
+      port: 6379
+      password: ruoyi123
+      database: 0
       repositories:
         enabled: false
 sa-token:
@@ -93,18 +94,23 @@ logging:
 
 easy-es:
   enable: true
+  compatible: true
+  address: 127.0.0.1:9200
+  schema: http
 
 address:
   search:
     enabled: true
+    kibana-url: http://127.0.0.1:5601
+    maintenance-lock-key: address:search:maintenance:running
     refresh-policy: wait_for
     rebuild-batch-size: 500
     pit-keep-alive: 1m
     standard:
       alias: address_standard_search
-      read-enabled: false
-      write-enabled: false
+      read-enabled: true
+      write-enabled: true
     installation:
       alias: address_installation_search
-      read-enabled: false
-      write-enabled: false
+      read-enabled: true
+      write-enabled: true

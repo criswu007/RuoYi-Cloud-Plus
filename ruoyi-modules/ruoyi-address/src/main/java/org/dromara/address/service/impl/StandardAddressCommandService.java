@@ -11,6 +11,9 @@ import org.dromara.address.domain.vo.StandardAddressAdminVo;
 import org.dromara.address.mapper.AddrSegmMapper;
 import org.dromara.address.mapper.AddrSetSegmMapper;
 import org.dromara.address.mapper.SpcRegionMapper;
+import org.dromara.address.search.builder.StandardAddressSearchDocumentBuilder;
+import org.dromara.address.search.document.StandardAddressSearchDocument;
+import org.dromara.address.search.service.AddressSearchSyncService;
 import org.dromara.address.support.StandardAddressOperationLogRecorder;
 import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.utils.StringUtils;
@@ -51,6 +54,7 @@ public class StandardAddressCommandService {
     private final StandardAddressNameService nameService;
     private final StandardAddressIdGenerator idGenerator;
     private final StandardAddressOperationLogRecorder operationLogRecorder;
+    private final AddressSearchSyncService addressSearchSyncService;
 
     /**
      * 目的：新增标准地址。
@@ -87,17 +91,20 @@ public class StandardAddressCommandService {
         AddrSegm parent = requireParent(bo.getParentSegmId(), "新增");
         Integer addrLevel = resolveWritableAddrLevel(bo, null, parent, "新增");
         AddrSegm entity = buildEntity(bo, null, parent, addrLevel);
-        boolean success = addrSegmMapper.insert(entity) > 0;
-        if (success) {
-            bo.setSegmId(entity.getSegmId());
-            bo.setStandName(entity.getStandName());
-            bo.setStandNo(entity.getStandNo());
-            bo.setSegmNo(entity.getSegmNo());
-            if (recordInsertLog) {
-                operationLogRecorder.record(entity.getSegmId(), OPERATION_TYPE_INSERT, entity.getStandName(), "新增标准地址成功");
+        StandardAddressSearchDocument document = StandardAddressSearchDocumentBuilder.fromEntity(entity, addrLevel);
+        return addressSearchSyncService.syncStandardCreate(document, () -> {
+            boolean success = addrSegmMapper.insert(entity) > 0;
+            if (success) {
+                bo.setSegmId(entity.getSegmId());
+                bo.setStandName(entity.getStandName());
+                bo.setStandNo(entity.getStandNo());
+                bo.setSegmNo(entity.getSegmNo());
+                if (recordInsertLog) {
+                    operationLogRecorder.record(entity.getSegmId(), OPERATION_TYPE_INSERT, entity.getStandName(), "新增标准地址成功");
+                }
             }
-        }
-        return success;
+            return success;
+        });
     }
 
     /**
@@ -136,17 +143,22 @@ public class StandardAddressCommandService {
         AddrSegm parent = requireParent(parentSegmId, "修改");
         Integer addrLevel = resolveWritableAddrLevel(bo, existing, parent, "修改");
         AddrSegm update = buildEntity(bo, existing, parent, addrLevel);
-        boolean success = addrSegmMapper.updateById(update) > 0;
-        if (success) {
-            bo.setStandName(update.getStandName());
-            bo.setStandNo(update.getStandNo());
-            bo.setSegmNo(update.getSegmNo());
-            refreshChildrenStandInfo(update);
-            if (recordUpdateLog) {
-                operationLogRecorder.record(update.getSegmId(), OPERATION_TYPE_UPDATE, update.getStandName(), "修改标准地址成功");
+        Integer existingAddrLevel = dictionaryService.resolveAddrLevel(existing.getSegmType());
+        StandardAddressSearchDocument beforeDocument = StandardAddressSearchDocumentBuilder.fromEntity(existing, existingAddrLevel);
+        StandardAddressSearchDocument afterDocument = StandardAddressSearchDocumentBuilder.fromEntity(update, addrLevel);
+        return addressSearchSyncService.syncStandardUpdate(beforeDocument, afterDocument, () -> {
+            boolean success = addrSegmMapper.updateById(update) > 0;
+            if (success) {
+                bo.setStandName(update.getStandName());
+                bo.setStandNo(update.getStandNo());
+                bo.setSegmNo(update.getSegmNo());
+                refreshChildrenStandInfo(update);
+                if (recordUpdateLog) {
+                    operationLogRecorder.record(update.getSegmId(), OPERATION_TYPE_UPDATE, update.getStandName(), "修改标准地址成功");
+                }
             }
-        }
-        return success;
+            return success;
+        });
     }
 
     /**
@@ -174,13 +186,18 @@ public class StandardAddressCommandService {
         if (installCount != null && installCount > 0 && !confirm) {
             throw new ServiceException("删除失败：存在关联安装地址，请确认后重试");
         }
-        boolean success = addrSegmMapper.logicalDeleteBySegmIds(segmIds) > 0;
-        if (success) {
-            for (AddrSegm item : current) {
-                operationLogRecorder.record(item.getSegmId(), OPERATION_TYPE_DELETE, item.getStandName(), "删除标准地址成功");
+        List<StandardAddressSearchDocument> beforeDocuments = current.stream()
+            .map(item -> StandardAddressSearchDocumentBuilder.fromEntity(item, dictionaryService.resolveAddrLevel(item.getSegmType())))
+            .toList();
+        return addressSearchSyncService.syncStandardDelete(beforeDocuments, () -> {
+            boolean success = addrSegmMapper.logicalDeleteBySegmIds(segmIds) > 0;
+            if (success) {
+                for (AddrSegm item : current) {
+                    operationLogRecorder.record(item.getSegmId(), OPERATION_TYPE_DELETE, item.getStandName(), "删除标准地址成功");
+                }
             }
-        }
-        return success;
+            return success;
+        });
     }
 
     /**

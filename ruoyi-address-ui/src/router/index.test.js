@@ -13,4 +13,10 @@ describe('标准地址路由', () => {
 
     expect(stationRoute).toBeTruthy();
   });
+
+  it('应提供 ES 运维页路由', () => {
+    const route = router.options.routes.find(item => item.path === '/ops/search');
+
+    expect(route).toBeTruthy();
+  });
 });

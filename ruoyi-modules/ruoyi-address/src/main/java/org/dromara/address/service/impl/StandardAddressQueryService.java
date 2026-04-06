@@ -13,6 +13,8 @@ import org.dromara.address.mapper.SpcRegionMapper;
 import org.dromara.address.mapper.SpcStationMapper;
 import org.dromara.address.mapper.StandardAddressTagMapper;
 import org.dromara.address.mapper.StandardAddressTagRelMapper;
+import org.dromara.address.config.AddressSearchProperties;
+import org.dromara.address.search.service.StandardAddressSearchGateway;
 import org.dromara.address.support.AddressRegionContext;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.core.page.PageQuery;
@@ -38,7 +40,6 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class StandardAddressQueryService {
-
     private final AddrSegmMapper addrSegmMapper;
     private final SpcRegionMapper spcRegionMapper;
     private final StandardAddressDictionaryService dictionaryService;
@@ -46,6 +47,8 @@ public class StandardAddressQueryService {
     private final SpcStationMapper spcStationMapper;
     private final StandardAddressTagRelMapper standardAddressTagRelMapper;
     private final StandardAddressTagMapper standardAddressTagMapper;
+    private final AddressSearchProperties addressSearchProperties;
+    private final StandardAddressSearchGateway standardAddressSearchGateway;
 
     /**
      * 目的：分页查询标准地址列表。
@@ -68,6 +71,15 @@ public class StandardAddressQueryService {
             return TableDataInfo.build(result);
         }
         List<String> segmTypes = resolveAddrSegmTypes(queryBo);
+        if (Boolean.TRUE.equals(addressSearchProperties.getStandard().getReadEnabled())) {
+            try {
+                TableDataInfo<StandardAddressVo> pageResult = standardAddressSearchGateway.queryPage(queryBo, CollUtil.isEmpty(segmTypes) ? null : segmTypes, pageQuery);
+                enrichAddrSegmRows(pageResult.getRows());
+                applyWritableFlags(pageResult.getRows());
+                return pageResult;
+            } catch (UnsupportedOperationException ignore) {
+            }
+        }
         Page<StandardAddressVo> page = buildPage(pageQuery, true);
         Page<StandardAddressVo> result = addrSegmMapper.selectStandardAddressPage(page, queryBo, CollUtil.isEmpty(segmTypes) ? null : segmTypes);
         if (result == null) {
@@ -147,17 +159,48 @@ public class StandardAddressQueryService {
      * 目的：查询 `ADDR_SEGM` 标准地址候选。
      * 入参：关键字、最大业务级别、状态与候选条数上限。
      * 出参：可写标准地址候选集合。
-     * 关键约束：结果条数必须依赖 MyBatis-Plus 分页插件在数据库侧收敛，层级过滤需先在字典服务中解析为 `segmType` 集合。
+     * 关键约束：区域条件未显式传入时需回退当前登录上下文；结果条数必须依赖数据库/ES 查询侧收敛，层级过滤需先在字典服务中解析为 `segmType` 集合。
      * 异常与副作用：无写入副作用。
      */
     public List<StandardAddressVo> searchAddrSegmCandidates(String keyword, Integer addrLevelMax, String status, int limit) {
+        return searchAddrSegmCandidates(keyword, addrLevelMax, status, null, limit);
+    }
+
+    /**
+     * 目的：查询 `ADDR_SEGM` 标准地址候选。
+     * 入参：关键字、最大业务级别、状态、显式区域与候选条数上限。
+     * 出参：可写标准地址候选集合。
+     * 关键约束：显式区域优先，未传时回退当前登录上下文；ES 与数据库读链路必须复用同一 `regionId` 过滤语义。
+     * 异常与副作用：无写入副作用。
+     */
+    public List<StandardAddressVo> searchAddrSegmCandidates(String keyword, Integer addrLevelMax, String status, String regionId, int limit) {
         if (limit <= 0) {
             return Collections.emptyList();
         }
         List<String> segmTypes = dictionaryService.resolveSegmTypesAtOrBelowAddrLevel(addrLevelMax);
+        String resolvedRegionId = addressRegionContext.resolveRegionId(regionId);
+        if (Boolean.TRUE.equals(addressSearchProperties.getStandard().getReadEnabled())) {
+            List<StandardAddressVo> searchResult = standardAddressSearchGateway.searchCandidates(
+                keyword,
+                CollUtil.isEmpty(segmTypes) ? null : segmTypes,
+                status,
+                resolvedRegionId,
+                limit
+            );
+            List<StandardAddressVo> rows = searchResult == null ? new java.util.ArrayList<>() : new java.util.ArrayList<>(searchResult);
+            enrichAddrSegmRows(rows);
+            sortAddrSegmCandidateRows(rows);
+            return applyWritableFlags(rows);
+        }
         Page<StandardAddressVo> page = buildLimitPage(limit);
-        Page<StandardAddressVo> result = addrSegmMapper.selectSearchCandidatePage(page, keyword, CollUtil.isEmpty(segmTypes) ? null : segmTypes, status);
-        List<StandardAddressVo> rows = result == null ? Collections.emptyList() : result.getRecords();
+        Page<StandardAddressVo> result = addrSegmMapper.selectSearchCandidatePage(
+            page,
+            keyword,
+            CollUtil.isEmpty(segmTypes) ? null : segmTypes,
+            status,
+            resolvedRegionId
+        );
+        List<StandardAddressVo> rows = result == null ? new java.util.ArrayList<>() : new java.util.ArrayList<>(result.getRecords());
         enrichAddrSegmRows(rows);
         sortAddrSegmCandidateRows(rows);
         return applyWritableFlags(rows);

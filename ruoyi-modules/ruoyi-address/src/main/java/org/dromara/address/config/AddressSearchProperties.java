@@ -20,7 +20,7 @@ public class AddressSearchProperties {
     /**
      * ES 写入刷新策略。
      */
-    private String refreshPolicy = "none";
+    private String refreshPolicy = "wait_for";
 
     /**
      * 全量重建索引时单批处理数量。
@@ -31,6 +31,16 @@ public class AddressSearchProperties {
      * PIT（Point In Time）保活时长。
      */
     private String pitKeepAlive = "1m";
+
+    /**
+     * Kibana 运维入口地址。
+     */
+    private String kibanaUrl = "http://127.0.0.1:5601";
+
+    /**
+     * ES 运维写操作串行锁 key。
+     */
+    private String maintenanceLockKey = "address:search:maintenance:running";
 
     /**
      * 标准地址索引配置。
@@ -56,11 +66,16 @@ public class AddressSearchProperties {
         /**
          * 是否允许读。
          */
-        private Boolean readEnabled = Boolean.TRUE;
+        private Boolean readEnabled = Boolean.FALSE;
 
         /**
          * 是否允许写。
          */
-        private Boolean writeEnabled = Boolean.TRUE;
+        private Boolean writeEnabled = Boolean.FALSE;
+    }
+
+    public AddressSearchProperties() {
+        this.standard.setAlias("address_standard_search");
+        this.installation.setAlias("address_installation_search");
     }
 }

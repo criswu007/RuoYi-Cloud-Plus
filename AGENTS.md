@@ -1,38 +1,24 @@
-# 仓库指南
+# Repository Guidelines
 
-## 项目结构
-- `ruoyi-auth`, `ruoyi-gateway`, `ruoyi-modules/*`：核心微服务与业务模块。
-- `ruoyi-common/*`：跨服务共享的基础库与 Starter。
-- `ruoyi-api/*`：共享 API 约定与 BOM。
-- `ruoyi-visual/*`：可视化与平台组件（监控、Nacos、Seata、SnailJob）。
-- `ruoyi-example/*`：示例与 MQ 案例模块。
-- `script/`：Docker 与环境搭建资源（见 `script/docker`、`script/config`）。
+## 项目结构与模块组织
+`ruoyi-auth`、`ruoyi-gateway`、`ruoyi-modules/*` 是核心服务与业务模块；`ruoyi-address-ui` 是独立前端；`ruoyi-common/*` 放公共组件；`ruoyi-api/*` 放共享接口与 BOM；`ruoyi-visual/*` 放平台配套；`script/docker`、`script/config` 放环境资源。测试代码位于各模块 `src/test/java`。
 
 ## 构建、测试与开发命令
-- 构建全部模块（本仓库默认跳过测试）：`mvn -T1C -DskipTests package`。
-- 构建单个服务及依赖：`mvn -pl ruoyi-auth -am package`。
-- 本地运行服务：`mvn -pl ruoyi-auth -am spring-boot:run`。
-- 显式执行测试（覆盖默认跳过）：`mvn -DskipTests=false test`。
-- Docker 环境与编排文件在 `script/docker`。
+- `mvn -T1C -DskipTests package`：全量构建，仓库默认跳过测试。
+- `mvn -pl ruoyi-auth -am spring-boot:run`：启动单个后端服务。
+- `mvn -pl ruoyi-modules/ruoyi-address -am package`：只构建标准地址相关模块。
+- `mvn -DskipTests=false test`：显式执行 Maven 测试。
+- `cd ruoyi-address-ui && npm run dev`：启动前端开发环境。
+- `cd ruoyi-address-ui && npm run build` / `npm test`：构建或执行 Vitest。
 
 ## 编码风格与命名
-- Java 遵循 Alibaba Java 规范，缩进 4 空格。
-- 包名与类名尽量与模块对齐（示例模块：`ruoyi-system`）。
-- 配置放在 `src/main/resources`，按环境区分 `bootstrap*.yml` 或 `application*.yml`。
-- 项目广泛使用 Lombok，除非必要不要手写样板代码。
+Java 遵循 Alibaba Java 规范，统一 4 空格缩进；包名小写，类名与模块职责对齐。配置文件放在 `src/main/resources`，按环境使用 `bootstrap-*.yml` 或 `application-*.yml`。说明与注释统一中文，命令和专有名词保留原文。项目已广泛使用 Lombok，除非必要不要手写样板代码。
 
-## 测试指南
-- 根目录配置 Maven Surefire，测试目录遵循 `src/test/java` 与 `src/test/resources`。
-- 推荐使用 `spring-boot-starter-test` 编写单元与切片测试。
-- 测试类命名使用 `*Test` 或 `*Tests` 以便 Surefire 识别。
+## 注释与测试要求
+`ruoyi-modules/ruoyi-address` 下的类、接口、方法注释需写明目的、入参/出参、关键约束、异常与副作用；核心业务方法和对外接口必须写详细注释，DTO/VO 仅保留字段注释。后端测试优先使用 `spring-boot-starter-test`，测试类命名采用 `*Test` 或 `*Tests`；前端使用 Vitest。改动查询链路、跨库兼容或性能敏感逻辑时，必须补测试。
 
 ## 提交与 PR 指南
-- 近期提交风格常见前缀：`fix`、`update`、`refactor`、版本发布。
-  示例：`fix 修复 xxx`。
-- 提交应聚焦且描述清晰，必要时注明模块范围。
-- PR 需包含变更摘要、关联 Issue 与配置或迁移说明；
-  仅在涉及 UI 变更时附截图。
+近期提交常见前缀有 `fix`、`docs`、`refactor`，也存在直接用模块名作主题的提交；建议统一为清晰、可检索的风格，例如 `fix ruoyi-address: 优化标准地址查询`。PR 应包含变更摘要、影响范围、配置或数据迁移说明；涉及页面变更时附截图，并关联 Issue。
 
-## 配置与环境提示
-- 默认 profile 为 `dev`（见根 `pom.xml`）；运行前确认 Nacos 与 Logstash 地址。
-- 禁止提交密钥与敏感配置，使用环境配置文件或 Nacos 管理。
+## 配置与安全提示
+根 `pom.xml` 默认启用 `dev` profile，启动前确认 Nacos、Logstash 等外部配置可用。禁止提交密码、密钥和线上地址等敏感信息，优先通过本地环境配置或 Nacos 管理。进入 `ruoyi-modules/ruoyi-address` 深度开发时，还需同时遵守该目录下的模块级 `AGENTS.md`。

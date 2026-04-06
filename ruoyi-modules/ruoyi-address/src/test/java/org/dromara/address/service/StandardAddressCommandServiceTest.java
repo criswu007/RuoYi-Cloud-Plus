@@ -7,12 +7,15 @@ import org.dromara.address.domain.bo.StandardAddressSplitItemBo;
 import org.dromara.address.domain.vo.StandardAddressAdminVo;
 import org.dromara.address.mapper.AddrSegmMapper;
 import org.dromara.address.mapper.AddrSetSegmMapper;
+import org.dromara.address.search.service.AddressSearchSyncService;
+import org.dromara.address.search.support.CheckedBooleanSupplier;
 import org.dromara.address.support.StandardAddressOperationLogRecorder;
 import org.dromara.address.service.impl.StandardAddressCommandService;
 import org.dromara.address.service.impl.StandardAddressDictionaryService;
 import org.dromara.address.service.impl.StandardAddressIdGenerator;
 import org.dromara.address.service.impl.StandardAddressNameService;
 import org.dromara.common.core.exception.ServiceException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,10 +31,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 
 @Tag("dev")
 @ExtendWith(MockitoExtension.class)
@@ -55,8 +61,21 @@ class StandardAddressCommandServiceTest {
     @Mock
     private StandardAddressOperationLogRecorder operationLogRecorder;
 
+    @Mock
+    private AddressSearchSyncService addressSearchSyncService;
+
     @InjectMocks
     private StandardAddressCommandService commandService;
+
+    @BeforeEach
+    void setUp() throws Exception {
+        lenient().when(addressSearchSyncService.syncStandardCreate(any(), any()))
+            .thenAnswer(invocation -> invocation.<CheckedBooleanSupplier>getArgument(1).getAsBoolean());
+        lenient().when(addressSearchSyncService.syncStandardUpdate(any(), any(), any()))
+            .thenAnswer(invocation -> invocation.<CheckedBooleanSupplier>getArgument(2).getAsBoolean());
+        lenient().when(addressSearchSyncService.syncStandardDelete(anyList(), any()))
+            .thenAnswer(invocation -> invocation.<CheckedBooleanSupplier>getArgument(1).getAsBoolean());
+    }
 
     @Test
     void shouldRejectWriteForLevel1AndLevel2() {
@@ -153,6 +172,35 @@ class StandardAddressCommandServiceTest {
         assertEquals(2140511, entityWrapper.getPropertyValue("areaType"));
         assertEquals(2140800, entityWrapper.getPropertyValue("placeType"));
         assertEquals(128, entityWrapper.getPropertyValue("coverNum"));
+    }
+
+    @Test
+    void shouldWriteEsBeforeDatabaseWhenAddingStandardAddress() throws Exception {
+        StandardAddressBo bo = new StandardAddressBo();
+        bo.setParentSegmId("segm-parent");
+        bo.setSegmName("101室");
+        bo.setSegmType("180007");
+
+        AddrSegm parent = new AddrSegm();
+        parent.setSegmId("segm-parent");
+        parent.setStandName("江苏省南京市");
+        parent.setRegionId("320100");
+        parent.setDistrictId("320106");
+        parent.setServiceRegionId("320106001001");
+
+        when(addrSegmMapper.selectById("segm-parent")).thenReturn(parent);
+        when(dictionaryService.resolveAddrLevel("180007")).thenReturn(16);
+        when(dictionaryService.resolveSegmTypesByAddrLevel(16)).thenReturn(List.of("180007"));
+        when(idGenerator.nextSegmId()).thenReturn("segm-new");
+        when(nameService.buildSegmNo("101室")).thenReturn("101S");
+        when(nameService.buildStandNo("江苏省南京市101室")).thenReturn("JSSNJS101S");
+        when(addrSegmMapper.insert(any(AddrSegm.class))).thenReturn(1);
+
+        Boolean result = commandService.addStandardAddress(bo);
+
+        assertTrue(Boolean.TRUE.equals(result));
+        verify(addressSearchSyncService).syncStandardCreate(any(), any());
+        verify(addrSegmMapper).insert(any(AddrSegm.class));
     }
 
     @Test
@@ -304,6 +352,44 @@ class StandardAddressCommandServiceTest {
     }
 
     @Test
+    void shouldSyncUpdateThroughAddressSearchSyncService() throws Exception {
+        StandardAddressBo bo = new StandardAddressBo();
+        bo.setSegmId("segm-1");
+        bo.setParentSegmId("segm-parent");
+        bo.setSegmName("102室");
+        bo.setAddrLevel(16);
+        bo.setSegmType("180007");
+
+        AddrSegm existing = new AddrSegm();
+        existing.setSegmId("segm-1");
+        existing.setParentSegmId("segm-parent");
+        existing.setSegmName("101室");
+        existing.setStandName("江苏省南京市鼓楼区中央路1号101室");
+        existing.setSegmType("180007");
+        existing.setDeleteState("0");
+
+        AddrSegm parent = new AddrSegm();
+        parent.setSegmId("segm-parent");
+        parent.setStandName("江苏省南京市鼓楼区中央路1号");
+        parent.setSegmType("180005");
+
+        when(addrSegmMapper.selectById("segm-1")).thenReturn(existing);
+        when(addrSegmMapper.selectById("segm-parent")).thenReturn(parent);
+        when(dictionaryService.resolveAddrLevel("180007")).thenReturn(16);
+        when(dictionaryService.resolveSegmTypesByAddrLevel(16)).thenReturn(List.of("180007"));
+        when(nameService.buildSegmNo("102室")).thenReturn("102S");
+        when(nameService.buildStandNo("江苏省南京市鼓楼区中央路1号102室")).thenReturn("JSSNJSGLQZYL1H102S");
+        when(addrSegmMapper.updateById(any(AddrSegm.class))).thenReturn(1);
+        when(addrSegmMapper.selectChildrenByParentSegmId("segm-1")).thenReturn(List.of());
+
+        Boolean result = commandService.updateStandardAddress(bo);
+
+        assertTrue(Boolean.TRUE.equals(result));
+        verify(addressSearchSyncService).syncStandardUpdate(any(), any(), any());
+        verify(addrSegmMapper).updateById(any(AddrSegm.class));
+    }
+
+    @Test
     void shouldRecordDeleteOperationLogWhenLogicalDeleteSucceeds() {
         AddrSegm current = new AddrSegm();
         current.setSegmId("segm-1");
@@ -326,6 +412,59 @@ class StandardAddressCommandServiceTest {
             "江苏省南京市鼓楼区中央路1号101室",
             "删除标准地址成功"
         );
+    }
+
+    @Test
+    void shouldCompensateEsWhenDeletingStandardAddressDatabaseStepFails() throws Exception {
+        AddrSegm current = new AddrSegm();
+        current.setSegmId("SEG001");
+        current.setSegmType("180007");
+        current.setStandName("江苏省南京市鼓楼区中央路1号101室");
+        current.setDeleteState("0");
+        current.setParentSegmId("segm-parent");
+        current.setSegmName("101室");
+
+        when(addrSegmMapper.selectBatchIds(List.of("SEG001"))).thenReturn(List.of(current));
+        when(dictionaryService.resolveAddrLevel("180007")).thenReturn(16);
+        when(addrSegmMapper.countChildren(List.of("SEG001"))).thenReturn(0L);
+        when(addrSetSegmMapper.countBySegmIds(List.of("SEG001"))).thenReturn(0L);
+        when(addrSegmMapper.logicalDeleteBySegmIds(List.of("SEG001"))).thenThrow(new RuntimeException("db failed"));
+
+        RuntimeException exception = assertThrows(RuntimeException.class,
+            () -> commandService.deleteStandardAddresses(List.of("SEG001"), true));
+
+        assertEquals("db failed", exception.getMessage());
+        verify(addressSearchSyncService).syncStandardDelete(anyList(), any());
+        verify(operationLogRecorder, never()).record(eq("SEG001"), eq("DELETE"), any(), any());
+    }
+
+    @Test
+    void shouldReuseSearchSyncServiceWhenAddingStandardAddressForImport() throws Exception {
+        StandardAddressBo bo = new StandardAddressBo();
+        bo.setParentSegmId("segm-parent");
+        bo.setSegmName("101室");
+        bo.setSegmType("180007");
+
+        AddrSegm parent = new AddrSegm();
+        parent.setSegmId("segm-parent");
+        parent.setStandName("江苏省南京市");
+        parent.setRegionId("320100");
+        parent.setDistrictId("320106");
+        parent.setServiceRegionId("320106001001");
+
+        when(addrSegmMapper.selectById("segm-parent")).thenReturn(parent);
+        when(dictionaryService.resolveAddrLevel("180007")).thenReturn(16);
+        when(dictionaryService.resolveSegmTypesByAddrLevel(16)).thenReturn(List.of("180007"));
+        when(idGenerator.nextSegmId()).thenReturn("segm-new");
+        when(nameService.buildSegmNo("101室")).thenReturn("101S");
+        when(nameService.buildStandNo("江苏省南京市101室")).thenReturn("JSSNJS101S");
+        when(addrSegmMapper.insert(any(AddrSegm.class))).thenReturn(1);
+
+        Boolean result = commandService.addStandardAddressForImport(bo);
+
+        assertTrue(Boolean.TRUE.equals(result));
+        verify(addressSearchSyncService).syncStandardCreate(any(), any());
+        verify(operationLogRecorder, never()).record(eq("segm-new"), eq("INSERT"), any(), any());
     }
 
     @Test

@@ -71,10 +71,6 @@
             <if test="bo != null and bo.parentSegmId != null and bo.parentSegmId != ''">
                 and a.parent_segm_id = #{bo.parentSegmId}
             </if>
-            <if test="bo != null and bo.segmName != null and bo.segmName != ''">
-                <bind name="segmNameLike" value="'%' + bo.segmName + '%'" />
-                and a.segm_name like #{segmNameLike}
-            </if>
             <if test="bo != null and bo.standName != null and bo.standName != ''">
                 <bind name="standNameLike" value="'%' + bo.standName + '%'" />
                 and a.stand_name like #{standNameLike}
@@ -151,10 +147,7 @@
             coalesce(a.delete_state, '0') = '0'
             <if test="keyword != null and keyword != ''">
                 <bind name="keywordLike" value="'%' + keyword + '%'" />
-                and (
-                    a.segm_name like #{keywordLike}
-                    or a.stand_name like #{keywordLike}
-                )
+                and a.stand_name like #{keywordLike}
             </if>
             <if test="segmTypes != null and segmTypes.size() > 0">
                 and a.segm_type in
@@ -164,6 +157,9 @@
             </if>
             <if test="status != null and status != ''">
                 and a.status = #{status}
+            </if>
+            <if test="regionId != null and regionId != ''">
+                and a.region_id = #{regionId}
             </if>
         </where>
         <choose>

@@ -6,7 +6,11 @@
 2. 后端：ruoyi-modules/ruoyi-address
 3. 原型网页：https://ftthtest.wetrytech.com/#/login 账号密码：shazhengbo/Wetry2026!
 4. 线上数据库：
-
+    ```properties
+    url: jdbc:mysql://82.156.6.111:4000/ftth_cloud_address?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8&rewriteBatchedStatements=true&allowPublicKeyRetrieval=true
+    username: address
+    password: Wetry2328!
+    ```
      url: jdbc:mysql://82.156.6.111:4000/ftth_cloud_address?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8&rewriteBatchedStatements=true&allowPublicKeyRetrieval=true
      username: address
      password: Wetry2328!

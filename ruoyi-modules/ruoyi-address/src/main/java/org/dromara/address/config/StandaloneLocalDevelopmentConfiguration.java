@@ -85,6 +85,7 @@ public class StandaloneLocalDevelopmentConfiguration {
         "address:installation:add",
         "address:installation:edit",
         "address:installation:remove",
+        "address:search:maintain",
         "address:operation:log:list",
         "address:operation:log:query"
     );

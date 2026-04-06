@@ -38,6 +38,7 @@ class AddressSearchDocumentBuilderTest {
         StandardAddressSearchDocument target = StandardAddressSearchDocumentBuilder.fromVo(source);
 
         assertNotNull(target, "标准地址文档不应为空");
+        assertEquals("1001", target.getDocumentId());
         assertEquals("1001", target.getSegmId());
         assertEquals("1000", target.getParentSegmId());
         assertEquals("世纪大道", target.getSegmName());
@@ -55,7 +56,7 @@ class AddressSearchDocumentBuilderTest {
 
     @Test
     void installationFromVoShouldMapCoreSearchFieldsAndAssociationStatus() {
-        InstallationAddressVo source = new TestInstallationAddressVo();
+        InstallationAddressVo source = new InstallationAddressVo();
         source.setSetAddrId("2001");
         source.setSegmId("1001");
         source.setSetAddrName("A座101室");
@@ -66,12 +67,13 @@ class AddressSearchDocumentBuilderTest {
         source.setAssociationStatus("BOUND");
         Date installationCreateDate = new Date(1760000005000L);
         source.setCreateDate(installationCreateDate);
-        ((TestInstallationAddressVo) source).setSegmType("BUILDING");
-        ((TestInstallationAddressVo) source).setRegionId("310000");
+        source.setSegmType("BUILDING");
+        source.setRegionId("310000");
 
         InstallationAddressSearchDocument target = InstallationAddressSearchDocumentBuilder.fromVo(source);
 
         assertNotNull(target, "安装地址文档不应为空");
+        assertEquals("2001", target.getDocumentId());
         assertEquals("2001", target.getSetAddrId());
         assertEquals("1001", target.getSegmId());
         assertEquals("A座101室", target.getSetAddrName());
@@ -83,27 +85,5 @@ class AddressSearchDocumentBuilderTest {
         assertEquals("BUILDING", target.getSegmType());
         assertEquals("310000", target.getRegionId());
         assertEquals(installationCreateDate, target.getCreateDate());
-    }
-
-    private static final class TestInstallationAddressVo extends InstallationAddressVo {
-
-        private String segmType;
-        private String regionId;
-
-        public String getSegmType() {
-            return segmType;
-        }
-
-        public void setSegmType(String segmType) {
-            this.segmType = segmType;
-        }
-
-        public String getRegionId() {
-            return regionId;
-        }
-
-        public void setRegionId(String regionId) {
-            this.regionId = regionId;
-        }
     }
 }

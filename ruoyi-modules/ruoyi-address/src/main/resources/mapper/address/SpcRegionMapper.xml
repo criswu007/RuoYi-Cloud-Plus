@@ -59,10 +59,6 @@
             <if test="bo != null and bo.parentSegmId != null and bo.parentSegmId != ''">
                 and r.super_region_id = #{bo.parentSegmId}
             </if>
-            <if test="bo != null and bo.segmName != null and bo.segmName != ''">
-                <bind name="segmNameLike" value="'%' + bo.segmName + '%'" />
-                and r.region_name like #{segmNameLike}
-            </if>
             <if test="bo != null and bo.standName != null and bo.standName != ''">
                 <bind name="standNameLike" value="'%' + bo.standName + '%'" />
                 and r.region_name like #{standNameLike}
@@ -82,10 +78,6 @@
             </if>
             <if test="bo != null and bo.parentSegmId != null and bo.parentSegmId != ''">
                 and r.super_region_id = #{bo.parentSegmId}
-            </if>
-            <if test="bo != null and bo.segmName != null and bo.segmName != ''">
-                <bind name="segmNameLike" value="'%' + bo.segmName + '%'" />
-                and r.region_name like #{segmNameLike}
             </if>
             <if test="bo != null and bo.standName != null and bo.standName != ''">
                 <bind name="standNameLike" value="'%' + bo.standName + '%'" />

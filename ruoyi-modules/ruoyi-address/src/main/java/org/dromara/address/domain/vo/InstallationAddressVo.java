@@ -23,6 +23,16 @@ public class InstallationAddressVo implements Serializable {
     private String segmId;
 
     /**
+     * 标准地址类型。
+     */
+    private String segmType;
+
+    /**
+     * 区域 ID。
+     */
+    private String regionId;
+
+    /**
      * 是否关联标准地址
      */
     private Boolean hasStandardAddress;

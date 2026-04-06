@@ -144,3 +144,24 @@ export const getMonitorTaskSummary = () =>
 
 export const executeMonitorTask = () =>
   request.post('/address/monitor/task/execute');
+
+export const getSearchOpsOverview = () =>
+  request.get('/address/search/ops/overview');
+
+export const createStandardRebuildTask = data =>
+  request.post('/address/search/tasks/rebuild/standard', data);
+
+export const createInstallationRebuildTask = data =>
+  request.post('/address/search/tasks/rebuild/installation', data);
+
+export const getSearchMaintenanceTasks = params =>
+  request.get('/address/search/tasks', { params });
+
+export const getSearchMaintenanceTaskDetail = taskId =>
+  request.get(`/address/search/tasks/${taskId}`);
+
+export const getSearchRepairTasks = params =>
+  request.get('/address/search/repair/tasks', { params });
+
+export const executeSearchRepairTask = (taskId, data) =>
+  request.post(`/address/search/repair/${taskId}/execute`, data);

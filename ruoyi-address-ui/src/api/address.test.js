@@ -229,4 +229,22 @@ describe('标准地址 API 契约', () => {
     expect(mockRequest.post).toHaveBeenCalledWith('/address/station/update', updatePayload);
     expect(mockRequest.post).toHaveBeenCalledWith('/address/station/remove/101');
   });
+
+  it('ES 运维接口应暴露概览、重建任务与 repair 契约', () => {
+    addressApi.getSearchOpsOverview();
+    addressApi.createStandardRebuildTask({ confirmationCode: 'REBUILD_STANDARD' });
+    addressApi.createInstallationRebuildTask({ confirmationCode: 'REBUILD_INSTALLATION' });
+    addressApi.getSearchMaintenanceTasks({ status: 'RUNNING', pageNum: 1, pageSize: 10 });
+    addressApi.getSearchMaintenanceTaskDetail(9001);
+    addressApi.getSearchRepairTasks({ status: 'FAILED', pageNum: 1, pageSize: 10 });
+    addressApi.executeSearchRepairTask(88, { confirmationCode: 'REPLAY_REPAIR' });
+
+    expect(mockRequest.get).toHaveBeenNthCalledWith(1, '/address/search/ops/overview');
+    expect(mockRequest.post).toHaveBeenNthCalledWith(1, '/address/search/tasks/rebuild/standard', { confirmationCode: 'REBUILD_STANDARD' });
+    expect(mockRequest.post).toHaveBeenNthCalledWith(2, '/address/search/tasks/rebuild/installation', { confirmationCode: 'REBUILD_INSTALLATION' });
+    expect(mockRequest.get).toHaveBeenNthCalledWith(2, '/address/search/tasks', { params: { status: 'RUNNING', pageNum: 1, pageSize: 10 } });
+    expect(mockRequest.get).toHaveBeenNthCalledWith(3, '/address/search/tasks/9001');
+    expect(mockRequest.get).toHaveBeenNthCalledWith(4, '/address/search/repair/tasks', { params: { status: 'FAILED', pageNum: 1, pageSize: 10 } });
+    expect(mockRequest.post).toHaveBeenNthCalledWith(3, '/address/search/repair/88/execute', { confirmationCode: 'REPLAY_REPAIR' });
+  });
 });

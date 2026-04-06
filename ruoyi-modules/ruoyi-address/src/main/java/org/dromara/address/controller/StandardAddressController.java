@@ -12,6 +12,7 @@ import org.dromara.address.domain.vo.StandardAddressAdminVo;
 import org.dromara.address.domain.vo.StandardAddressImportResultVo;
 import org.dromara.address.domain.vo.StandardAddressImportVo;
 import org.dromara.address.domain.vo.StandardAddressVo;
+import org.dromara.address.search.service.StandardAddressSearchExportService;
 import org.dromara.address.service.IStandardAddressService;
 import org.dromara.common.core.domain.R;
 import org.dromara.common.core.utils.file.FileUtils;
@@ -47,6 +48,7 @@ public class StandardAddressController extends StandardAddressAdminApiSupport {
     private static final int EXPORT_BATCH_SIZE = 500;
 
     private final IStandardAddressService addressStandardService;
+    private final StandardAddressSearchExportService standardAddressSearchExportService;
 
     /**
      * 查询标准地址列表。
@@ -286,29 +288,15 @@ public class StandardAddressController extends StandardAddressAdminApiSupport {
     }
 
     /**
-     * 目的：按分页批次写出标准地址导出数据。
+     * 目的：按当前导出口径流式写出标准地址数据。
      * 入参：标准地址查询条件与 Excel 写出包装器。
      * 出参：无，直接把查询结果逐批写入工作表。
-     * 关键约束：每批最多拉取 `500` 条，直到达到总记录数或当前批次为空，禁止一次性全量加载。
+     * 关键约束：区域级标准地址或 ES 读链路关闭时回退数据库分页；`ADDR_SEGM` 导出走 `PIT + search_after` 批次查询，禁止一次性全量加载。
      * 异常与副作用：会持续写入响应输出流，不产生数据库写入副作用。
      */
     private void writeStandardAddressExportRows(StandardAddressBo bo, ExcelWriterWrapper<StandardAddressVo> writer) {
-        long total = Long.MAX_VALUE;
-        int pageNum = 1;
         var writeSheet = ExcelWriterWrapper.buildSheet("标准地址");
-        while (((long) (pageNum - 1) * EXPORT_BATCH_SIZE) < total) {
-            TableDataInfo<StandardAddressVo> pageData = addressStandardService.queryStandardAddressPageList(bo, new PageQuery(EXPORT_BATCH_SIZE, pageNum));
-            List<StandardAddressVo> rows = pageData.getRows();
-            if (rows == null || rows.isEmpty()) {
-                return;
-            }
-            writer.write(rows, writeSheet);
-            total = pageData.getTotal();
-            if (((long) pageNum * EXPORT_BATCH_SIZE) >= total) {
-                return;
-            }
-            pageNum++;
-        }
+        standardAddressSearchExportService.writeRows(bo, EXPORT_BATCH_SIZE, rows -> writer.write(rows, writeSheet));
     }
 
     /**

@@ -10,6 +10,7 @@ import org.dromara.address.domain.vo.StandardAddressAdminVo;
 import org.dromara.address.domain.vo.StandardAddressImportResultVo;
 import org.dromara.address.domain.vo.StandardAddressImportVo;
 import org.dromara.address.domain.vo.StandardAddressVo;
+import org.dromara.address.service.IStandardAddressApprovalService;
 import org.dromara.address.service.IStandardAddressService;
 import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.mybatis.core.page.PageQuery;
@@ -24,8 +25,8 @@ import java.util.Map;
  * 标准地址核心 facade。
  * 目的：把标准地址核心主链路统一收口到查询服务与命令服务，避免核心能力继续扩散历史实现。
  * 入参/出参：输入标准地址查询/命令 BO，输出统一 `VO`、分页结果或布尔型执行结果。
- * 关键约束：查询分流由 `StandardAddressQueryService` 负责；新增、修改、删除、批量预览与批量新增全部由 `StandardAddressCommandService` 负责。
- * 异常与副作用：核心写链路会写入线上 `ADDR_SEGM`；未纳入本轮实现的合并、拆分、导入接口统一抛出业务异常。
+ * 关键约束：查询分流由 `StandardAddressQueryService` 负责；正式写链路由命令服务执行，前台写操作统一先走审批申请。
+ * 异常与副作用：查询接口无写入副作用；写接口会创建审批申请单并发起 workflow，审批通过后才会写正式地址表。
  */
 @Service
 @DS("address")
@@ -36,6 +37,7 @@ public class StandardAddressServiceImpl implements IStandardAddressService {
     private final StandardAddressCommandService commandService;
     private final StandardAddressDictionaryService dictionaryService;
     private final StandardAddressImportService importService;
+    private final IStandardAddressApprovalService approvalService;
 
     /**
      * 目的：按线上 `segmId` 查询标准地址详情。
@@ -126,11 +128,11 @@ public class StandardAddressServiceImpl implements IStandardAddressService {
      * 入参：标准地址业务对象。
      * 出参：新增是否成功。
      * 关键约束：一二级地址只读，新增必须落到 `ADDR_SEGM`。
-     * 异常与副作用：会写入线上标准地址主表。
+     * 异常与副作用：会创建审批申请单并发起 workflow，不直接写正式地址主表。
      */
     @Override
     public Boolean addStandardAddress(StandardAddressBo bo) {
-        return commandService.addStandardAddress(bo);
+        return approvalService.submitAddApproval(bo);
     }
 
     /**
@@ -138,11 +140,11 @@ public class StandardAddressServiceImpl implements IStandardAddressService {
      * 入参：标准地址业务对象。
      * 出参：修改是否成功。
      * 关键约束：名称或父级变化后需同步刷新子节点完整名称与简拼。
-     * 异常与副作用：会更新线上标准地址主表并递归刷新子节点。
+     * 异常与副作用：会创建审批申请单并发起 workflow，不直接更新正式地址主表。
      */
     @Override
     public Boolean updateStandardAddress(StandardAddressBo bo) {
-        return commandService.updateStandardAddress(bo);
+        return approvalService.submitUpdateApproval(bo);
     }
 
     /**
@@ -150,11 +152,11 @@ public class StandardAddressServiceImpl implements IStandardAddressService {
      * 入参：标准地址主键集合与确认标记。
      * 出参：删除是否成功。
      * 关键约束：删除前必须先校验子节点和安装地址关联；仅做逻辑删除。
-     * 异常与副作用：会更新 `ADDR_SEGM.delete_state` 等逻辑删除字段。
+     * 异常与副作用：会创建审批申请单并发起 workflow，不直接更新 `ADDR_SEGM`。
      */
     @Override
     public Boolean deleteStandardAddresses(Collection<String> standardAddressIds, boolean confirm) {
-        return commandService.deleteStandardAddresses(standardAddressIds, confirm);
+        return approvalService.submitDeleteApproval(standardAddressIds, confirm);
     }
 
     /**
@@ -182,38 +184,38 @@ public class StandardAddressServiceImpl implements IStandardAddressService {
     }
 
     /**
-     * 目的：占位未纳入首批实现的地址合并能力。
+     * 目的：提交标准地址合并审批申请。
      * 入参：源地址集合与目标地址。
-     * 出参：无。
-     * 关键约束：当前版本未继续沿用旧表逻辑，避免错误实现牵引编码方向。
-     * 异常与副作用：抛出业务异常，无写入副作用。
+     * 出参：提交是否成功。
+     * 关键约束：审批通过前不修改正式地址。
+     * 异常与副作用：会创建审批申请单并发起 workflow。
      */
     @Override
     public Boolean mergeStandardAddresses(List<String> sourceSegmIds, String targetSegmId) {
-        return commandService.mergeStandardAddresses(sourceSegmIds, targetSegmId);
+        return approvalService.submitMergeApproval(sourceSegmIds, targetSegmId);
     }
 
     /**
-     * 目的：占位未纳入首批实现的地址拆分能力。
+     * 目的：提交标准地址拆分审批申请。
      * 入参：源地址与新地址集合。
-     * 出参：无。
-     * 关键约束：当前版本不再复用旧表拆分逻辑。
-     * 异常与副作用：抛出业务异常，无写入副作用。
+     * 出参：提交是否成功。
+     * 关键约束：审批通过前不修改正式地址。
+     * 异常与副作用：会创建审批申请单并发起 workflow。
      */
     @Override
     public Boolean splitStandardAddress(String sourceSegmId, List<StandardAddressSplitItemBo> splitItems) {
-        return commandService.splitStandardAddress(sourceSegmId, splitItems);
+        return approvalService.submitSplitApproval(sourceSegmId, splitItems);
     }
 
     /**
-     * 目的：占位未纳入首批实现的导入能力。
+     * 目的：提交标准地址导入审批申请。
      * 入参：导入数据、更新标识、操作人和文件名。
-     * 出参：无。
-     * 关键约束：首批实现不继续沿用旧导入链路。
-     * 异常与副作用：抛出业务异常，无写入副作用。
+     * 出参：审批提交摘要。
+     * 关键约束：审批通过前不写正式地址表与导入记录。
+     * 异常与副作用：会创建审批申请单并发起 workflow。
      */
     @Override
     public StandardAddressImportResultVo importStandardAddressData(List<StandardAddressImportVo> list, Boolean updateSupport, String operName, String fileName) {
-        return importService.importStandardAddressData(list, updateSupport, operName, fileName);
+        return approvalService.submitImportApproval(list, updateSupport, operName, fileName);
     }
 }

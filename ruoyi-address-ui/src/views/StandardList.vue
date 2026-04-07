@@ -566,6 +566,8 @@ import {
   unbindTagsFromStandardAddresses,
   updateStandardAddress
 } from '../api/address';
+
+const APPROVAL_SUCCESS_MESSAGE = '已提交审批，待审批通过后生效，审批期间原地址可继续使用。';
 import {
   buildFormOptionState,
   createEmptyFormOptionLabelMaps,
@@ -1089,10 +1091,10 @@ export default {
           const payload = this.buildEditorPayload();
           if (this.editor.segmId) {
             await updateStandardAddress(payload);
-            this.$message.success('标准地址已更新');
+            this.$message.success(APPROVAL_SUCCESS_MESSAGE);
           } else {
             await createStandardAddress(payload);
-            this.$message.success('标准地址已创建');
+            this.$message.success(APPROVAL_SUCCESS_MESSAGE);
           }
           this.editorVisible = false;
           await this.fetchList();
@@ -1104,7 +1106,7 @@ export default {
     async executeDelete(segmIds) {
       try {
         await deleteStandardAddresses(segmIds, false);
-        this.$message.success('标准地址已删除');
+        this.$message.success(APPROVAL_SUCCESS_MESSAGE);
       } catch (err) {
         const message = err?.friendlyMessage || err?.message || '';
         if (!message.includes('确认')) {
@@ -1112,7 +1114,7 @@ export default {
         }
         await this.$confirm('勾选的标准地址中存在关联安装地址，是否继续删除？', '二次确认');
         await deleteStandardAddresses(segmIds, true);
-        this.$message.success('标准地址已删除');
+        this.$message.success(APPROVAL_SUCCESS_MESSAGE);
       }
     },
     async batchRemove() {
@@ -1380,7 +1382,7 @@ export default {
         const res = await importStandardAddressData(this.importFile, this.importUpdateSupport);
         this.importResult = res.data || res;
         await this.fetchList();
-        this.$message.success('导入完成');
+        this.$message.success(APPROVAL_SUCCESS_MESSAGE);
       } catch (err) {
         this.$message.error(err?.friendlyMessage || err?.message || '导入失败');
       } finally {

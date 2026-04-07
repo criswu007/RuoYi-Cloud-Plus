@@ -111,6 +111,7 @@ import {
 } from '../api/address';
 
 const READONLY_REGION_ADDR_TYPES = ['180000', '180001'];
+const APPROVAL_SUCCESS_MESSAGE = '已提交审批，待审批通过后生效，审批期间原地址可继续使用。';
 
 function dedupeBySegmId(rows = []) {
   const rowMap = new Map();
@@ -265,7 +266,7 @@ export default {
       try {
         const payload = this.buildSubmitPayload();
         await mergeStandardAddresses(payload.sourceSegmIds, payload.targetSegmId);
-        this.$message.success('合并完成');
+        this.$message.success(APPROVAL_SUCCESS_MESSAGE);
         this.clearPending();
         this.clearTarget();
         await this.fetchList();

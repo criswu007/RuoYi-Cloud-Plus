@@ -247,4 +247,47 @@ describe('标准地址 API 契约', () => {
     expect(mockRequest.get).toHaveBeenNthCalledWith(4, '/address/search/repair/tasks', { params: { status: 'FAILED', pageNum: 1, pageSize: 10 } });
     expect(mockRequest.post).toHaveBeenNthCalledWith(3, '/address/search/repair/88/execute', { confirmationCode: 'REPLAY_REPAIR' });
   });
+
+  it('应暴露标准地址审批记录与 workflow 审批接口', () => {
+    const pageParams = {
+      keyword: '莲花新城南苑',
+      pageNum: 1,
+      pageSize: 10
+    };
+    const completePayload = {
+      taskId: 9001,
+      message: '同意',
+      variables: { ignore: true }
+    };
+    const rejectPayload = {
+      taskId: 9002,
+      nodeCode: 'stdaddr-approve',
+      message: '请补充备注',
+      variables: { ignore: true }
+    };
+
+    addressApi.getStandardApprovalMyPage(pageParams);
+    addressApi.getStandardApprovalHandledPage(pageParams);
+    addressApi.exportStandardApprovalHandled(pageParams);
+    addressApi.getStandardApprovalDetail(1001);
+    addressApi.getStandardApprovalByBusinessId('1001');
+    addressApi.getWorkflowAllTaskWait(pageParams);
+    addressApi.completeWorkflowTask(completePayload);
+    addressApi.backWorkflowTask(rejectPayload);
+    addressApi.approveStandardApproval({ taskId: 9001, businessId: '1001', message: '审批通过' });
+    addressApi.rejectStandardApproval({ taskId: 9002, businessId: '1001', nodeCode: 'stdaddr-approve', message: '请补充备注' });
+    addressApi.getWorkflowHistory('1001');
+
+    expect(mockRequest.postForm).toHaveBeenCalledWith('/address/standard/approval/my/page', pageParams);
+    expect(mockRequest.postForm).toHaveBeenCalledWith('/address/standard/approval/handled/page', pageParams);
+    expect(mockRequest.postDownload).toHaveBeenCalledWith('/address/standard/approval/handled/export?keyword=%E8%8E%B2%E8%8A%B1%E6%96%B0%E5%9F%8E%E5%8D%97%E8%8B%91&pageNum=1&pageSize=10');
+    expect(mockRequest.post).toHaveBeenCalledWith('/address/standard/approval/1001');
+    expect(mockRequest.post).toHaveBeenCalledWith('/address/standard/approval/business/1001');
+    expect(mockRequest.get).toHaveBeenCalledWith('/workflow/task/pageByAllTaskWait', { params: pageParams });
+    expect(mockRequest.post).toHaveBeenCalledWith('/workflow/task/completeTask', completePayload);
+    expect(mockRequest.post).toHaveBeenCalledWith('/workflow/task/backProcess', rejectPayload);
+    expect(mockRequest.post).toHaveBeenCalledWith('/address/standard/approval/approve', { taskId: 9001, businessId: '1001', message: '审批通过' });
+    expect(mockRequest.post).toHaveBeenCalledWith('/address/standard/approval/reject', { taskId: 9002, businessId: '1001', nodeCode: 'stdaddr-approve', message: '请补充备注' });
+    expect(mockRequest.get).toHaveBeenCalledWith('/workflow/instance/flowHisTaskList/1001');
+  });
 });

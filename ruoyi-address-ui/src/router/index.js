@@ -5,6 +5,7 @@ import StandardDetail from '../views/StandardDetail.vue';
 import StandardList from '../views/StandardList.vue';
 import StandardMerge from '../views/StandardMerge.vue';
 import StandardSplit from '../views/StandardSplit.vue';
+import StandardApprovalRecords from '../views/StandardApprovalRecords.vue';
 import ImportRecords from '../views/ImportRecords.vue';
 import OperationLogs from '../views/OperationLogs.vue';
 import InstallationList from '../views/InstallationList.vue';
@@ -24,6 +25,7 @@ export default new Router({
     { path: '/', redirect: '/standard/list' },
     { path: '/standard/list', component: StandardList },
     { path: '/standard/detail/:segmId', component: StandardDetail },
+    { path: '/standard/approvals', component: StandardApprovalRecords },
     { path: '/standard/merge', component: StandardMerge },
     { path: '/standard/split', component: StandardSplit },
     { path: '/import/records', component: ImportRecords },

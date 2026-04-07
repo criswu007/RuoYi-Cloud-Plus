@@ -88,6 +88,7 @@ import {
 } from '../api/address';
 
 const READONLY_REGION_ADDR_TYPES = ['180000', '180001'];
+const APPROVAL_SUCCESS_MESSAGE = '已提交审批，待审批通过后生效，审批期间原地址可继续使用。';
 
 export default {
   data() {
@@ -229,7 +230,7 @@ export default {
       this.submitLoading = true;
       try {
         await splitStandardAddress(payload.sourceSegmId, payload.splitItems);
-        this.$message.success('拆分完成');
+        this.$message.success(APPROVAL_SUCCESS_MESSAGE);
         this.cancelSelectedSource();
         await this.fetchList();
       } catch (err) {

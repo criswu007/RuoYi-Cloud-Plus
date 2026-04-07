@@ -20,6 +20,7 @@ import org.dromara.common.excel.core.DefaultExcelListener;
 import org.dromara.common.excel.core.ExcelResult;
 import org.dromara.common.excel.utils.ExcelUtil;
 import org.dromara.common.excel.utils.ExcelWriterWrapper;
+import org.dromara.common.idempotent.annotation.RepeatSubmit;
 import org.dromara.common.log.annotation.Log;
 import org.dromara.common.log.enums.BusinessType;
 import org.dromara.common.mybatis.core.page.PageQuery;
@@ -35,9 +36,9 @@ import java.util.List;
 
 /**
  * 标准地址对外管理接口。
- * 目的：提供标准地址的查询、维护、合并/拆分、导入导出能力。
+ * 目的：提供标准地址的查询、审批化维护、合并/拆分、导入导出能力。
  * 关键约束：层级规则由服务层校验；删除存在子级或关联安装地址需要二次确认。
- * 副作用：新增/修改/删除/合并/拆分/导入会产生数据写入与日志记录。
+ * 副作用：新增/修改/删除/合并/拆分/导入会提交审批申请；仅查询和导出接口不会写正式地址表。
  */
 @Validated
 @RequiredArgsConstructor
@@ -46,6 +47,7 @@ import java.util.List;
 public class StandardAddressController extends StandardAddressAdminApiSupport {
 
     private static final int EXPORT_BATCH_SIZE = 500;
+    private static final String APPROVAL_SUBMITTED_MESSAGE = "已提交审批，待审批通过后生效，审批期间原地址可继续使用。";
 
     private final IStandardAddressService addressStandardService;
     private final StandardAddressSearchExportService standardAddressSearchExportService;
@@ -134,14 +136,15 @@ public class StandardAddressController extends StandardAddressAdminApiSupport {
      * @return 操作结果
      *
      * 关键约束：层级规则、一级/二级地址限制由服务层校验。
-     * 副作用：写入标准地址并生成完整地址名称。
+     * 副作用：提交新增审批申请单并发起 workflow，不直接写正式地址表。
      */
     @Override
     @SaCheckPermission("address:standard:add")
+    @RepeatSubmit(interval = 5000)
     @Log(title = "标准地址", businessType = BusinessType.INSERT)
     @PostMapping
     public R<Void> addStandardAddress(@RequestBody StandardAddressBo bo) {
-        return toAjax(addressStandardService.addStandardAddress(bo));
+        return addressStandardService.addStandardAddress(bo) ? R.ok(APPROVAL_SUBMITTED_MESSAGE) : R.fail();
     }
 
     /**
@@ -151,14 +154,15 @@ public class StandardAddressController extends StandardAddressAdminApiSupport {
      * @return 操作结果
      *
      * 关键约束：层级规则与一级/二级地址限制由服务层校验。
-     * 副作用：必要时级联更新子级地址完整名称。
+     * 副作用：提交编辑审批申请单并发起 workflow，不直接改正式地址表。
      */
     @Override
     @SaCheckPermission("address:standard:edit")
+    @RepeatSubmit(interval = 5000)
     @Log(title = "标准地址", businessType = BusinessType.UPDATE)
     @PostMapping("/update")
     public R<Void> editStandardAddress(@RequestBody StandardAddressBo bo) {
-        return toAjax(addressStandardService.updateStandardAddress(bo));
+        return addressStandardService.updateStandardAddress(bo) ? R.ok(APPROVAL_SUBMITTED_MESSAGE) : R.fail();
     }
 
     /**
@@ -169,15 +173,18 @@ public class StandardAddressController extends StandardAddressAdminApiSupport {
      * @return 操作结果
      *
      * 关键约束：存在子级地址禁止删除；有关联安装地址需二次确认。
-     * 副作用：逻辑删除并写入操作日志。
+     * 副作用：提交删除审批申请单并发起 workflow，不直接执行逻辑删除。
      */
     @Override
     @SaCheckPermission("address:standard:remove")
+    @RepeatSubmit(interval = 5000)
     @Log(title = "标准地址", businessType = BusinessType.DELETE)
     @PostMapping("/remove/{segmIds}")
     public R<Void> removeStandardAddresses(@PathVariable String[] segmIds,
                                            @RequestParam(defaultValue = "false") boolean confirm) {
-        return toAjax(addressStandardService.deleteStandardAddresses(Arrays.asList(segmIds), confirm));
+        return addressStandardService.deleteStandardAddresses(Arrays.asList(segmIds), confirm)
+            ? R.ok(APPROVAL_SUBMITTED_MESSAGE)
+            : R.fail();
     }
 
     /**
@@ -187,14 +194,17 @@ public class StandardAddressController extends StandardAddressAdminApiSupport {
      * @return 操作结果
      *
      * 关键约束：目标地址层级必须高于待合并地址。
-     * 副作用：迁移子地址与安装地址，源地址被逻辑删除。
+     * 副作用：提交合并审批申请单并发起 workflow，不直接修改正式地址。
      */
     @Override
     @SaCheckPermission("address:standard:merge")
+    @RepeatSubmit(interval = 5000)
     @Log(title = "标准地址", businessType = BusinessType.UPDATE)
     @PostMapping("/merge")
     public R<Void> mergeStandardAddresses(@RequestBody StandardAddressMergeBo bo) {
-        return toAjax(addressStandardService.mergeStandardAddresses(bo.getSourceSegmIds(), bo.getTargetSegmId()));
+        return addressStandardService.mergeStandardAddresses(bo.getSourceSegmIds(), bo.getTargetSegmId())
+            ? R.ok(APPROVAL_SUBMITTED_MESSAGE)
+            : R.fail();
     }
 
     /**
@@ -204,14 +214,17 @@ public class StandardAddressController extends StandardAddressAdminApiSupport {
      * @return 操作结果
      *
      * 关键约束：继承源地址行政区划与层级信息。
-     * 副作用：新增多条标准地址并逻辑删除源地址。
+     * 副作用：提交拆分审批申请单并发起 workflow，不直接修改正式地址。
      */
     @Override
     @SaCheckPermission("address:standard:split")
+    @RepeatSubmit(interval = 5000)
     @Log(title = "标准地址", businessType = BusinessType.UPDATE)
     @PostMapping("/split")
     public R<Void> splitStandardAddress(@RequestBody StandardAddressSplitBo bo) {
-        return toAjax(addressStandardService.splitStandardAddress(bo.getSourceSegmId(), bo.getSplitItems()));
+        return addressStandardService.splitStandardAddress(bo.getSourceSegmId(), bo.getSplitItems())
+            ? R.ok(APPROVAL_SUBMITTED_MESSAGE)
+            : R.fail();
     }
 
     /**
@@ -239,6 +252,7 @@ public class StandardAddressController extends StandardAddressAdminApiSupport {
      */
     @Override
     @SaCheckPermission("address:standard:add")
+    @RepeatSubmit(interval = 5000)
     @Log(title = "标准地址", businessType = BusinessType.INSERT)
     @PostMapping({"/batchAddChild", "/batchAddStandardAddressChildren"})
     public R<Void> batchAddStandardAddressChildren(@RequestBody StandardAddressBatchAddBo bo) {
@@ -308,15 +322,16 @@ public class StandardAddressController extends StandardAddressAdminApiSupport {
      * @throws Exception 导入解析异常
      *
      * 关键约束：一级/二级地址为系统预置数据，不允许通过导入变更。
-     * 副作用：批量写入标准地址并记录导入日志。
+     * 副作用：提交导入审批申请单并发起 workflow，不直接写正式地址表。
      */
     @Override
     @SaCheckPermission("address:standard:import")
+    @RepeatSubmit(interval = 5000)
     @Log(title = "标准地址", businessType = BusinessType.IMPORT)
     @PostMapping("/import")
     public R<StandardAddressImportResultVo> importStandardAddressData(MultipartFile file, boolean updateSupport) throws Exception {
         ExcelResult<StandardAddressImportVo> result = ExcelUtil.importExcel(file.getInputStream(), StandardAddressImportVo.class, new DefaultExcelListener<>());
         StandardAddressImportResultVo summary = addressStandardService.importStandardAddressData(result.getList(), updateSupport, LoginHelper.getUsername(), file.getOriginalFilename());
-        return R.ok(summary);
+        return R.ok(APPROVAL_SUBMITTED_MESSAGE, summary);
     }
 }

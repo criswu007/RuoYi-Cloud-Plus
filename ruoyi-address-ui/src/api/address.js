@@ -1,5 +1,17 @@
 import request from './request';
 
+function toQueryString(params = {}) {
+  const searchParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') {
+      return;
+    }
+    searchParams.append(key, value);
+  });
+  const queryString = searchParams.toString();
+  return queryString ? `?${queryString}` : '';
+}
+
 export const getStandardAddressList = params =>
   request.postForm('/address/standard/list', params);
 
@@ -45,6 +57,45 @@ export const importStandardAddressData = (file, updateSupport = false) => {
   form.append('updateSupport', updateSupport);
   return request.postMultipart('/address/standard/import', form);
 };
+
+export const getStandardApprovalMyPage = params =>
+  request.postForm('/address/standard/approval/my/page', params);
+
+export const getStandardApprovalHandledPage = params =>
+  request.postForm('/address/standard/approval/handled/page', params);
+
+export const exportStandardApprovalHandled = params =>
+  request.postDownload(`/address/standard/approval/handled/export${toQueryString(params)}`);
+
+export const getStandardApprovalDetail = id =>
+  request.post(`/address/standard/approval/${id}`);
+
+export const getStandardApprovalByBusinessId = businessId =>
+  request.post(`/address/standard/approval/business/${businessId}`);
+
+export const getStandardApprovalActionPermission = () =>
+  request.post('/address/standard/approval/action/permission');
+
+export const getWorkflowAllTaskWait = params =>
+  request.get('/workflow/task/pageByAllTaskWait', { params });
+
+export const getWorkflowAllTaskFinish = params =>
+  request.get('/workflow/task/pageByAllTaskFinish', { params });
+
+export const completeWorkflowTask = data =>
+  request.post('/workflow/task/completeTask', data);
+
+export const backWorkflowTask = data =>
+  request.post('/workflow/task/backProcess', data);
+
+export const approveStandardApproval = data =>
+  request.post('/address/standard/approval/approve', data);
+
+export const rejectStandardApproval = data =>
+  request.post('/address/standard/approval/reject', data);
+
+export const getWorkflowHistory = businessId =>
+  request.get(`/workflow/instance/flowHisTaskList/${businessId}`);
 
 export const getImportRecords = params =>
   request.postForm('/address/import-record/list', params);

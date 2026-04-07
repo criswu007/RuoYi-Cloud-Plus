@@ -12,6 +12,7 @@
         <el-submenu index="standard">
           <template slot="title">标准地址管理</template>
           <el-menu-item index="/standard/list">标准地址列表</el-menu-item>
+          <el-menu-item index="/standard/approvals">待审批地址管理</el-menu-item>
           <el-menu-item index="/standard/merge">地址合并</el-menu-item>
           <el-menu-item index="/standard/split">地址拆分</el-menu-item>
           <el-menu-item index="/installation/list">安装地址列表</el-menu-item>
@@ -73,6 +74,7 @@ export default {
       titleMap: {
         '/standard/list': '标准地址列表',
         '/standard/detail': '标准地址详情',
+        '/standard/approvals': '待审批地址管理',
         '/standard/merge': '标准地址合并',
         '/standard/split': '标准地址拆分',
         '/standard/labels': '标签库管理',

@@ -6,7 +6,6 @@ import com.baomidou.lock.LockTemplate;
 import com.baomidou.lock.executor.RedissonLockExecutor;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import lombok.RequiredArgsConstructor;
 import org.dromara.address.config.AddressSearchProperties;
 import org.dromara.address.domain.AddressSearchMaintenanceTask;
 import org.dromara.address.domain.AddressSearchRepairTask;
@@ -21,6 +20,7 @@ import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.satoken.utils.LoginHelper;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 
@@ -37,7 +37,6 @@ import java.util.List;
  * </p>
  */
 @Service
-@RequiredArgsConstructor
 public class AddressSearchMaintenanceTaskService {
 
     private static final String TASK_TYPE_REBUILD_STANDARD = "REBUILD_STANDARD";
@@ -58,6 +57,42 @@ public class AddressSearchMaintenanceTaskService {
     private final AddressSearchProperties properties;
     private final LockTemplate lockTemplate;
     private final TaskExecutor taskExecutor;
+
+    /**
+     * 目的：构造 ES 运维任务编排服务并显式绑定应用异步执行器。
+     * 入参：任务/repair 持久层、运维服务、索引网关、搜索配置、分布式锁模板与应用任务执行器。
+     * 出参：无。
+     * 关键约束：异步执行器必须使用 `applicationTaskExecutor`，避免与 Spring Integration 自动注册的 `taskScheduler` 产生歧义。
+     * 异常与副作用：仅完成依赖注入，不直接触发任务执行或持久化副作用。
+     *
+     * @param taskMapper 运维任务 Mapper
+     * @param repairTaskMapper repair 任务 Mapper
+     * @param maintenanceService 运维执行服务
+     * @param standardAddressSearchGateway 标准地址索引网关
+     * @param installationAddressSearchGateway 安装地址索引网关
+     * @param properties 搜索配置
+     * @param lockTemplate 分布式锁模板
+     * @param taskExecutor 应用异步执行器
+     */
+    public AddressSearchMaintenanceTaskService(
+        AddressSearchMaintenanceTaskMapper taskMapper,
+        AddressSearchRepairTaskMapper repairTaskMapper,
+        AddressSearchMaintenanceService maintenanceService,
+        StandardAddressSearchGateway standardAddressSearchGateway,
+        InstallationAddressSearchGateway installationAddressSearchGateway,
+        AddressSearchProperties properties,
+        LockTemplate lockTemplate,
+        @Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor
+    ) {
+        this.taskMapper = taskMapper;
+        this.repairTaskMapper = repairTaskMapper;
+        this.maintenanceService = maintenanceService;
+        this.standardAddressSearchGateway = standardAddressSearchGateway;
+        this.installationAddressSearchGateway = installationAddressSearchGateway;
+        this.properties = properties;
+        this.lockTemplate = lockTemplate;
+        this.taskExecutor = taskExecutor;
+    }
 
     /**
      * 目的：提交标准地址全量重建任务并异步派发执行。

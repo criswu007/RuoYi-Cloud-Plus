@@ -38,6 +38,9 @@ spring:
         enabled: false
       config:
         enabled: false
+    bus:
+      enabled: false
+      base-packages: org.dromara.**.event
     service-registry:
       auto-registration:
         enabled: false
@@ -99,6 +102,8 @@ easy-es:
   schema: http
 
 address:
+  workflow:
+    base-url: http://127.0.0.1:9205
   search:
     enabled: true
     kibana-url: http://127.0.0.1:5601

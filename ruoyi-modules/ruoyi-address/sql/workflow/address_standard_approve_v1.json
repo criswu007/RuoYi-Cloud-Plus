@@ -1,0 +1,104 @@
+{
+  "nodeList": [
+    {
+      "nodeType": "0",
+      "nodeCode": "stdaddr-start",
+      "nodeName": "开始",
+      "permissionFlag": null,
+      "nodeRatio": "0.000",
+      "anyNodeSkip": null,
+      "listenerType": null,
+      "listenerPath": null,
+      "formCustom": "N",
+      "formPath": "/standard/approvals",
+      "ext": "[]",
+      "coordinate": "200,200|200,200",
+      "version": "1",
+      "skipList": [
+        {
+          "skipType": "PASS",
+          "skipCondition": null,
+          "skipName": null,
+          "nowNodeCode": "stdaddr-start",
+          "nextNodeCode": "stdaddr-apply",
+          "coordinate": "220,200;310,200"
+        }
+      ]
+    },
+    {
+      "nodeType": "1",
+      "nodeCode": "stdaddr-apply",
+      "nodeName": "申请人",
+      "permissionFlag": "",
+      "nodeRatio": "0.000",
+      "anyNodeSkip": null,
+      "listenerType": "",
+      "listenerPath": "",
+      "formCustom": "N",
+      "formPath": "/standard/approvals",
+      "ext": "[{\"code\":\"ButtonPermissionEnum\",\"value\":\"back,termination,file,copy\"}]",
+      "coordinate": "360,200|360,200",
+      "version": "1",
+      "skipList": [
+        {
+          "skipType": "PASS",
+          "skipCondition": null,
+          "skipName": null,
+          "nowNodeCode": "stdaddr-apply",
+          "nextNodeCode": "stdaddr-approve",
+          "coordinate": "410,200;520,200"
+        }
+      ]
+    },
+    {
+      "nodeType": "1",
+      "nodeCode": "stdaddr-approve",
+      "nodeName": "标准地址审批员",
+      "permissionFlag": "role:1,role:2026040701301",
+      "nodeRatio": "0.000",
+      "anyNodeSkip": null,
+      "listenerType": "",
+      "listenerPath": "",
+      "formCustom": "N",
+      "formPath": "/standard/approvals",
+      "ext": "[{\"code\":\"ButtonPermissionEnum\",\"value\":\"back,termination,copy,transfer,trust,file\"}]",
+      "coordinate": "570,200|570,200",
+      "version": "1",
+      "skipList": [
+        {
+          "skipType": "PASS",
+          "skipCondition": null,
+          "skipName": null,
+          "nowNodeCode": "stdaddr-approve",
+          "nextNodeCode": "stdaddr-end",
+          "coordinate": "620,200;730,200"
+        }
+      ]
+    },
+    {
+      "nodeType": "2",
+      "nodeCode": "stdaddr-end",
+      "nodeName": "结束",
+      "permissionFlag": null,
+      "nodeRatio": "0.000",
+      "anyNodeSkip": null,
+      "listenerType": null,
+      "listenerPath": null,
+      "formCustom": "N",
+      "formPath": "/standard/approvals",
+      "ext": "[]",
+      "coordinate": "780,200|780,200",
+      "version": "1",
+      "skipList": []
+    }
+  ],
+  "flowCode": "address_standard_approve_v1",
+  "flowName": "标准地址变更审批",
+  "modelValue": "CLASSICS",
+  "category": "103",
+  "version": "1",
+  "formCustom": "N",
+  "formPath": "/standard/approvals",
+  "listenerType": null,
+  "listenerPath": null
+}

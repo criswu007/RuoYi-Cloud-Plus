@@ -10,6 +10,7 @@ import org.dromara.address.mapper.PubRestrictionMapper;
 import org.dromara.address.mapper.SegmAddrTypeMapper;
 import org.dromara.address.mapper.SpcStationMapper;
 import org.dromara.address.support.AddressRegionContext;
+import org.dromara.common.excel.core.DropDownOptions;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -36,6 +37,12 @@ public class StandardAddressDictionaryService {
     private static final int MAX_STATION_OPTION_LIMIT = 50;
     private static final String PROVINCE_ADDR_TYPE_ID = "180000";
     private static final String CITY_ADDR_TYPE_ID = "180001";
+    private static final String KEYWORD_ADDR_IN_TYPE_FTTH = "ADDR_IN_TYPE_FTTH";
+    private static final String KEYWORD_FTTH_PON_TYPE = "FTTH_PON_TYPE";
+    private static final String KEYWORD_ADDR_IN_TYPE_LAN = "ADDR_IN_TYPE_LAN";
+    private static final String KEYWORD_AREA_TYPE = "AREA_TYPE";
+    private static final String KEYWORD_ADDR_PLACE_TYPE = "ADDR_PLACE_TYPE";
+    private static final String KEYWORD_ADDR_UNIT_TYPE = "ADDR_UNIT_TYPE";
 
     private final SegmAddrTypeMapper segmAddrTypeMapper;
     private final PubRestrictionMapper pubRestrictionMapper;
@@ -282,6 +289,103 @@ public class StandardAddressDictionaryService {
             .toList();
     }
 
+    /**
+     * 目的：按地址类型中文名称解析真实地址类型编码。
+     * 入参：模板或界面展示的地址类型中文名称。
+     * 出参：命中的 `addr_type_id`；未命中返回 `null`。
+     * 关键约束：必须直接基于线上 `segm_addr_type.name` 匹配，不允许落回硬编码级别映射。
+     * 异常与副作用：无写入副作用。
+     */
+    public String resolveSegmTypeByName(String segmTypeName) {
+        if (segmTypeName == null || segmTypeName.isBlank()) {
+            return null;
+        }
+        String normalized = segmTypeName.trim();
+        return listSegmAddrTypes().stream()
+            .filter(item -> normalized.equals(item.getAddrTypeName()))
+            .map(SegmAddrType::getAddrTypeId)
+            .filter(Objects::nonNull)
+            .findFirst()
+            .orElse(null);
+    }
+
+    /**
+     * 目的：按字典关键字和中文标签解析真实字典值。
+     * 入参：字典关键字与中文标签。
+     * 出参：命中的 `serial_no`；未命中返回 `null`。
+     * 关键约束：仅匹配标准地址表单相关字典，不对无关键字做兜底。
+     * 异常与副作用：无写入副作用。
+     */
+    public String resolveRestrictionValue(String keyword, String label) {
+        if (keyword == null || keyword.isBlank() || label == null || label.isBlank()) {
+            return null;
+        }
+        String normalizedKeyword = keyword.trim();
+        String normalizedLabel = label.trim();
+        String value = listFormRestrictions().stream()
+            .filter(item -> normalizedKeyword.equals(item.getKeyword()))
+            .filter(item -> normalizedLabel.equals(item.getDescChina()))
+            .map(PubRestriction::getSerialNo)
+            .filter(Objects::nonNull)
+            .findFirst()
+            .orElse(null);
+        if (value == null && KEYWORD_ADDR_PLACE_TYPE.equals(normalizedKeyword)) {
+            return listFormRestrictions().stream()
+                .filter(item -> KEYWORD_ADDR_UNIT_TYPE.equals(item.getKeyword()))
+                .filter(item -> normalizedLabel.equals(item.getDescChina()))
+                .map(PubRestriction::getSerialNo)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+        }
+        return value;
+    }
+
+    /**
+     * 目的：按区域、管理站类型和名称关键字匹配单个管理站。
+     * 入参：区域 ID、管理站类型和模板中的管理站文本。
+     * 出参：命中的首条管理站 ID；未命中返回 `null`。
+     * 关键约束：必须优先按 `region_id + manage_type` 收敛范围；命中多条时取排序后的第一条。
+     * 异常与副作用：无写入副作用。
+     */
+    public String matchStationId(String regionId, String manageType, String keyword) {
+        if (manageType == null || manageType.isBlank() || keyword == null || keyword.isBlank()) {
+            return null;
+        }
+        List<SpcStation> rows = spcStationMapper.selectStationOptions(regionId, manageType, keyword.trim());
+        if (rows == null || rows.isEmpty()) {
+            return null;
+        }
+        return rows.get(0).getStationId();
+    }
+
+    /**
+     * 目的：构建标准地址导入模板下拉选项。
+     * 入参：无。
+     * 出参：模板下拉选项集合。
+     * 关键约束：下拉值需与当前导入解析规则完全一致，避免模板与导入口径漂移。
+     * 异常与副作用：无写入副作用。
+     */
+    public List<DropDownOptions> listImportTemplateOptions() {
+        List<String> segmTypeNames = listSegmAddrTypes().stream()
+            .sorted(Comparator.comparing(SegmAddrType::getLevelId, Comparator.nullsLast(Integer::compareTo))
+                .thenComparing(SegmAddrType::getAddrTypeId, Comparator.nullsLast(String::compareTo)))
+            .map(SegmAddrType::getAddrTypeName)
+            .filter(Objects::nonNull)
+            .distinct()
+            .toList();
+        Map<String, List<String>> restrictionMap = buildRestrictionLabelMap();
+        List<DropDownOptions> result = new ArrayList<>();
+        result.add(new DropDownOptions(0, segmTypeNames));
+        result.add(new DropDownOptions(1, List.of("是", "否")));
+        result.add(new DropDownOptions(7, restrictionMap.getOrDefault(KEYWORD_ADDR_IN_TYPE_FTTH, Collections.emptyList())));
+        result.add(new DropDownOptions(8, restrictionMap.getOrDefault(KEYWORD_FTTH_PON_TYPE, Collections.emptyList())));
+        result.add(new DropDownOptions(9, restrictionMap.getOrDefault(KEYWORD_AREA_TYPE, Collections.emptyList())));
+        result.add(new DropDownOptions(10, mergeRestrictionLabels(restrictionMap, KEYWORD_ADDR_PLACE_TYPE, KEYWORD_ADDR_UNIT_TYPE)));
+        result.add(new DropDownOptions(11, List.of("是", "否")));
+        return result;
+    }
+
     private StandardAddressAdminVo.LevelOptionVo toLevelOption(SegmAddrType row, Map<Integer, Integer> addrLevelMap) {
         StandardAddressAdminVo.LevelOptionVo option = new StandardAddressAdminVo.LevelOptionVo();
         option.setAddrTypeId(row.getAddrTypeId());
@@ -316,6 +420,33 @@ public class StandardAddressDictionaryService {
         option.setRegionId(row.getRegionId());
         option.setManageType(row.getManageType());
         return option;
+    }
+
+    private List<PubRestriction> listFormRestrictions() {
+        List<PubRestriction> rows = pubRestrictionMapper.selectStandardAddressFormRestrictions();
+        return rows == null ? Collections.emptyList() : rows;
+    }
+
+    private Map<String, List<String>> buildRestrictionLabelMap() {
+        Map<String, List<String>> result = new LinkedHashMap<>();
+        for (PubRestriction row : listFormRestrictions()) {
+            if (row.getKeyword() == null || row.getKeyword().isBlank() || row.getDescChina() == null || row.getDescChina().isBlank()) {
+                continue;
+            }
+            result.computeIfAbsent(row.getKeyword(), key -> new ArrayList<>()).add(row.getDescChina());
+        }
+        result.replaceAll((key, value) -> value.stream().distinct().toList());
+        return result;
+    }
+
+    private List<String> mergeRestrictionLabels(Map<String, List<String>> restrictionMap, String... keywords) {
+        LinkedHashMap<String, String> ordered = new LinkedHashMap<>();
+        for (String keyword : keywords) {
+            for (String label : restrictionMap.getOrDefault(keyword, Collections.emptyList())) {
+                ordered.putIfAbsent(label, label);
+            }
+        }
+        return new ArrayList<>(ordered.values());
     }
 
     private int normalizeStationOptionLimit(Integer limit) {

@@ -3,8 +3,11 @@ package org.dromara.address.service.impl;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.dromara.address.domain.AddrSegm;
@@ -26,7 +29,6 @@ import org.dromara.address.workflow.AddressWorkflowHttpClient;
 import org.dromara.common.core.enums.BusinessStatusEnum;
 import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.utils.StringUtils;
-import org.dromara.common.json.utils.JsonUtils;
 import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.satoken.utils.LoginHelper;
@@ -96,8 +98,8 @@ public class StandardAddressApprovalService implements IStandardAddressApprovalS
         String parentStandName = requireParentStandName(bo.getParentSegmId(), "新增失败：父级地址不存在");
         StandardAddressApproval approval = initApproval(OPERATION_ADD, "标准地址新增审批-" + summaryForAdd(bo, parentStandName));
         approval.setTargetSummary(summaryForAdd(bo, parentStandName));
-        approval.setRequestPayload(JsonUtils.toJsonString(bo));
-        approval.setTargetSnapshot(JsonUtils.toJsonString(List.of(bo)));
+        approval.setRequestPayload(toJsonString(bo));
+        approval.setTargetSnapshot(toJsonString(List.of(bo)));
         prepareSubmitGuard(approval, bo);
         return persistAndStart(approval);
     }
@@ -116,9 +118,9 @@ public class StandardAddressApprovalService implements IStandardAddressApprovalS
         StandardAddressApproval approval = initApproval(OPERATION_UPDATE, "标准地址编辑审批-" + existing.getStandName());
         approval.setSourceSummary(existing.getStandName());
         approval.setTargetSummary(StringUtils.defaultIfBlank(bo.getStandName(), bo.getSegmName()));
-        approval.setSourceSnapshot(JsonUtils.toJsonString(List.of(existing)));
-        approval.setTargetSnapshot(JsonUtils.toJsonString(List.of(bo)));
-        approval.setRequestPayload(JsonUtils.toJsonString(bo));
+        approval.setSourceSnapshot(toJsonString(List.of(existing)));
+        approval.setTargetSnapshot(toJsonString(List.of(bo)));
+        approval.setRequestPayload(toJsonString(bo));
         prepareSubmitGuard(approval, bo);
         return persistAndStart(approval);
     }
@@ -139,9 +141,9 @@ public class StandardAddressApprovalService implements IStandardAddressApprovalS
         String summary = joinStandNames(addresses);
         StandardAddressApproval approval = initApproval(OPERATION_DELETE, "标准地址删除审批-" + summary);
         approval.setSourceSummary(summary);
-        approval.setSourceSnapshot(JsonUtils.toJsonString(addresses));
+        approval.setSourceSnapshot(toJsonString(addresses));
         DeleteApprovalPayload payload = new DeleteApprovalPayload(normalizeSegmIdsForFingerprint(normalizedIds), confirm);
-        approval.setRequestPayload(JsonUtils.toJsonString(payload));
+        approval.setRequestPayload(toJsonString(payload));
         prepareSubmitGuard(approval, payload);
         return persistAndStart(approval);
     }
@@ -168,10 +170,10 @@ public class StandardAddressApprovalService implements IStandardAddressApprovalS
         StandardAddressApproval approval = initApproval(OPERATION_MERGE, "标准地址合并审批-" + target.getStandName());
         approval.setSourceSummary(joinStandNames(sources));
         approval.setTargetSummary(target.getStandName());
-        approval.setSourceSnapshot(JsonUtils.toJsonString(sources));
-        approval.setTargetSnapshot(JsonUtils.toJsonString(List.of(target)));
+        approval.setSourceSnapshot(toJsonString(sources));
+        approval.setTargetSnapshot(toJsonString(List.of(target)));
         MergeApprovalPayload payload = new MergeApprovalPayload(normalizeSegmIdsForFingerprint(normalizedSourceIds), targetSegmId);
-        approval.setRequestPayload(JsonUtils.toJsonString(payload));
+        approval.setRequestPayload(toJsonString(payload));
         prepareSubmitGuard(approval, payload);
         return persistAndStart(approval);
     }
@@ -193,10 +195,10 @@ public class StandardAddressApprovalService implements IStandardAddressApprovalS
         StandardAddressApproval approval = initApproval(OPERATION_SPLIT, "标准地址拆分审批-" + source.getStandName());
         approval.setSourceSummary(source.getStandName());
         approval.setTargetSummary(splitItems.stream().map(StandardAddressSplitItemBo::getSegmName).filter(StringUtils::isNotBlank).collect(Collectors.joining("、")));
-        approval.setSourceSnapshot(JsonUtils.toJsonString(List.of(source)));
-        approval.setTargetSnapshot(JsonUtils.toJsonString(splitItems));
+        approval.setSourceSnapshot(toJsonString(List.of(source)));
+        approval.setTargetSnapshot(toJsonString(splitItems));
         SplitApprovalPayload payload = new SplitApprovalPayload(sourceSegmId, splitItems);
-        approval.setRequestPayload(JsonUtils.toJsonString(payload));
+        approval.setRequestPayload(toJsonString(payload));
         prepareSubmitGuard(approval, payload);
         return persistAndStart(approval);
     }
@@ -214,9 +216,9 @@ public class StandardAddressApprovalService implements IStandardAddressApprovalS
         int totalCount = rows == null ? 0 : rows.size();
         StandardAddressApproval approval = initApproval(OPERATION_IMPORT, "标准地址导入审批-" + StringUtils.defaultIfBlank(fileName, "标准地址导入"));
         approval.setTargetSummary("共" + totalCount + "条");
-        approval.setImportBatchPayload(JsonUtils.toJsonString(rows));
-        approval.setRequestPayload(JsonUtils.toJsonString(new ImportApprovalPayload(Boolean.TRUE.equals(updateSupport), operName, fileName)));
-        approval.setTargetSnapshot(JsonUtils.toJsonString(rows));
+        approval.setImportBatchPayload(toJsonString(rows));
+        approval.setRequestPayload(toJsonString(new ImportApprovalPayload(Boolean.TRUE.equals(updateSupport), operName, fileName)));
+        approval.setTargetSnapshot(toJsonString(rows));
         prepareSubmitGuard(approval, new ImportFingerprintPayload(Boolean.TRUE.equals(updateSupport), fileName, rows));
         persistAndStart(approval);
 
@@ -230,6 +232,27 @@ public class StandardAddressApprovalService implements IStandardAddressApprovalS
         result.setFailCount(0);
         result.setFailureExportable(false);
         return result;
+    }
+
+    /**
+     * 目的：提交标准地址导入单行审批申请。
+     * 入参：单条导入行、批次上下文、是否允许更新、操作人和文件名。
+     * 出参：已落库并发起 workflow 的审批申请单实体。
+     * 关键约束：一条 Excel 行只生成一条审批单；审批负载必须携带 `batchId/itemId/rowNum`，便于 workflow 回写导入行结果。
+     * 异常与副作用：会落审批申请单并发起 workflow。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public StandardAddressApproval submitImportRowApproval(StandardAddressImportVo row, Long batchId, Long itemId, Integer rowNum,
+                                                           Boolean updateSupport, String operName, String fileName) {
+        StandardAddressApproval approval = initApproval(OPERATION_IMPORT, "标准地址导入审批-" + StringUtils.defaultIfBlank(fileName, "标准地址导入"));
+        approval.setTargetSummary("第" + rowNum + "行-" + StringUtils.defaultIfBlank(row == null ? null : row.getSegmName(), "未命名地址"));
+        approval.setRequestPayload(toJsonString(new ImportApprovalPayload(batchId, itemId, rowNum,
+            Boolean.TRUE.equals(updateSupport), operName, fileName, row)));
+        approval.setTargetSnapshot(toJsonString(List.of(row)));
+        prepareSubmitGuard(approval, new ImportFingerprintPayload(batchId, itemId, rowNum, Boolean.TRUE.equals(updateSupport), fileName, row));
+        persistAndStart(approval);
+        return approval;
     }
 
     /**
@@ -675,7 +698,7 @@ public class StandardAddressApprovalService implements IStandardAddressApprovalS
      * @return 提交指纹
      */
     private String buildSubmitFingerprint(String operationType, Object fingerprintPayload) {
-        String source = JsonUtils.toJsonString(Map.of(
+        String source = toJsonString(Map.of(
             "operationType", StringUtils.defaultString(operationType),
             "payload", fingerprintPayload
         ));
@@ -877,6 +900,23 @@ public class StandardAddressApprovalService implements IStandardAddressApprovalS
         };
     }
 
+    private String toJsonString(Object value) {
+        try {
+            return resolveObjectMapper().writeValueAsString(value);
+        } catch (JsonProcessingException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    private ObjectMapper resolveObjectMapper() {
+        try {
+            ObjectMapper objectMapper = SpringUtil.getBean(ObjectMapper.class);
+            return objectMapper == null ? new ObjectMapper() : objectMapper;
+        } catch (Exception ex) {
+            return new ObjectMapper();
+        }
+    }
+
     @Data
     public static class DeleteApprovalPayload {
         private List<String> segmIds;
@@ -921,9 +961,13 @@ public class StandardAddressApprovalService implements IStandardAddressApprovalS
 
     @Data
     public static class ImportApprovalPayload {
+        private Long batchId;
+        private Long itemId;
+        private Integer rowNum;
         private Boolean updateSupport;
         private String operName;
         private String fileName;
+        private StandardAddressImportVo row;
 
         public ImportApprovalPayload() {
         }
@@ -933,10 +977,24 @@ public class StandardAddressApprovalService implements IStandardAddressApprovalS
             this.operName = operName;
             this.fileName = fileName;
         }
+
+        public ImportApprovalPayload(Long batchId, Long itemId, Integer rowNum, Boolean updateSupport,
+                                     String operName, String fileName, StandardAddressImportVo row) {
+            this.batchId = batchId;
+            this.itemId = itemId;
+            this.rowNum = rowNum;
+            this.updateSupport = updateSupport;
+            this.operName = operName;
+            this.fileName = fileName;
+            this.row = row;
+        }
     }
 
     @Data
     public static class ImportFingerprintPayload {
+        private Long batchId;
+        private Long itemId;
+        private Integer rowNum;
         private Boolean updateSupport;
         private String fileName;
         private List<StandardAddressImportVo> rows;
@@ -950,8 +1008,18 @@ public class StandardAddressApprovalService implements IStandardAddressApprovalS
             this.rows = rows == null ? List.of() : new ArrayList<>(rows).stream()
                 .sorted(Comparator.comparing(item -> StringUtils.defaultString(item.getSegmName())
                     + "|" + StringUtils.defaultString(item.getParentStandName())
-                    + "|" + StringUtils.defaultString(item.getAddrLevel() == null ? null : String.valueOf(item.getAddrLevel()))))
+                    + "|" + StringUtils.defaultString(item.getSegmTypeName())))
                 .toList();
+        }
+
+        public ImportFingerprintPayload(Long batchId, Long itemId, Integer rowNum, Boolean updateSupport,
+                                        String fileName, StandardAddressImportVo row) {
+            this.batchId = batchId;
+            this.itemId = itemId;
+            this.rowNum = rowNum;
+            this.updateSupport = updateSupport;
+            this.fileName = fileName;
+            this.rows = row == null ? List.of() : List.of(row);
         }
     }
 }

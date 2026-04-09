@@ -13,7 +13,7 @@ spring:
   profiles:
     # 环境配置
 #    active: @profiles.active@
-    active: standalone
+    active: local
 
 ---
 spring:

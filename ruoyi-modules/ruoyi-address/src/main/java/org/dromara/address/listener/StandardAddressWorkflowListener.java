@@ -1,10 +1,16 @@
 package org.dromara.address.listener;
 
 import cn.hutool.core.convert.Convert;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.dromara.address.domain.StandardAddressApproval;
+import org.dromara.address.domain.StandardAddressImportFailDetail;
+import org.dromara.address.domain.StandardAddressImportRecord;
 import org.dromara.address.mapper.StandardAddressApprovalMapper;
+import org.dromara.address.mapper.StandardAddressImportFailDetailMapper;
+import org.dromara.address.mapper.StandardAddressImportRecordMapper;
+import org.dromara.address.service.IStandardAddressImportRecordService;
 import org.dromara.address.service.impl.StandardAddressApprovalExecutor;
 import org.dromara.address.service.impl.StandardAddressApprovalService;
 import org.dromara.common.core.enums.BusinessStatusEnum;
@@ -35,6 +41,9 @@ public class StandardAddressWorkflowListener {
 
     private final StandardAddressApprovalMapper approvalMapper;
     private final StandardAddressApprovalExecutor approvalExecutor;
+    private final StandardAddressImportFailDetailMapper importFailDetailMapper;
+    private final StandardAddressImportRecordMapper importRecordMapper;
+    private final IStandardAddressImportRecordService importRecordService;
 
     /**
      * 目的：处理流程状态变化事件。
@@ -55,6 +64,7 @@ public class StandardAddressWorkflowListener {
             if (processEvent.getSubmit()) {
                 approval.setApprovalStatus(StandardAddressApprovalService.APPROVAL_WAITING);
                 approvalMapper.updateById(approval);
+                syncImportRowResult(approval, StandardAddressImportFailDetail.STATUS_WAITING_APPROVAL, null);
                 return;
             }
             if (BusinessStatusEnum.FINISH.getStatus().equals(processEvent.getStatus())) {
@@ -69,6 +79,7 @@ public class StandardAddressWorkflowListener {
                 approval.setApproveUserName(Convert.toStr(params == null ? null : params.get("handler")));
                 approval.setApproveTime(new Date());
                 approvalMapper.updateById(approval);
+                syncImportRowResult(approval, StandardAddressImportFailDetail.STATUS_REJECTED_FAILED, approval.getRejectReason());
                 return;
             }
             approvalMapper.updateById(approval);
@@ -92,6 +103,7 @@ public class StandardAddressWorkflowListener {
             approval.setCurrentTaskId(processTaskEvent.getTaskId());
             approval.setApprovalStatus(StandardAddressApprovalService.APPROVAL_WAITING);
             approvalMapper.updateById(approval);
+            syncImportRowResult(approval, StandardAddressImportFailDetail.STATUS_WAITING_APPROVAL, null);
         });
     }
 
@@ -126,17 +138,66 @@ public class StandardAddressWorkflowListener {
         try {
             approval.setApprovalStatus(StandardAddressApprovalService.APPROVAL_EXECUTING);
             approvalMapper.updateById(approval);
+            syncImportRowResult(approval, StandardAddressImportFailDetail.STATUS_WAITING_APPROVAL, null);
             approvalExecutor.execute(approval);
             approval.setApprovalStatus(StandardAddressApprovalService.APPROVAL_APPROVED);
             approval.setApproveUserId(Convert.toLong(params == null ? null : params.get("handler")));
             approval.setApproveUserName(Convert.toStr(params == null ? null : params.get("handler")));
             approval.setApproveTime(new Date());
             approval.setExecuteMessage("正式地址变更已生效");
+            syncImportRowResult(approval, StandardAddressImportFailDetail.STATUS_APPROVED_SUCCESS, null);
         } catch (Exception ex) {
             log.error("标准地址审批执行失败，approvalId={}", approval.getId(), ex);
             approval.setApprovalStatus(StandardAddressApprovalService.APPROVAL_EXECUTE_FAILED);
             approval.setExecuteMessage(StringUtils.defaultIfBlank(ex.getMessage(), "正式地址变更执行失败"));
+            syncImportRowResult(approval, StandardAddressImportFailDetail.STATUS_EXECUTE_FAILED, approval.getExecuteMessage());
         }
         approvalMapper.updateById(approval);
+    }
+
+    private void syncImportRowResult(StandardAddressApproval approval, String rowStatus, String failReason) {
+        StandardAddressApprovalService.ImportApprovalPayload payload = resolveImportPayload(approval);
+        if (payload == null || payload.getItemId() == null) {
+            return;
+        }
+        StandardAddressImportFailDetail detail = importFailDetailMapper.selectById(payload.getItemId());
+        if (detail == null) {
+            return;
+        }
+        detail.setApprovalId(approval.getId());
+        detail.setApprovalNo(approval.getApplyNo());
+        detail.setApprovalStatus(approval.getApprovalStatus());
+        detail.setStatus(rowStatus);
+        if (StringUtils.isNotBlank(failReason)) {
+            detail.setFailReason(failReason);
+        } else if (StandardAddressImportFailDetail.STATUS_WAITING_APPROVAL.equals(rowStatus)
+            || StandardAddressImportFailDetail.STATUS_APPROVED_SUCCESS.equals(rowStatus)) {
+            detail.setFailReason(null);
+        }
+        importFailDetailMapper.updateById(detail);
+        if (payload.getBatchId() != null) {
+            if (StringUtils.isNotBlank(failReason)) {
+                StandardAddressImportRecord update = new StandardAddressImportRecord();
+                update.setId(payload.getBatchId());
+                update.setErrorMsg(failReason);
+                importRecordMapper.updateById(update);
+            }
+            importRecordService.refreshBatchSummary(payload.getBatchId());
+        }
+    }
+
+    private StandardAddressApprovalService.ImportApprovalPayload resolveImportPayload(StandardAddressApproval approval) {
+        if (!StandardAddressApprovalService.OPERATION_IMPORT.equals(approval.getOperationType())
+            || StringUtils.isBlank(approval.getRequestPayload())) {
+            return null;
+        }
+        try {
+            StandardAddressApprovalService.ImportApprovalPayload payload = new ObjectMapper()
+                .readValue(approval.getRequestPayload(), StandardAddressApprovalService.ImportApprovalPayload.class);
+            return payload != null && payload.getItemId() != null ? payload : null;
+        } catch (Exception ex) {
+            log.warn("解析导入审批负载失败，approvalId={}", approval.getId(), ex);
+            return null;
+        }
     }
 }

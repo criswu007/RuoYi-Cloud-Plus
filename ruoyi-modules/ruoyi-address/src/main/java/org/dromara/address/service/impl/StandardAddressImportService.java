@@ -38,6 +38,14 @@ public class StandardAddressImportService {
     private static final String IMPORT_SUCCESS = "1";
     private static final String IMPORT_FAIL = "2";
     private static final String OPERATION_TYPE_IMPORT = "IMPORT";
+    private static final String DEFAULT_STATUS = "2140900";
+    private static final String MANAGE_TYPE_MAINTENANCE = "2017101";
+    private static final String MANAGE_TYPE_INSTALL = "2017102";
+    private static final String MANAGE_TYPE_BUSINESS = "2017103";
+    private static final String KEYWORD_ADDR_IN_TYPE_FTTH = "ADDR_IN_TYPE_FTTH";
+    private static final String KEYWORD_FTTH_PON_TYPE = "FTTH_PON_TYPE";
+    private static final String KEYWORD_AREA_TYPE = "AREA_TYPE";
+    private static final String KEYWORD_ADDR_PLACE_TYPE = "ADDR_PLACE_TYPE";
 
     private final StandardAddressCommandService commandService;
     private final StandardAddressDictionaryService dictionaryService;
@@ -66,7 +74,7 @@ public class StandardAddressImportService {
         int successCount = 0;
         int failCount = 0;
         String batchErrorMsg = null;
-        Map<String, String> standNameCache = new HashMap<>();
+        Map<String, ParentAddressContext> standNameCache = new HashMap<>();
         if (rows != null) {
             for (int index = 0; index < rows.size(); index++) {
                 StandardAddressImportVo row = rows.get(index);
@@ -76,7 +84,7 @@ public class StandardAddressImportService {
                 } catch (Exception ex) {
                     failCount++;
                     batchErrorMsg = StringUtils.defaultIfBlank(batchErrorMsg, ex.getMessage());
-                    importFailDetailMapper.insert(buildFailDetail(batchId, index + 1, row, ex.getMessage()));
+                    importFailDetailMapper.insert(buildFailDetail(batchId, index + 1, row, fileName, allowUpdate, ex.getMessage()));
                 }
             }
         }
@@ -85,47 +93,137 @@ public class StandardAddressImportService {
         return buildResult(record);
     }
 
-    private void processRow(StandardAddressImportVo row, int rowNum, boolean allowUpdate, Map<String, String> standNameCache, String fileName) {
+    /**
+     * 目的：执行上传阶段单条前置校验。
+     * 入参：导入行与是否允许更新标记。
+     * 出参：无。
+     * 关键约束：只做规则校验，不写正式地址、批次记录或失败明细。
+     * 异常与副作用：校验失败时抛出业务异常，无额外写入副作用。
+     */
+    public void validateImportRow(StandardAddressImportVo row, Boolean updateSupport) {
+        prepareRow(row, Boolean.TRUE.equals(updateSupport), new HashMap<>());
+    }
+
+    /**
+     * 目的：执行审批通过后的单条正式导入。
+     * 入参：导入行、Excel 行号、是否允许更新、操作人与文件名。
+     * 出参：无。
+     * 关键约束：正式执行时仍需复用同一套校验规则，避免审批后数据已变化导致脏写。
+     * 异常与副作用：会新增或修改 `ADDR_SEGM` 并记录导入操作日志。
+     */
+    public void executeApprovedImportRow(StandardAddressImportVo row, Integer rowNum, Boolean updateSupport, String operName, String fileName) {
+        ImportExecutionContext context = prepareRow(row, Boolean.TRUE.equals(updateSupport), new HashMap<>());
+        writePreparedRow(context, rowNum == null ? 0 : rowNum, fileName);
+    }
+
+    /**
+     * 目的：构建导入批次主记录。
+     * 入参：总数量、是否允许更新和文件名。
+     * 出参：待持久化的批次记录实体。
+     * 关键约束：上传阶段批次默认状态为进行中，最终状态由行结果聚合刷新。
+     * 异常与副作用：仅构建内存对象，不直接写库。
+     */
+    public StandardAddressImportRecord buildImportBatchRecord(int totalCount, Boolean updateSupport, String fileName) {
+        long batchId = IdUtil.getSnowflakeNextId();
+        StandardAddressImportRecord record = new StandardAddressImportRecord();
+        record.setId(batchId);
+        record.setBatchNo(buildBatchNo(batchId));
+        record.setFileName(StringUtils.defaultIfBlank(fileName, "standard-address-import.xlsx"));
+        record.setStatus(StandardAddressImportRecord.STATUS_PENDING);
+        record.setTotalCount(totalCount);
+        record.setSuccessCount(0);
+        record.setFailCount(0);
+        record.setUpdateSupport(Boolean.TRUE.equals(updateSupport));
+        record.setDelFlag("0");
+        return record;
+    }
+
+    /**
+     * 目的：构建单条导入行结果实体。
+     * 入参：批次ID、行号、原始导入行、文件名、是否允许更新、行状态与失败原因。
+     * 出参：待持久化的导入行结果实体。
+     * 关键约束：`rawPayload` 必须保留原始导入快照，便于失败导出与审计回溯。
+     * 异常与副作用：仅构建内存对象，不直接写库。
+     */
+    public StandardAddressImportFailDetail buildImportRowDetail(Long batchId, Integer rowNum, StandardAddressImportVo row,
+                                                                String fileName, Boolean updateSupport, String status,
+                                                                String failReason) {
+        StandardAddressImportFailDetail detail = new StandardAddressImportFailDetail();
+        detail.setId(IdUtil.getSnowflakeNextId());
+        detail.setBatchId(batchId);
+        detail.setRowNum(rowNum);
+        detail.setFileName(StringUtils.defaultIfBlank(fileName, "standard-address-import.xlsx"));
+        detail.setUpdateSupport(Boolean.TRUE.equals(updateSupport));
+        detail.setParentStandName(row == null ? null : row.getParentStandName());
+        detail.setSegmName(row == null ? null : row.getSegmName());
+        String segmType = row == null ? null : dictionaryService.resolveSegmTypeByName(row.getSegmTypeName());
+        detail.setSegmType(segmType);
+        detail.setAddrLevel(segmType == null ? null : dictionaryService.resolveAddrLevel(segmType));
+        detail.setStatus(status);
+        detail.setFailReason(StringUtils.trimToNull(failReason));
+        detail.setRawPayload(row == null ? "{}" : JSONUtil.toJsonStr(row));
+        detail.setDelFlag("0");
+        return detail;
+    }
+
+    private void processRow(StandardAddressImportVo row, int rowNum, boolean allowUpdate, Map<String, ParentAddressContext> standNameCache, String fileName) {
+        ImportExecutionContext context = prepareRow(row, allowUpdate, standNameCache);
+        writePreparedRow(context, rowNum, fileName);
+    }
+
+    private ImportExecutionContext prepareRow(StandardAddressImportVo row, boolean allowUpdate, Map<String, ParentAddressContext> standNameCache) {
         String parentStandName = normalizeRequiredText(row.getParentStandName(), "导入失败：父级地址不能为空");
         String segmName = normalizeRequiredText(row.getSegmName(), "导入失败：当级名称不能为空");
-        Integer addrLevel = row.getAddrLevel();
+        String segmTypeName = normalizeRequiredText(row.getSegmTypeName(), "导入失败：分段地址类型不能为空");
+        String segmType = dictionaryService.resolveSegmTypeByName(segmTypeName);
+        if (StringUtils.isBlank(segmType)) {
+            throw new ServiceException("导入失败：标准地址类型不存在");
+        }
+        Integer addrLevel = dictionaryService.resolveAddrLevel(segmType);
         if (addrLevel == null) {
-            throw new ServiceException("导入失败：地址级别不能为空");
+            throw new ServiceException("导入失败：标准地址类型不存在");
         }
         if (addrLevel == 1 || addrLevel == 2) {
             throw new ServiceException("导入失败：一二级标准地址为只读基础数据");
         }
-        String segmType = dictionaryService.resolveDefaultSegmTypeByAddrLevel(addrLevel);
-        if (StringUtils.isBlank(segmType)) {
-            throw new ServiceException("导入失败：地址级别不存在");
-        }
-        String parentSegmId = resolveParentSegmId(parentStandName, standNameCache);
-        if (StringUtils.isBlank(parentSegmId)) {
+        ParentAddressContext parent = resolveParent(parentStandName, standNameCache);
+        if (parent == null || StringUtils.isBlank(parent.getSegmId())) {
             throw new ServiceException("导入失败：父级地址不存在");
         }
-        AddrSegm existing = addrSegmMapper.selectActiveByParentAndSegmName(parentSegmId, segmName);
+        AddrSegm existing = addrSegmMapper.selectActiveByParentAndSegmName(parent.getSegmId(), segmName);
         StandardAddressBo bo = new StandardAddressBo();
-        bo.setParentSegmId(parentSegmId);
+        bo.setParentSegmId(parent.getSegmId());
         bo.setSegmName(segmName);
         bo.setAddrLevel(addrLevel);
         bo.setSegmType(segmType);
-        bo.setStatus(StringUtils.defaultIfBlank(row.getStatus(), "2140900"));
-        bo.setNotes(row.getNotes());
+        bo.setStatus(DEFAULT_STATUS);
+        bo.setIsCity(normalizeYesNoFlag(row.getIsCityLabel()));
+        bo.setStationId(resolveStationId(parent.getRegionId(), MANAGE_TYPE_MAINTENANCE, row.getMaintenanceStationName()));
+        bo.setInstallStationId(resolveStationId(parent.getRegionId(), MANAGE_TYPE_INSTALL, row.getInstallStationName()));
+        bo.setBusStationId(resolveStationId(parent.getRegionId(), MANAGE_TYPE_BUSINESS, row.getBusinessStationName()));
+        applyAccessMode(bo, row.getAccessModeName());
+        bo.setFtthPonType(parseRestrictionInteger(KEYWORD_FTTH_PON_TYPE, row.getAccessCapabilityName(), "接入能力"));
+        bo.setAreaType(parseRestrictionInteger(KEYWORD_AREA_TYPE, row.getAreaTypeName(), "城乡属性"));
+        bo.setPlaceType(parseRestrictionInteger(KEYWORD_ADDR_PLACE_TYPE, row.getPlaceTypeName(), "房屋属性"));
+        bo.setSupportingFeeCommunityFlag(normalizeYesNoFlag(row.getSupportingFeeCommunityLabel()));
+        bo.setCoverNum(parseCoverNum(row.getCoverNumText()));
+        bo.setSingleProjectCode(trimToNull(row.getSingleProjectCode()));
+        if (existing != null && !allowUpdate) {
+            throw new ServiceException("导入失败：标准地址已存在，请开启更新支持后重试");
+        }
+        return new ImportExecutionContext(bo, existing, parent);
+    }
+
+    private void writePreparedRow(ImportExecutionContext context, int rowNum, String fileName) {
         boolean updated = false;
-        if (existing == null) {
-            commandService.addStandardAddressForImport(bo);
+        if (context.existing == null) {
+            commandService.addStandardAddressForImport(context.bo);
         } else {
-            if (!allowUpdate) {
-                throw new ServiceException("导入失败：标准地址已存在，请开启更新支持后重试");
-            }
-            bo.setSegmId(existing.getSegmId());
-            commandService.updateStandardAddressForImport(bo);
+            context.bo.setSegmId(context.existing.getSegmId());
+            commandService.updateStandardAddressForImport(context.bo);
             updated = true;
         }
-        recordImportSuccess(bo, fileName, rowNum, updated);
-        if (StringUtils.isNotBlank(bo.getStandName()) && StringUtils.isNotBlank(bo.getSegmId())) {
-            standNameCache.put(bo.getStandName(), bo.getSegmId());
-        }
+        recordImportSuccess(context.bo, fileName, rowNum, updated);
     }
 
     private void recordImportSuccess(StandardAddressBo bo, String fileName, int rowNum, boolean updated) {
@@ -139,17 +237,17 @@ public class StandardAddressImportService {
         operationLogRecorder.record(bo.getSegmId(), OPERATION_TYPE_IMPORT, operationObject, detail);
     }
 
-    private String resolveParentSegmId(String parentStandName, Map<String, String> standNameCache) {
-        String cachedSegmId = standNameCache.get(parentStandName);
-        if (StringUtils.isNotBlank(cachedSegmId)) {
-            return cachedSegmId;
+    private ParentAddressContext resolveParent(String parentStandName, Map<String, ParentAddressContext> standNameCache) {
+        ParentAddressContext cached = standNameCache.get(parentStandName);
+        if (cached != null && StringUtils.isNotBlank(cached.getSegmId())) {
+            return cached;
         }
         AddrSegm addressParent = addrSegmMapper.selectActiveByStandName(parentStandName);
         if (addressParent != null) {
-            return addressParent.getSegmId();
+            return new ParentAddressContext(addressParent.getSegmId(), addressParent.getRegionId());
         }
         SpcRegion regionParent = spcRegionMapper.selectActiveByRegionName(parentStandName);
-        return regionParent == null ? null : regionParent.getRegionId();
+        return regionParent == null ? null : new ParentAddressContext(regionParent.getRegionId(), regionParent.getRegionId());
     }
 
     private StandardAddressImportRecord buildBatchRecord(long batchId, String batchNo, String fileName, int totalCount,
@@ -169,16 +267,20 @@ public class StandardAddressImportService {
         return record;
     }
 
-    private StandardAddressImportFailDetail buildFailDetail(long batchId, int rowNum, StandardAddressImportVo row, String failReason) {
+    private StandardAddressImportFailDetail buildFailDetail(long batchId, int rowNum, StandardAddressImportVo row,
+                                                            String fileName, boolean updateSupport, String failReason) {
         StandardAddressImportFailDetail detail = new StandardAddressImportFailDetail();
         detail.setId(IdUtil.getSnowflakeNextId());
         detail.setBatchId(batchId);
         detail.setRowNum(rowNum);
+        detail.setFileName(StringUtils.defaultIfBlank(fileName, "standard-address-import.xlsx"));
+        detail.setUpdateSupport(updateSupport);
         detail.setParentStandName(row == null ? null : row.getParentStandName());
         detail.setSegmName(row == null ? null : row.getSegmName());
-        detail.setSegmType(row == null || row.getAddrLevel() == null ? null : dictionaryService.resolveDefaultSegmTypeByAddrLevel(row.getAddrLevel()));
-        detail.setAddrLevel(row == null ? null : row.getAddrLevel());
-        detail.setStatus(IMPORT_FAIL);
+        String segmType = row == null ? null : dictionaryService.resolveSegmTypeByName(row.getSegmTypeName());
+        detail.setSegmType(segmType);
+        detail.setAddrLevel(segmType == null ? null : dictionaryService.resolveAddrLevel(segmType));
+        detail.setStatus(StandardAddressImportFailDetail.STATUS_VALIDATE_FAILED);
         detail.setFailReason(StringUtils.defaultIfBlank(failReason, "导入失败"));
         detail.setRawPayload(row == null ? "{}" : JSONUtil.toJsonStr(row));
         detail.setDelFlag("0");
@@ -194,6 +296,7 @@ public class StandardAddressImportService {
         result.setTotalCount(record.getTotalCount());
         result.setSuccessCount(record.getSuccessCount());
         result.setFailCount(record.getFailCount());
+        result.setPendingCount(0);
         result.setFailureExportable(record.getFailCount() != null && record.getFailCount() > 0);
         return result;
     }
@@ -208,5 +311,106 @@ public class StandardAddressImportService {
             throw new ServiceException(message);
         }
         return normalized;
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private String normalizeYesNoFlag(String label) {
+        String normalized = trimToNull(label);
+        if (normalized == null) {
+            return null;
+        }
+        if ("是".equals(normalized)) {
+            return "Y";
+        }
+        if ("否".equals(normalized)) {
+            return "N";
+        }
+        throw new ServiceException("导入失败：" + normalized + " 不是有效的是/否值");
+    }
+
+    private void applyAccessMode(StandardAddressBo bo, String label) {
+        String normalized = trimToNull(label);
+        if (normalized == null) {
+            return;
+        }
+        String ftthValue = dictionaryService.resolveRestrictionValue(KEYWORD_ADDR_IN_TYPE_FTTH, normalized);
+        if (StringUtils.isNotBlank(ftthValue)) {
+            bo.setAddrInTypeFtth(Integer.valueOf(ftthValue));
+            bo.setAddrInTypeLan(null);
+            return;
+        }
+        throw new ServiceException("导入失败：接入方式不存在");
+    }
+
+    private Integer parseRestrictionInteger(String keyword, String label, String fieldName) {
+        String normalized = trimToNull(label);
+        if (normalized == null) {
+            return null;
+        }
+        String value = dictionaryService.resolveRestrictionValue(keyword, normalized);
+        if (StringUtils.isBlank(value)) {
+            throw new ServiceException("导入失败：" + fieldName + "不存在");
+        }
+        return Integer.valueOf(value);
+    }
+
+    private String resolveStationId(String regionId, String manageType, String stationName) {
+        String normalized = trimToNull(stationName);
+        if (normalized == null) {
+            return null;
+        }
+        return dictionaryService.matchStationId(regionId, manageType, normalized);
+    }
+
+    private Integer parseCoverNum(String coverNumText) {
+        String normalized = trimToNull(coverNumText);
+        if (normalized == null) {
+            return 1;
+        }
+        if (!normalized.matches("\\d+")) {
+            return 1;
+        }
+        try {
+            return Math.max(Integer.parseInt(normalized), 1);
+        } catch (NumberFormatException ex) {
+            return 1;
+        }
+    }
+
+    private static final class ParentAddressContext {
+        private final String segmId;
+        private final String regionId;
+
+        private ParentAddressContext(String segmId, String regionId) {
+            this.segmId = segmId;
+            this.regionId = regionId;
+        }
+
+        private String getSegmId() {
+            return segmId;
+        }
+
+        private String getRegionId() {
+            return regionId;
+        }
+    }
+
+    private static final class ImportExecutionContext {
+        private final StandardAddressBo bo;
+        private final AddrSegm existing;
+        private final ParentAddressContext parent;
+
+        private ImportExecutionContext(StandardAddressBo bo, AddrSegm existing, ParentAddressContext parent) {
+            this.bo = bo;
+            this.existing = existing;
+            this.parent = parent;
+        }
     }
 }

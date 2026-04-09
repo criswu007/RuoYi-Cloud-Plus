@@ -2,6 +2,7 @@ package org.dromara.address.service;
 
 import org.dromara.address.domain.bo.StandardAddressApprovalBo;
 import org.dromara.address.domain.bo.StandardAddressApprovalActionBo;
+import org.dromara.address.domain.StandardAddressApproval;
 import org.dromara.address.domain.bo.StandardAddressBo;
 import org.dromara.address.domain.bo.StandardAddressSplitItemBo;
 import org.dromara.address.domain.vo.StandardAddressApprovalVo;
@@ -33,6 +34,9 @@ public interface IStandardAddressApprovalService {
     Boolean submitSplitApproval(String sourceSegmId, List<StandardAddressSplitItemBo> splitItems);
 
     StandardAddressImportResultVo submitImportApproval(List<StandardAddressImportVo> rows, Boolean updateSupport, String operName, String fileName);
+
+    StandardAddressApproval submitImportRowApproval(StandardAddressImportVo row, Long batchId, Long itemId, Integer rowNum,
+                                                    Boolean updateSupport, String operName, String fileName);
 
     TableDataInfo<StandardAddressApprovalVo> queryMyPage(StandardAddressApprovalBo bo, PageQuery pageQuery);
 

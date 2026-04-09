@@ -1,12 +1,13 @@
 package org.dromara.address.workflow;
 
 import lombok.RequiredArgsConstructor;
+import org.dromara.address.config.condition.AddressStandaloneRuntimeCondition;
 import org.dromara.workflow.api.RemoteWorkflowService;
 import org.dromara.workflow.api.domain.RemoteCompleteTask;
 import org.dromara.workflow.api.domain.RemoteStartProcess;
 import org.dromara.workflow.api.domain.RemoteStartProcessReturn;
 import org.springframework.context.annotation.Primary;
-import org.springframework.context.annotation.Profile;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,12 +17,12 @@ import java.util.Map;
  * 标准地址 standalone workflow 远程服务适配器。
  * 目的：在 `standalone` 模式下以 HTTP 方式实现 `RemoteWorkflowService`，复用现有审批提交服务逻辑。
  * 入参/出参：输入 workflow 远程服务接口参数，输出 HTTP 调用结果。
- * 关键约束：当前仅保证标准地址审批链路所需方法可用，其余未使用方法维持最小实现。
+ * 关键约束：仅在 legacy `standalone` profile 或 `local + address.runtime.mode=standalone` 时生效；当前仅保证标准地址审批链路所需方法可用，其余未使用方法维持最小实现。
  * 异常与副作用：会请求 workflow HTTP 接口，失败时抛出业务异常。
  */
 @Primary
 @Service
-@Profile("standalone")
+@Conditional(AddressStandaloneRuntimeCondition.class)
 @RequiredArgsConstructor
 public class StandaloneRemoteWorkflowService implements RemoteWorkflowService {
 

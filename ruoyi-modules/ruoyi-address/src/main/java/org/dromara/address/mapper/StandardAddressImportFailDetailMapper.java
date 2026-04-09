@@ -8,6 +8,7 @@ import org.dromara.address.domain.vo.StandardAddressImportRecordVo;
 import org.dromara.common.mybatis.core.mapper.BaseMapperPlus;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 标准地址导入失败明细 Mapper。
@@ -32,4 +33,13 @@ public interface StandardAddressImportFailDetailMapper extends BaseMapperPlus<St
      * 异常与副作用：无写入副作用。
      */
     List<StandardAddressImportRecordVo> selectFailDetailListByBatchId(@Param("batchId") Long batchId);
+
+    /**
+     * 目的：按批次聚合导入行状态数量。
+     * 入参：批次ID。
+     * 出参：状态与数量映射列表。
+     * 关键约束：仅统计未删除导入行结果。
+     * 异常与副作用：无写入副作用。
+     */
+    List<Map<String, Object>> selectStatusSummaryByBatchId(@Param("batchId") Long batchId);
 }

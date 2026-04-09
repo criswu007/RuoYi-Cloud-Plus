@@ -29,6 +29,8 @@ public class StandardAddressImportBatchVo implements Serializable {
 
     private Integer failCount;
 
+    private Integer pendingCount;
+
     private Boolean updateSupport;
 
     private String errorMsg;

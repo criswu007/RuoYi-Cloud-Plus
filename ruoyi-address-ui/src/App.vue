@@ -39,7 +39,7 @@
         <div class="header-main">
           <div class="header-title">{{ pageTitle }}</div>
           <div class="env">
-            API_BASE: {{ apiBase }}
+            MODE: {{ runtimeMode }} ｜ API_BASE: {{ apiBase }}
           </div>
         </div>
         <div class="token">
@@ -70,6 +70,7 @@ export default {
   data() {
     return {
       token: storage ? storage.getItem('AUTH_TOKEN') || '' : '',
+      runtimeMode: import.meta.env.VITE_ADDRESS_RUNTIME_MODE || 'standalone',
       apiBase: import.meta.env.VITE_API_BASE || '代理 /address',
       titleMap: {
         '/standard/list': '标准地址列表',

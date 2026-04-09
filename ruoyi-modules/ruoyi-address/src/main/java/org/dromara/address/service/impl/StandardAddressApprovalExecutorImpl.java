@@ -1,13 +1,12 @@
 package org.dromara.address.service.impl;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.dromara.address.domain.StandardAddressApproval;
 import org.dromara.address.domain.bo.StandardAddressBo;
-import org.dromara.address.domain.bo.StandardAddressSplitItemBo;
 import org.dromara.address.domain.vo.StandardAddressImportVo;
 import org.dromara.common.core.exception.ServiceException;
-import org.dromara.common.json.utils.JsonUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -53,7 +52,12 @@ public class StandardAddressApprovalExecutorImpl implements StandardAddressAppro
             }
             case StandardAddressApprovalService.OPERATION_IMPORT -> {
                 StandardAddressApprovalService.ImportApprovalPayload payload = parseObject(approval.getRequestPayload(), StandardAddressApprovalService.ImportApprovalPayload.class);
-                List<StandardAddressImportVo> rows = JsonUtils.parseArray(approval.getImportBatchPayload(), StandardAddressImportVo.class);
+                if (payload.getRow() != null) {
+                    importService.executeApprovedImportRow(payload.getRow(), payload.getRowNum(),
+                        payload.getUpdateSupport(), payload.getOperName(), payload.getFileName());
+                    return;
+                }
+                List<StandardAddressImportVo> rows = parseList(approval.getImportBatchPayload(), StandardAddressImportVo.class);
                 importService.importStandardAddressData(rows, payload.getUpdateSupport(), payload.getOperName(), payload.getFileName());
             }
             default -> throw new ServiceException("不支持的标准地址审批操作类型：" + operationType);
@@ -68,10 +72,30 @@ public class StandardAddressApprovalExecutorImpl implements StandardAddressAppro
      * 异常与副作用：解析失败时抛出业务异常，不产生额外写入副作用。
      */
     private <T> T parseObject(String json, Class<T> clazz) {
-        T value = JsonUtils.parseObject(json, clazz);
-        if (value == null) {
+        try {
+            T value = resolveObjectMapper().readValue(json, clazz);
+            if (value == null) {
+                throw new ServiceException("审批单快照缺失，无法执行正式变更");
+            }
+            return value;
+        } catch (Exception ex) {
+            if (ex instanceof ServiceException serviceException) {
+                throw serviceException;
+            }
             throw new ServiceException("审批单快照缺失，无法执行正式变更");
         }
-        return value;
+    }
+
+    private <T> List<T> parseList(String json, Class<T> clazz) {
+        try {
+            return resolveObjectMapper().readValue(json,
+                resolveObjectMapper().getTypeFactory().constructCollectionType(List.class, clazz));
+        } catch (JsonProcessingException ex) {
+            throw new ServiceException("审批单快照缺失，无法执行正式变更");
+        }
+    }
+
+    private ObjectMapper resolveObjectMapper() {
+        return new ObjectMapper();
     }
 }

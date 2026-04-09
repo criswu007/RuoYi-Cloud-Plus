@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
@@ -27,7 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 异常与副作用：若 standalone 缺失鉴权配置、JWT 配置或最小化基础设施兜底，该测试会直接失败。
  */
 @Tag("dev")
-@ActiveProfiles("standalone")
+@ActiveProfiles("local")
+@TestPropertySource(properties = "address.runtime.mode=standalone")
 @SpringBootTest(
     classes = RuoYiAddressApplication.class,
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT

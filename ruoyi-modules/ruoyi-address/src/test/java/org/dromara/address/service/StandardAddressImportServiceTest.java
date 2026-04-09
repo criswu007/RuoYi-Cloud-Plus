@@ -68,21 +68,24 @@ class StandardAddressImportServiceTest {
         StandardAddressImportVo successRow = new StandardAddressImportVo();
         successRow.setParentStandName("江苏省南京市鼓楼区中央路");
         successRow.setSegmName("紫峰大厦");
-        successRow.setAddrLevel(9);
-        successRow.setStatus("2140900");
+        successRow.setSegmTypeName("建筑、楼栋");
 
         StandardAddressImportVo failRow = new StandardAddressImportVo();
-        failRow.setParentStandName("江苏省南京市");
-        failRow.setSegmName("江苏省");
-        failRow.setAddrLevel(1);
+        failRow.setParentStandName("不存在的父级地址");
+        failRow.setSegmName("失败地址");
+        failRow.setSegmTypeName("建筑、楼栋");
 
         AddrSegm parent = new AddrSegm();
         parent.setSegmId("parent-1");
         parent.setStandName("江苏省南京市鼓楼区中央路");
+        parent.setRegionId("320100");
 
         when(addrSegmMapper.selectActiveByStandName("江苏省南京市鼓楼区中央路")).thenReturn(parent);
+        when(addrSegmMapper.selectActiveByStandName("不存在的父级地址")).thenReturn(null);
+        when(spcRegionMapper.selectActiveByRegionName("不存在的父级地址")).thenReturn(null);
         when(addrSegmMapper.selectActiveByParentAndSegmName("parent-1", "紫峰大厦")).thenReturn(null);
-        when(dictionaryService.resolveDefaultSegmTypeByAddrLevel(9)).thenReturn("180005");
+        when(dictionaryService.resolveSegmTypeByName("建筑、楼栋")).thenReturn("180005");
+        when(dictionaryService.resolveAddrLevel("180005")).thenReturn(9);
         when(commandService.addStandardAddressForImport(any(StandardAddressBo.class))).thenAnswer(invocation -> {
             StandardAddressBo bo = invocation.getArgument(0);
             bo.setSegmId("segm-new");
@@ -112,7 +115,7 @@ class StandardAddressImportServiceTest {
         ArgumentCaptor<StandardAddressImportFailDetail> failCaptor = ArgumentCaptor.forClass(StandardAddressImportFailDetail.class);
         verify(importFailDetailMapper).insert(failCaptor.capture());
         assertEquals(2, failCaptor.getValue().getRowNum());
-        assertEquals("江苏省", failCaptor.getValue().getSegmName());
+        assertEquals("失败地址", failCaptor.getValue().getSegmName());
         verify(commandService).addStandardAddressForImport(any(StandardAddressBo.class));
         verify(commandService, never()).updateStandardAddressForImport(any(StandardAddressBo.class));
         verify(operationLogRecorder).record(
@@ -128,9 +131,8 @@ class StandardAddressImportServiceTest {
         StandardAddressImportVo updateRow = new StandardAddressImportVo();
         updateRow.setParentStandName("江苏省南京市鼓楼区中央路");
         updateRow.setSegmName("紫峰大厦");
-        updateRow.setAddrLevel(9);
-        updateRow.setStatus("2140900");
-        updateRow.setNotes("更新备注");
+        updateRow.setSegmTypeName("建筑、楼栋");
+        updateRow.setSingleProjectCode("GC-2026-001");
 
         SpcRegion regionParent = new SpcRegion();
         regionParent.setRegionId("320100");
@@ -146,7 +148,8 @@ class StandardAddressImportServiceTest {
         when(addrSegmMapper.selectActiveByStandName("江苏省南京市鼓楼区中央路")).thenReturn(null);
         when(spcRegionMapper.selectActiveByRegionName("江苏省南京市鼓楼区中央路")).thenReturn(regionParent);
         when(addrSegmMapper.selectActiveByParentAndSegmName("320100", "紫峰大厦")).thenReturn(existing);
-        when(dictionaryService.resolveDefaultSegmTypeByAddrLevel(9)).thenReturn("180005");
+        when(dictionaryService.resolveSegmTypeByName("建筑、楼栋")).thenReturn("180005");
+        when(dictionaryService.resolveAddrLevel("180005")).thenReturn(9);
         when(commandService.updateStandardAddressForImport(any(StandardAddressBo.class))).thenAnswer(invocation -> {
             StandardAddressBo bo = invocation.getArgument(0);
             bo.setStandName("江苏省南京市鼓楼区中央路紫峰大厦");
@@ -169,6 +172,170 @@ class StandardAddressImportServiceTest {
             eq("IMPORT"),
             eq("江苏省南京市鼓楼区中央路紫峰大厦"),
             contains("导入更新标准地址成功")
+        );
+    }
+
+    @Test
+    void shouldMapLatestTemplateFieldsAndFallbackCoverNumToOne() {
+        StandardAddressImportVo row = new StandardAddressImportVo();
+        row.setParentStandName("江苏省南京市鼓楼区中央路");
+        row.setSegmName("紫峰大厦");
+        row.setSegmTypeName("建筑、楼栋");
+        row.setIsCityLabel("是");
+        row.setMaintenanceStationName("洪武路维修站");
+        row.setInstallStationName("不存在的安装站");
+        row.setBusinessStationName("中央路营业站");
+        row.setAccessModeName("FTTH_双纤");
+        row.setAccessCapabilityName("1G-PON");
+        row.setAreaTypeName("城区");
+        row.setPlaceTypeName("普通住宅");
+        row.setSupportingFeeCommunityLabel("否");
+        row.setCoverNumText("abc");
+        row.setSingleProjectCode("GC-2026-001");
+
+        AddrSegm parent = new AddrSegm();
+        parent.setSegmId("parent-1");
+        parent.setStandName("江苏省南京市鼓楼区中央路");
+        parent.setRegionId("320100");
+
+        when(addrSegmMapper.selectActiveByStandName("江苏省南京市鼓楼区中央路")).thenReturn(parent);
+        when(addrSegmMapper.selectActiveByParentAndSegmName("parent-1", "紫峰大厦")).thenReturn(null);
+        when(dictionaryService.resolveSegmTypeByName("建筑、楼栋")).thenReturn("180005");
+        when(dictionaryService.resolveAddrLevel("180005")).thenReturn(9);
+        when(dictionaryService.resolveRestrictionValue("ADDR_IN_TYPE_FTTH", "FTTH_双纤")).thenReturn("2140760");
+        when(dictionaryService.resolveRestrictionValue("FTTH_PON_TYPE", "1G-PON")).thenReturn("2141301");
+        when(dictionaryService.resolveRestrictionValue("AREA_TYPE", "城区")).thenReturn("2140511");
+        when(dictionaryService.resolveRestrictionValue("ADDR_PLACE_TYPE", "普通住宅")).thenReturn("2140800");
+        when(dictionaryService.matchStationId("320100", "2017101", "洪武路维修站")).thenReturn("WX001");
+        when(dictionaryService.matchStationId("320100", "2017102", "不存在的安装站")).thenReturn(null);
+        when(dictionaryService.matchStationId("320100", "2017103", "中央路营业站")).thenReturn("BUS001");
+        when(commandService.addStandardAddressForImport(any(StandardAddressBo.class))).thenAnswer(invocation -> {
+            StandardAddressBo bo = invocation.getArgument(0);
+            bo.setSegmId("segm-new");
+            bo.setStandName("江苏省南京市鼓楼区中央路紫峰大厦");
+            return true;
+        });
+        when(importRecordMapper.insert(any(StandardAddressImportRecord.class))).thenReturn(1);
+
+        StandardAddressImportResultVo result = importService.importStandardAddressData(
+            List.of(row), false, "tester", "latest-template.xlsx");
+
+        assertEquals(1, result.getSuccessCount());
+        assertEquals(0, result.getFailCount());
+
+        ArgumentCaptor<StandardAddressBo> boCaptor = ArgumentCaptor.forClass(StandardAddressBo.class);
+        verify(commandService).addStandardAddressForImport(boCaptor.capture());
+        StandardAddressBo bo = boCaptor.getValue();
+        assertEquals("parent-1", bo.getParentSegmId());
+        assertEquals("紫峰大厦", bo.getSegmName());
+        assertEquals(9, bo.getAddrLevel());
+        assertEquals("180005", bo.getSegmType());
+        assertEquals("Y", bo.getIsCity());
+        assertEquals("WX001", bo.getStationId());
+        assertEquals(null, bo.getInstallStationId());
+        assertEquals("BUS001", bo.getBusStationId());
+        assertEquals(2140760, bo.getAddrInTypeFtth());
+        assertEquals(2141301, bo.getFtthPonType());
+        assertEquals(2140511, bo.getAreaType());
+        assertEquals(2140800, bo.getPlaceType());
+        assertEquals("N", bo.getSupportingFeeCommunityFlag());
+        assertEquals(1, bo.getCoverNum());
+        assertEquals("GC-2026-001", bo.getSingleProjectCode());
+        assertEquals("2140900", bo.getStatus());
+    }
+
+    @Test
+    void shouldRejectLanAccessModeDuringImport() {
+        StandardAddressImportVo row = new StandardAddressImportVo();
+        row.setParentStandName("江苏省南京市鼓楼区中央路");
+        row.setSegmName("紫峰大厦");
+        row.setSegmTypeName("建筑、楼栋");
+        row.setAccessModeName("LAN");
+
+        AddrSegm parent = new AddrSegm();
+        parent.setSegmId("parent-1");
+        parent.setStandName("江苏省南京市鼓楼区中央路");
+        parent.setRegionId("320100");
+
+        when(addrSegmMapper.selectActiveByStandName("江苏省南京市鼓楼区中央路")).thenReturn(parent);
+        when(addrSegmMapper.selectActiveByParentAndSegmName("parent-1", "紫峰大厦")).thenReturn(null);
+        when(dictionaryService.resolveSegmTypeByName("建筑、楼栋")).thenReturn("180005");
+        when(dictionaryService.resolveAddrLevel("180005")).thenReturn(9);
+        when(dictionaryService.resolveRestrictionValue("ADDR_IN_TYPE_FTTH", "LAN")).thenReturn(null);
+        when(importRecordMapper.insert(any(StandardAddressImportRecord.class))).thenReturn(1);
+        when(importFailDetailMapper.insert(any(StandardAddressImportFailDetail.class))).thenReturn(1);
+
+        StandardAddressImportResultVo result = importService.importStandardAddressData(
+            List.of(row), false, "tester", "lan-import.xlsx");
+
+        assertEquals(0, result.getSuccessCount());
+        assertEquals(1, result.getFailCount());
+        verify(commandService, never()).addStandardAddressForImport(any(StandardAddressBo.class));
+        verify(commandService, never()).updateStandardAddressForImport(any(StandardAddressBo.class));
+    }
+
+    @Test
+    void shouldValidateRowWithoutWritingBusinessDataDuringUploadPhase() {
+        StandardAddressImportVo row = new StandardAddressImportVo();
+        row.setParentStandName("江苏省南京市鼓楼区中央路");
+        row.setSegmName("紫峰大厦");
+        row.setSegmTypeName("建筑、楼栋");
+        row.setAccessModeName("FTTH_双纤");
+
+        AddrSegm parent = new AddrSegm();
+        parent.setSegmId("parent-1");
+        parent.setStandName("江苏省南京市鼓楼区中央路");
+        parent.setRegionId("320100");
+
+        when(addrSegmMapper.selectActiveByStandName("江苏省南京市鼓楼区中央路")).thenReturn(parent);
+        when(addrSegmMapper.selectActiveByParentAndSegmName("parent-1", "紫峰大厦")).thenReturn(null);
+        when(dictionaryService.resolveSegmTypeByName("建筑、楼栋")).thenReturn("180005");
+        when(dictionaryService.resolveAddrLevel("180005")).thenReturn(9);
+        when(dictionaryService.resolveRestrictionValue("ADDR_IN_TYPE_FTTH", "FTTH_双纤")).thenReturn("2140760");
+
+        importService.validateImportRow(row, false);
+
+        verify(commandService, never()).addStandardAddressForImport(any(StandardAddressBo.class));
+        verify(commandService, never()).updateStandardAddressForImport(any(StandardAddressBo.class));
+        verify(importRecordMapper, never()).insert(any(StandardAddressImportRecord.class));
+        verify(importFailDetailMapper, never()).insert(any(StandardAddressImportFailDetail.class));
+        verify(operationLogRecorder, never()).record(any(), any(), any(), any());
+    }
+
+    @Test
+    void shouldExecuteApprovedRowWithoutCreatingNewBatchRecord() {
+        StandardAddressImportVo row = new StandardAddressImportVo();
+        row.setParentStandName("江苏省南京市鼓楼区中央路");
+        row.setSegmName("紫峰大厦");
+        row.setSegmTypeName("建筑、楼栋");
+
+        AddrSegm parent = new AddrSegm();
+        parent.setSegmId("parent-1");
+        parent.setStandName("江苏省南京市鼓楼区中央路");
+        parent.setRegionId("320100");
+
+        when(addrSegmMapper.selectActiveByStandName("江苏省南京市鼓楼区中央路")).thenReturn(parent);
+        when(addrSegmMapper.selectActiveByParentAndSegmName("parent-1", "紫峰大厦")).thenReturn(null);
+        when(dictionaryService.resolveSegmTypeByName("建筑、楼栋")).thenReturn("180005");
+        when(dictionaryService.resolveAddrLevel("180005")).thenReturn(9);
+        when(commandService.addStandardAddressForImport(any(StandardAddressBo.class))).thenAnswer(invocation -> {
+            StandardAddressBo bo = invocation.getArgument(0);
+            bo.setSegmId("segm-new");
+            bo.setStandName("江苏省南京市鼓楼区中央路紫峰大厦");
+            return true;
+        });
+
+        importService.executeApprovedImportRow(row, 12, false, "tester", "approved.xlsx");
+
+        verify(commandService).addStandardAddressForImport(any(StandardAddressBo.class));
+        verify(commandService, never()).updateStandardAddressForImport(any(StandardAddressBo.class));
+        verify(importRecordMapper, never()).insert(any(StandardAddressImportRecord.class));
+        verify(importFailDetailMapper, never()).insert(any(StandardAddressImportFailDetail.class));
+        verify(operationLogRecorder).record(
+            eq("segm-new"),
+            eq("IMPORT"),
+            eq("江苏省南京市鼓楼区中央路紫峰大厦"),
+            contains("行号：12")
         );
     }
 }

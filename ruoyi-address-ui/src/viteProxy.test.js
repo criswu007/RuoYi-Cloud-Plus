@@ -8,7 +8,7 @@ describe('vite 代理配置', () => {
     const workflowProxy = config.server.proxy['/workflow'];
 
     expect(workflowProxy).toBeTruthy();
-    expect(workflowProxy.target).toBe('http://localhost:9205');
+    expect(workflowProxy.target).toBe('http://127.0.0.1:9205');
     expect(workflowProxy.rewrite('/workflow/task/pageByAllTaskWait')).toBe('/task/pageByAllTaskWait');
     expect(workflowProxy.rewrite('/workflow/instance/flowHisTaskList/1001')).toBe('/instance/flowHisTaskList/1001');
   });
@@ -19,5 +19,35 @@ describe('vite 代理配置', () => {
 
     expect(addressProxy).toBeTruthy();
     expect(addressProxy.rewrite).toBeUndefined();
+  });
+
+  it('standalone 模式应直连本地地址与 workflow 服务', () => {
+    process.env.VITE_ADDRESS_RUNTIME_MODE = 'standalone';
+    process.env.VITE_ADDRESS_STANDALONE_BASE = 'http://127.0.0.1:9206';
+    process.env.VITE_WORKFLOW_STANDALONE_BASE = 'http://127.0.0.1:9205';
+    process.env.VITE_GATEWAY_BASE = 'http://127.0.0.1:8080';
+
+    const config = createConfig({ mode: 'test' });
+    const addressProxy = config.server.proxy['/address'];
+    const workflowProxy = config.server.proxy['/workflow'];
+
+    expect(addressProxy.target).toBe('http://127.0.0.1:9206');
+    expect(workflowProxy.target).toBe('http://127.0.0.1:9205');
+    expect(workflowProxy.rewrite('/workflow/task/pageByAllTaskWait')).toBe('/task/pageByAllTaskWait');
+  });
+
+  it('microservice 模式应统一走 gateway 且 workflow 不重写路径', () => {
+    process.env.VITE_ADDRESS_RUNTIME_MODE = 'microservice';
+    process.env.VITE_ADDRESS_STANDALONE_BASE = 'http://127.0.0.1:9206';
+    process.env.VITE_WORKFLOW_STANDALONE_BASE = 'http://127.0.0.1:9205';
+    process.env.VITE_GATEWAY_BASE = 'http://127.0.0.1:8080';
+
+    const config = createConfig({ mode: 'test' });
+    const addressProxy = config.server.proxy['/address'];
+    const workflowProxy = config.server.proxy['/workflow'];
+
+    expect(addressProxy.target).toBe('http://127.0.0.1:8080');
+    expect(workflowProxy.target).toBe('http://127.0.0.1:8080');
+    expect(workflowProxy.rewrite).toBeUndefined();
   });
 });

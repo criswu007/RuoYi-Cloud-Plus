@@ -28,5 +28,7 @@ public class StandardAddressImportResultVo implements Serializable {
 
     private Integer failCount;
 
+    private Integer pendingCount;
+
     private Boolean failureExportable;
 }

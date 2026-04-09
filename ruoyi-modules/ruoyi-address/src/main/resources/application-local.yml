@@ -1,0 +1,10 @@
+server:
+  port: 9206
+
+address:
+  runtime:
+    mode: standalone
+
+spring:
+  config:
+    import: optional:classpath:runtime/address-local-runtime-${address.runtime.mode}.yml

@@ -34,4 +34,11 @@ public interface IStandardAddressImportRecordService {
      * @return 失败明细列表
      */
     List<StandardAddressImportRecordVo> listFailDetailsByBatchId(Long batchId);
+
+    /**
+     * 刷新导入批次聚合统计。
+     *
+     * @param batchId 批次ID
+     */
+    void refreshBatchSummary(Long batchId);
 }

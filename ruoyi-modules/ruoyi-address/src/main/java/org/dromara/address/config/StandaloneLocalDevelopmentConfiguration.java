@@ -10,13 +10,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.dromara.common.core.service.DictService;
 import org.dromara.common.core.enums.UserType;
+import org.dromara.address.config.condition.AddressStandaloneRuntimeCondition;
 import org.dromara.common.satoken.utils.LoginHelper;
 import org.dromara.system.api.model.LoginUser;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.context.annotation.Profile;
 import org.springframework.core.Ordered;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -32,10 +33,10 @@ import java.util.stream.Collectors;
 /**
  * standalone 本地联调配置。
  * 目的：为地址模块提供脱离 Redis、网关和统一登录体系的本地运行基线，便于先把标准地址主链路跑通。
- * 关键约束：仅在 `standalone` profile 生效，不能影响 dev/prod 的真实鉴权与存储行为。
+ * 关键约束：仅在 legacy `standalone` profile 或 `local + address.runtime.mode=standalone` 时生效，不能影响真实微服务环境。
  * 异常与副作用：会在本地请求进入时自动注入一个开发态登录态，仅用于当前单体联调。
  */
-@Profile("standalone")
+@Conditional(AddressStandaloneRuntimeCondition.class)
 @Configuration
 public class StandaloneLocalDevelopmentConfiguration {
 

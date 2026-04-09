@@ -8,6 +8,7 @@ import org.dromara.address.domain.vo.StandardAddressAdminVo;
 import org.dromara.address.domain.vo.StandardAddressImportResultVo;
 import org.dromara.address.domain.vo.StandardAddressImportVo;
 import org.dromara.address.domain.vo.StandardAddressVo;
+import org.dromara.common.excel.core.DropDownOptions;
 import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 
@@ -75,6 +76,13 @@ public interface IStandardAddressService {
      * 异常与副作用：无写入副作用。
      */
     List<StandardAddressAdminVo.StationOptionVo> listStandardAddressStationOptions(StandardAddressAdminBo.StationOptionQueryBo bo);
+
+    /**
+     * 查询标准地址导入模板下拉选项。
+     *
+     * @return Excel 下拉选项集合
+     */
+    List<DropDownOptions> listStandardAddressImportTemplateOptions();
 
     /**
      * 查询标准地址列表（不分页）。

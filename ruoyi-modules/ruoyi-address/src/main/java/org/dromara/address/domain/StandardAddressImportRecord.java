@@ -19,6 +19,10 @@ import java.io.Serial;
 @TableName("address_standard_import_record")
 public class StandardAddressImportRecord extends TenantEntity {
 
+    public static final String STATUS_PENDING = "0";
+    public static final String STATUS_SUCCESS = "1";
+    public static final String STATUS_FAIL = "2";
+
     @Serial
     private static final long serialVersionUID = 1L;
 

@@ -16,6 +16,7 @@ import org.dromara.address.search.service.StandardAddressSearchExportService;
 import org.dromara.address.service.IStandardAddressService;
 import org.dromara.common.core.domain.R;
 import org.dromara.common.core.utils.file.FileUtils;
+import org.dromara.common.excel.core.DropDownOptions;
 import org.dromara.common.excel.core.DefaultExcelListener;
 import org.dromara.common.excel.core.ExcelResult;
 import org.dromara.common.excel.utils.ExcelUtil;
@@ -298,7 +299,8 @@ public class StandardAddressController extends StandardAddressAdminApiSupport {
     public void downloadStandardAddressImportTemplate(HttpServletResponse response) throws Exception {
         FileUtils.setAttachmentResponseHeader(response, ExcelUtil.encodingFilename("标准地址导入模板"));
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8");
-        ExcelUtil.exportExcel(List.of(), "标准地址导入模板", StandardAddressImportVo.class, response.getOutputStream());
+        List<DropDownOptions> options = addressStandardService.listStandardAddressImportTemplateOptions();
+        ExcelUtil.exportExcel(List.of(), "标准地址导入模板", StandardAddressImportVo.class, response.getOutputStream(), options, false);
     }
 
     /**
@@ -330,7 +332,7 @@ public class StandardAddressController extends StandardAddressAdminApiSupport {
     @Log(title = "标准地址", businessType = BusinessType.IMPORT)
     @PostMapping("/import")
     public R<StandardAddressImportResultVo> importStandardAddressData(MultipartFile file, boolean updateSupport) throws Exception {
-        ExcelResult<StandardAddressImportVo> result = ExcelUtil.importExcel(file.getInputStream(), StandardAddressImportVo.class, new DefaultExcelListener<>());
+        ExcelResult<StandardAddressImportVo> result = ExcelUtil.importExcel(file.getInputStream(), StandardAddressImportVo.class, new DefaultExcelListener<>(true));
         StandardAddressImportResultVo summary = addressStandardService.importStandardAddressData(result.getList(), updateSupport, LoginHelper.getUsername(), file.getOriginalFilename());
         return R.ok(APPROVAL_SUBMITTED_MESSAGE, summary);
     }

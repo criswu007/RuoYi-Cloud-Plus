@@ -10,16 +10,22 @@ import org.dromara.common.tenant.core.TenantEntity;
 import java.io.Serial;
 
 /**
- * 标准地址导入失败明细实体。
- * 目的：按单条失败数据粒度记录失败原因、原始值和所属批次，支撑失败明细列表与导出。
- * 入参/出参：入库时承载失败记录明细，查询时输出给导入记录页面与导出链路。
- * 关键约束：仅记录失败数据；按批次主记录关联；删除采用逻辑删除。
- * 异常与副作用：持久化失败时回滚当前事务，会写入导入失败明细表。
+ * 标准地址导入行结果实体。
+ * 目的：按单条 Excel 记录粒度记录导入前置校验、审批流转和正式执行结果，支撑导入记录列表、批次统计与失败导出。
+ * 入参/出参：入库时承载导入行结果快照，查询时输出给导入记录页面、批次详情和失败导出链路。
+ * 关键约束：一条 Excel 行对应一条记录；`status` 表示行生命周期状态；删除采用逻辑删除。
+ * 异常与副作用：持久化失败时回滚当前事务，会写入 `address_standard_import_fail_detail`。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("address_standard_import_fail_detail")
 public class StandardAddressImportFailDetail extends TenantEntity {
+
+    public static final String STATUS_VALIDATE_FAILED = "VALIDATE_FAILED";
+    public static final String STATUS_WAITING_APPROVAL = "WAITING_APPROVAL";
+    public static final String STATUS_APPROVED_SUCCESS = "APPROVED_SUCCESS";
+    public static final String STATUS_REJECTED_FAILED = "REJECTED_FAILED";
+    public static final String STATUS_EXECUTE_FAILED = "EXECUTE_FAILED";
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -36,9 +42,34 @@ public class StandardAddressImportFailDetail extends TenantEntity {
     private Long batchId;
 
     /**
+     * 审批单ID。
+     */
+    private Long approvalId;
+
+    /**
+     * 审批单号。
+     */
+    private String approvalNo;
+
+    /**
+     * 审批状态。
+     */
+    private String approvalStatus;
+
+    /**
      * Excel 行号。
      */
     private Integer rowNum;
+
+    /**
+     * 导入文件名。
+     */
+    private String fileName;
+
+    /**
+     * 是否允许更新。
+     */
+    private Boolean updateSupport;
 
     /**
      * 父级标准地址名称。
@@ -61,7 +92,7 @@ public class StandardAddressImportFailDetail extends TenantEntity {
     private Integer addrLevel;
 
     /**
-     * 状态。
+     * 行状态。
      */
     private String status;
 

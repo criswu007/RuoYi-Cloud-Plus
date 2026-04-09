@@ -52,6 +52,7 @@ spring:
       database: 0
       repositories:
         enabled: false
+
 sa-token:
   check-same-token: false
   jwt-secret-key: standalone-address-local-jwt-secret

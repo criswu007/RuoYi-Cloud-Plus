@@ -8,7 +8,7 @@ import java.io.Serializable;
 import java.util.Date;
 
 /**
- * 标准地址导入失败明细视图。
+ * 标准地址导入行结果视图。
  */
 @Data
 public class StandardAddressImportRecordVo implements Serializable {
@@ -38,6 +38,23 @@ public class StandardAddressImportRecordVo implements Serializable {
      */
     @ExcelProperty("导入文件")
     private String fileName;
+
+    /**
+     * 审批单ID。
+     */
+    private Long approvalId;
+
+    /**
+     * 审批单号。
+     */
+    @ExcelProperty("审批单号")
+    private String approvalNo;
+
+    /**
+     * 审批状态。
+     */
+    @ExcelProperty("审批状态")
+    private String approvalStatus;
 
     /**
      * Excel 行号。
@@ -70,10 +87,15 @@ public class StandardAddressImportRecordVo implements Serializable {
     private String segmType;
 
     /**
-     * 状态。
+     * 页面兼容状态。
      */
-    @ExcelProperty("状态")
     private String status;
+
+    /**
+     * 行处理状态。
+     */
+    @ExcelProperty("行处理状态")
+    private String rowStatus;
 
     /**
      * 失败原因。

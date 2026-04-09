@@ -9,12 +9,15 @@
         d.batch_id as batchId,
         b.batch_no as batchNo,
         b.file_name as fileName,
+        d.approval_id as approvalId,
+        d.approval_no as approvalNo,
+        d.approval_status as approvalStatus,
         d.row_num,
         d.parent_stand_name as parentStandName,
         d.segm_name as segmName,
         d.addr_level as addrLevel,
         d.segm_type as segmType,
-        d.status as status,
+        d.status as rowStatus,
         d.fail_reason as failReason,
         d.create_by as createBy,
         d.create_time as createTime
@@ -35,7 +38,18 @@
                 and b.file_name like #{fileNameLike}
             </if>
             <if test="bo != null and bo.status != null and bo.status != ''">
-                and d.status = #{bo.status}
+                <if test='bo.status == "0"'>
+                    and d.status = 'WAITING_APPROVAL'
+                </if>
+                <if test='bo.status == "1"'>
+                    and d.status = 'APPROVED_SUCCESS'
+                </if>
+                <if test='bo.status == "2"'>
+                    and d.status in ('VALIDATE_FAILED', 'REJECTED_FAILED', 'EXECUTE_FAILED')
+                </if>
+                <if test='bo.status != "0" and bo.status != "1" and bo.status != "2"'>
+                    and d.status = #{bo.status}
+                </if>
             </if>
             <if test="bo != null and bo.segmName != null and bo.segmName != ''">
                 <bind name="segmNameLike" value="'%' + bo.segmName + '%'" />
@@ -58,7 +72,18 @@
         left join address_standard_import_record b on b.id = d.batch_id and coalesce(b.del_flag, '0') = '0'
         where coalesce(d.del_flag, '0') = '0'
           and d.batch_id = #{batchId}
+          and d.status in ('VALIDATE_FAILED', 'REJECTED_FAILED', 'EXECUTE_FAILED')
         order by d.row_num asc, d.id asc
+    </select>
+
+    <select id="selectStatusSummaryByBatchId" resultType="java.util.HashMap">
+        select
+            d.status as status,
+            count(1) as count
+        from address_standard_import_fail_detail d
+        where coalesce(d.del_flag, '0') = '0'
+          and d.batch_id = #{batchId}
+        group by d.status
     </select>
 
 </mapper>

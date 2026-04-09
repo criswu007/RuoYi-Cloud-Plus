@@ -93,12 +93,15 @@
 - 若线上物理字段名本身存在历史遗留歧义，例如 `post_code`、`segm_name_fir`、`installstation_id`、`busstation_id`，代码层应采用“语义清晰的变量名 + 注释标注物理字段与释义”的方式收口，不能只沿用含义模糊的物理名或旧泛化名。
 - legacy 兼容层可保留 `standardAddressId/fullName/accessMethod` 等旧字段名以满足外部协议，但内部主模型、Mapper 别名、SQL 列别名和新增接口合同不得继续扩散这类泛化命名；若路径占位名暂时仍为 `id` 或 `standardAddressId`，实现中必须在注释和变量命名上明确其真实语义分别是 `segmId` 或 `setAddrId`。
 
-### 6.2 standalone 联调配置约束
+### 6.2 本地联调运行模式约束
 
-- 当前单体联调统一使用 `standalone` profile，并默认直连线上标准地址库 `ftth_cloud_address`；不再保留内置 H2 样例库回退链路。
+- 后端本地统一入口改为 `local` profile，通过 `address.runtime.mode=standalone|microservice` 切换地址模块运行方式；审批链路联调需同步设置 `workflow.runtime.mode=standalone|microservice`。
+- `standalone` 条件兼容继续保留给历史装配判断与少量显式 `standalone` profile 场景，但不再保留单独的 `application-standalone.yml`；新的本地联调说明、默认配置与问题排查统一以 `local + runtime.mode` 为准。
+- 前端通过 `VITE_ADDRESS_RUNTIME_MODE=standalone|microservice` 切换代理目标；`standalone` 直连本地地址/审批服务，`microservice` 统一走 `gateway`。
+- standalone 模式默认直连线上标准地址库 `ftth_cloud_address`；不再保留内置 H2 样例库回退链路。microservice 模式沿用 Nacos 中的最小微服务配置。
 - 后端优先识别 `ADDRESS_DATASOURCE_URL / ADDRESS_DATASOURCE_USERNAME / ADDRESS_DATASOURCE_PASSWORD`；若未提供，也兼容 `ADDRESS_DB_URL / ADDRESS_DB_USERNAME / ADDRESS_DB_PASSWORD` 这组历史脚本变量名。
 - standalone 自动登录态的区域过滤允许通过 `ADDRESS_STANDALONE_REGION_ID` 或 JVM 参数 `-Daddress.standalone.region-id=...` 覆盖；未显式指定时默认使用 `000102140000000021128049（南京市区）`，避免首屏因旧区域编码失效而查空。
-- `standalone` 不再执行本地 schema/data 初始化脚本，所有标准地址查询、字典、管理站联调都以线上库实时数据为准。
+- `standalone` 与 `local + address.runtime.mode=standalone` 都不再执行本地 schema/data 初始化脚本，所有标准地址查询、字典、管理站联调都以线上库实时数据为准。
 - 当前已验证可达的标准地址线上库基线为 `ftth_cloud_address`，核心大表包括 `ADDR_SEGM`、`ADDR_SET_SEGM`、`segm_addr_type`、`pub_restriction`、`spc_region`、`spc_station`；标准地址模块开发、联调和字段释义统一以这套实表为准。
 - 对接线上库启动前必须先确认 `ADDR_SEGM`、`segm_addr_type` 等核心表可连通，并用实际行数或字段注释核对已接入真实库表，而不是旧样例数据。
 

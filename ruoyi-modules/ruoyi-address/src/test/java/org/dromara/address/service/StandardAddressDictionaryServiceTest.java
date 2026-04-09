@@ -1,6 +1,7 @@
 package org.dromara.address.service;
 
 import org.dromara.address.domain.PubRestriction;
+import org.dromara.address.domain.SegmAddrType;
 import org.dromara.address.domain.SpcStation;
 import org.dromara.address.domain.bo.StandardAddressAdminBo;
 import org.dromara.address.mapper.PubRestrictionMapper;
@@ -8,6 +9,7 @@ import org.dromara.address.mapper.SegmAddrTypeMapper;
 import org.dromara.address.mapper.SpcStationMapper;
 import org.dromara.address.support.AddressRegionContext;
 import org.dromara.address.service.impl.StandardAddressDictionaryService;
+import org.dromara.common.excel.core.DropDownOptions;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,6 +22,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -137,5 +140,107 @@ class StandardAddressDictionaryServiceTest {
         assertEquals("320100", result.get(0).getRegionId());
         verify(addressRegionContext).resolveRegionId(null);
         verify(spcStationMapper).selectStationOptions(eq("320100"), eq("2017101"), eq("洪武"));
+    }
+
+    @Test
+    void shouldBuildImportTemplateOptionsFromDynamicDictionaries() {
+        SegmAddrType building = new SegmAddrType();
+        building.setAddrTypeId("180010");
+        building.setAddrTypeName("建筑、楼栋");
+        building.setLevelId(100);
+
+        PubRestriction ftth = new PubRestriction();
+        ftth.setKeyword("ADDR_IN_TYPE_FTTH");
+        ftth.setDescChina("FTTH_双纤");
+        ftth.setSerialNo("2140760");
+
+        PubRestriction lan = new PubRestriction();
+        lan.setKeyword("ADDR_IN_TYPE_LAN");
+        lan.setDescChina("LAN");
+        lan.setSerialNo("2140784");
+
+        PubRestriction pon = new PubRestriction();
+        pon.setKeyword("FTTH_PON_TYPE");
+        pon.setDescChina("1G-PON");
+        pon.setSerialNo("2141301");
+
+        PubRestriction areaType = new PubRestriction();
+        areaType.setKeyword("AREA_TYPE");
+        areaType.setDescChina("城区");
+        areaType.setSerialNo("2140511");
+
+        PubRestriction placeType = new PubRestriction();
+        placeType.setKeyword("ADDR_PLACE_TYPE");
+        placeType.setDescChina("普通住宅");
+        placeType.setSerialNo("2140800");
+
+        when(segmAddrTypeMapper.selectList(any())).thenReturn(List.of(building));
+        when(pubRestrictionMapper.selectStandardAddressFormRestrictions()).thenReturn(List.of(ftth, lan, pon, areaType, placeType));
+
+        List<DropDownOptions> result = dictionaryService.listImportTemplateOptions();
+
+        assertEquals(7, result.size());
+        assertEquals(0, result.get(0).getIndex());
+        assertEquals(List.of("建筑、楼栋"), result.get(0).getOptions());
+        assertEquals(1, result.get(1).getIndex());
+        assertEquals(List.of("是", "否"), result.get(1).getOptions());
+        assertEquals(List.of("FTTH_双纤"), result.get(2).getOptions());
+        assertFalse(result.get(2).getOptions().contains("LAN"));
+        assertEquals(11, result.get(6).getIndex());
+        assertEquals(List.of("是", "否"), result.get(6).getOptions());
+    }
+
+    @Test
+    void shouldResolveImportMappingsAndPickFirstMatchedStation() {
+        SegmAddrType building = new SegmAddrType();
+        building.setAddrTypeId("180010");
+        building.setAddrTypeName("建筑、楼栋");
+        building.setLevelId(100);
+
+        PubRestriction ftth = new PubRestriction();
+        ftth.setKeyword("ADDR_IN_TYPE_FTTH");
+        ftth.setDescChina("FTTH_双纤");
+        ftth.setSerialNo("2140760");
+
+        SpcStation first = new SpcStation();
+        first.setStationId("WX001");
+        first.setStationName("洪武路维修站");
+        first.setRegionId("320100");
+        first.setManageType("2017101");
+
+        SpcStation second = new SpcStation();
+        second.setStationId("WX002");
+        second.setStationName("洪武门维修站");
+        second.setRegionId("320100");
+        second.setManageType("2017101");
+
+        when(segmAddrTypeMapper.selectList(any())).thenReturn(List.of(building));
+        when(pubRestrictionMapper.selectStandardAddressFormRestrictions()).thenReturn(List.of(ftth));
+        when(spcStationMapper.selectStationOptions("320100", "2017101", "洪武")).thenReturn(List.of(first, second));
+
+        assertEquals("180010", dictionaryService.resolveSegmTypeByName("建筑、楼栋"));
+        assertEquals("2140760", dictionaryService.resolveRestrictionValue("ADDR_IN_TYPE_FTTH", "FTTH_双纤"));
+        assertEquals("WX001", dictionaryService.matchStationId("320100", "2017101", "洪武"));
+        assertEquals(null, dictionaryService.matchStationId("320100", "2017101", "不存在"));
+    }
+
+    @Test
+    void shouldFallbackUnitTypeWhenResolvingPlaceTypeImportOptions() {
+        PubRestriction unitType = new PubRestriction();
+        unitType.setKeyword("ADDR_UNIT_TYPE");
+        unitType.setDescChina("普通住宅");
+        unitType.setSerialNo("2140800");
+
+        when(pubRestrictionMapper.selectStandardAddressFormRestrictions()).thenReturn(List.of(unitType));
+
+        List<DropDownOptions> result = dictionaryService.listImportTemplateOptions();
+
+        assertTrue(result.stream()
+            .filter(item -> item.getIndex() == 10)
+            .findFirst()
+            .orElseThrow()
+            .getOptions()
+            .contains("普通住宅"));
+        assertEquals("2140800", dictionaryService.resolveRestrictionValue("ADDR_PLACE_TYPE", "普通住宅"));
     }
 }

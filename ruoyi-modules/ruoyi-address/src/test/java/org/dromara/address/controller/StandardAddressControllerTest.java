@@ -1,5 +1,6 @@
 package org.dromara.address.controller;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.dromara.common.idempotent.annotation.RepeatSubmit;
 import org.dromara.address.domain.bo.StandardAddressBo;
 import org.dromara.address.domain.bo.StandardAddressMergeBo;
@@ -45,6 +46,9 @@ class StandardAddressControllerTest {
 
     @Mock
     private MultipartFile multipartFile;
+
+    @Mock
+    private HttpServletResponse response;
 
     @InjectMocks
     private StandardAddressController controller;

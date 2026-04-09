@@ -6,6 +6,7 @@ import org.dromara.address.domain.StandardAddressApproval;
 import org.dromara.address.domain.bo.StandardAddressBo;
 import org.dromara.address.domain.bo.StandardAddressApprovalActionBo;
 import org.dromara.address.domain.bo.StandardAddressApprovalBo;
+import org.dromara.address.domain.vo.StandardAddressImportVo;
 import org.dromara.address.mapper.AddrSegmMapper;
 import org.dromara.address.mapper.StandardAddressApprovalMapper;
 import org.dromara.address.service.impl.StandardAddressApprovalService;
@@ -295,5 +296,51 @@ class StandardAddressApprovalServiceTest {
 
         assertEquals("相同内容已提交审批，请勿重复提交。申请单号：STDADDRAPP1002", ex.getMessage());
         verify(approvalMapper).insert(any(StandardAddressApproval.class));
+    }
+
+    @Test
+    void shouldCreateSingleRowImportApprovalAndCarryBatchContext() throws Exception {
+        StandardAddressImportVo row = new StandardAddressImportVo();
+        row.setParentStandName("江苏省南京市鼓楼区中央路");
+        row.setSegmName("紫峰大厦");
+        row.setSegmTypeName("建筑、楼栋");
+
+        when(approvalMapper.selectOne(any())).thenReturn(null);
+        when(approvalMapper.insert(any(StandardAddressApproval.class))).thenReturn(1);
+        when(approvalMapper.updateById(any(StandardAddressApproval.class))).thenReturn(1);
+        when(remoteWorkflowService.startCompleteTask(any(RemoteStartProcess.class))).thenReturn(true);
+        when(remoteWorkflowService.getInstanceIdByBusinessId(any(String.class))).thenReturn(9003L);
+
+        StandardAddressApproval result;
+        try (MockedStatic<SpringUtil> springUtil = org.mockito.Mockito.mockStatic(SpringUtil.class);
+             MockedStatic<LoginHelper> loginHelper = org.mockito.Mockito.mockStatic(LoginHelper.class)) {
+            springUtil.when(() -> SpringUtil.getBean(ObjectMapper.class)).thenReturn(new ObjectMapper());
+            loginHelper.when(LoginHelper::getUserId).thenReturn(100L);
+            loginHelper.when(LoginHelper::getUsername).thenReturn("tester");
+            loginHelper.when(LoginHelper::getDeptId).thenReturn(200L);
+            loginHelper.when(LoginHelper::getDeptName).thenReturn("研发部");
+            result = approvalService.submitImportRowApproval(row, 9001L, 8001L, 12, false, "tester", "标准地址导入.xlsx");
+        }
+
+        assertNotNull(result);
+        assertEquals(StandardAddressApprovalService.OPERATION_IMPORT, result.getOperationType());
+
+        ArgumentCaptor<StandardAddressApproval> entityCaptor = ArgumentCaptor.forClass(StandardAddressApproval.class);
+        verify(approvalMapper).insert(entityCaptor.capture());
+        StandardAddressApproval approval = entityCaptor.getValue();
+        assertTrue(approval.getTargetSummary().contains("第12行"));
+
+        StandardAddressApprovalService.ImportApprovalPayload payload =
+            new ObjectMapper().readValue(approval.getRequestPayload(), StandardAddressApprovalService.ImportApprovalPayload.class);
+        assertEquals(9001L, payload.getBatchId());
+        assertEquals(8001L, payload.getItemId());
+        assertEquals(12, payload.getRowNum());
+        assertEquals("tester", payload.getOperName());
+        assertEquals("标准地址导入.xlsx", payload.getFileName());
+        assertEquals("紫峰大厦", payload.getRow().getSegmName());
+
+        ArgumentCaptor<RemoteStartProcess> workflowCaptor = ArgumentCaptor.forClass(RemoteStartProcess.class);
+        verify(remoteWorkflowService).startCompleteTask(workflowCaptor.capture());
+        assertEquals(String.valueOf(approval.getId()), workflowCaptor.getValue().getBusinessId());
     }
 }

@@ -17,6 +17,19 @@
 
 > 当前主线目标是先完成 `ruoyi-address` 标准地址与网格模块的程序设计前置工作。主视角只保留少量活跃文档，旧批次、旧设计稿和过程材料统一收口到 [archive/README.md](./archive/README.md)。
 
+## SQL 字符集注意事项
+
+- 所有手工执行的 MySQL 导入命令都必须显式带上 `--default-character-set=utf8mb4`。
+- 根因不是库表默认字符集，而是客户端连接字符集在部分环境下会退回 `latin1`；此时中文 `COMMENT`、流程定义文本和部分初始化数据会被写成乱码。
+- `ruoyi-address/sql/**/*.sql` 已统一补充 `SET NAMES utf8mb4;`，但执行命令仍不能省略字符集参数。
+- 推荐命令模板：
+
+```bash
+mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> \
+  --default-character-set=utf8mb4 \
+  ftth_cloud_address < <SQL_FILE>
+```
+
 ## 程序设计前先看这 5 份
 
 1. [project-baseline.md](./project-baseline.md)：项目范围、阶段、风险、外部依赖总控入口。

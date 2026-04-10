@@ -146,7 +146,7 @@ describe('标准地址 API 契约', () => {
     addressApi.exportImportFailDetails(9001);
 
     expect(mockRequest.postDownload).toHaveBeenNthCalledWith(1, '/address/standard/import/template');
-    expect(mockRequest.postDownload).toHaveBeenNthCalledWith(2, '/address/import-record/failure/export/9001');
+    expect(mockRequest.postDownload).toHaveBeenNthCalledWith(2, '/address/import/batch/failure/export/9001');
   });
 
   it('导入记录查询应使用 POST form 与批次详情路径', () => {
@@ -160,8 +160,8 @@ describe('标准地址 API 契约', () => {
     addressApi.getImportRecords(params);
     addressApi.getImportBatchDetail(9001);
 
-    expect(mockRequest.postForm).toHaveBeenCalledWith('/address/import-record/list', params);
-    expect(mockRequest.post).toHaveBeenCalledWith('/address/import-record/batch/9001');
+    expect(mockRequest.postForm).toHaveBeenCalledWith('/address/import/batch/list', params);
+    expect(mockRequest.post).toHaveBeenCalledWith('/address/import/batch/9001');
   });
 
   it('操作日志查询与详情应使用 POST', () => {

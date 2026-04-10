@@ -12,10 +12,14 @@ import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.web.core.BaseController;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import java.util.List;
 
 /**
@@ -38,8 +42,8 @@ public class StandardAddressMonitorRecordController extends BaseController {
      * @return 分页结果
      */
     @SaCheckPermission("address:monitor:record:list")
-    @GetMapping("/list")
-    public TableDataInfo<StandardAddressMonitorRecordVo> list(StandardAddressMonitorRecordBo bo, PageQuery pageQuery) {
+    @PostMapping("/list")
+    public TableDataInfo<StandardAddressMonitorRecordVo> listMonitorRecords(StandardAddressMonitorRecordBo bo, PageQuery pageQuery) {
         return monitorRecordService.queryPageList(bo, pageQuery);
     }
 
@@ -50,8 +54,8 @@ public class StandardAddressMonitorRecordController extends BaseController {
      * @return 监控记录详情
      */
     @SaCheckPermission("address:monitor:record:query")
-    @GetMapping("/{id}")
-    public R<StandardAddressMonitorRecordVo> getInfo(@NotNull(message = "主键不能为空") @PathVariable Long id) {
+    @PostMapping("/{id}")
+    public R<StandardAddressMonitorRecordVo> getMonitorRecordInfo(@NotNull(message = "主键不能为空") @PathVariable Long id) {
         return R.ok(monitorRecordService.queryById(id));
     }
 
@@ -63,8 +67,8 @@ public class StandardAddressMonitorRecordController extends BaseController {
      */
     @SaCheckPermission("address:monitor:record:edit")
     @Log(title = "地址监控记录", businessType = BusinessType.UPDATE)
-    @PutMapping
-    public R<Void> edit(@Validated @RequestBody StandardAddressMonitorRecordBo bo) {
+    @PostMapping("/update")
+    public R<Void> editMonitorRecord(@Validated @RequestBody StandardAddressMonitorRecordBo bo) {
         return toAjax(monitorRecordService.updateByBo(bo));
     }
 
@@ -76,8 +80,26 @@ public class StandardAddressMonitorRecordController extends BaseController {
      */
     @SaCheckPermission("address:monitor:record:remove")
     @Log(title = "地址监控记录", businessType = BusinessType.DELETE)
-    @DeleteMapping("/{ids}")
-    public R<Void> remove(@NotEmpty(message = "主键不能为空") @PathVariable Long[] ids) {
+    @PostMapping("/remove/{ids}")
+    public R<Void> removeMonitorRecord(@NotEmpty(message = "主键不能为空") @PathVariable Long[] ids) {
         return toAjax(monitorRecordService.deleteWithValidByIds(List.of(ids), true));
+    }
+
+    /**
+     * 批量忽略监控记录。
+     *
+     * @param ids 记录主键集合
+     * @return 操作结果
+     *
+     * 目的：提供异常预警页批量忽略入口。
+     * 入参/出参：入参为异常记录主键数组，出参为统一操作结果。
+     * 关键约束：重复忽略需保持幂等，仅更新状态与处理时间。
+     * 异常与副作用：成功后会批量更新异常记录状态。
+     */
+    @SaCheckPermission("address:monitor:record:edit")
+    @Log(title = "地址监控记录", businessType = BusinessType.UPDATE)
+    @PostMapping("/ignore/{ids}")
+    public R<Void> ignoreMonitorRecord(@NotEmpty(message = "主键不能为空") @PathVariable Long[] ids) {
+        return toAjax(monitorRecordService.ignoreByIds(List.of(ids)));
     }
 }

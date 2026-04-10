@@ -3,14 +3,14 @@ package org.dromara.address.service.impl;
 import com.baomidou.dynamic.datasource.annotation.DS;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
-import org.dromara.address.domain.StandardAddressImportFailDetail;
-import org.dromara.address.domain.StandardAddressImportRecord;
-import org.dromara.address.domain.bo.StandardAddressImportRecordBo;
+import org.dromara.address.domain.StandardAddressImportBatch;
+import org.dromara.address.domain.StandardAddressImportDetail;
+import org.dromara.address.domain.bo.StandardAddressImportDetailBo;
 import org.dromara.address.domain.vo.StandardAddressImportBatchVo;
-import org.dromara.address.domain.vo.StandardAddressImportRecordVo;
-import org.dromara.address.mapper.StandardAddressImportFailDetailMapper;
-import org.dromara.address.mapper.StandardAddressImportRecordMapper;
-import org.dromara.address.service.IStandardAddressImportRecordService;
+import org.dromara.address.domain.vo.StandardAddressImportDetailVo;
+import org.dromara.address.mapper.StandardAddressImportBatchMapper;
+import org.dromara.address.mapper.StandardAddressImportDetailMapper;
+import org.dromara.address.service.IStandardAddressImportBatchService;
 import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.springframework.stereotype.Service;
@@ -27,14 +27,14 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Service
 @DS("address")
-public class StandardAddressImportRecordServiceImpl implements IStandardAddressImportRecordService {
+public class StandardAddressImportBatchServiceImpl implements IStandardAddressImportBatchService {
 
-    private final StandardAddressImportRecordMapper baseMapper;
-    private final StandardAddressImportFailDetailMapper failDetailMapper;
+    private final StandardAddressImportBatchMapper baseMapper;
+    private final StandardAddressImportDetailMapper failDetailMapper;
 
     @Override
     public StandardAddressImportBatchVo queryBatchById(Long batchId) {
-        StandardAddressImportRecord record = baseMapper.selectById(batchId);
+        StandardAddressImportBatch record = baseMapper.selectById(batchId);
         if (record == null) {
             return null;
         }
@@ -56,15 +56,15 @@ public class StandardAddressImportRecordServiceImpl implements IStandardAddressI
     }
 
     @Override
-    public TableDataInfo<StandardAddressImportRecordVo> queryPageList(StandardAddressImportRecordBo bo, PageQuery pageQuery) {
-        Page<StandardAddressImportRecordVo> result = failDetailMapper.selectFailDetailPage(pageQuery.build(), bo);
+    public TableDataInfo<StandardAddressImportDetailVo> queryPageList(StandardAddressImportDetailBo bo, PageQuery pageQuery) {
+        Page<StandardAddressImportDetailVo> result = failDetailMapper.selectFailDetailPage(pageQuery.build(), bo);
         result.getRecords().forEach(this::applyCompatibleStatus);
         return TableDataInfo.build(result);
     }
 
     @Override
-    public List<StandardAddressImportRecordVo> listFailDetailsByBatchId(Long batchId) {
-        List<StandardAddressImportRecordVo> records = failDetailMapper.selectFailDetailListByBatchId(batchId);
+    public List<StandardAddressImportDetailVo> listFailDetailsByBatchId(Long batchId) {
+        List<StandardAddressImportDetailVo> records = failDetailMapper.selectFailDetailListByBatchId(batchId);
         records.forEach(this::applyCompatibleStatus);
         return records;
     }
@@ -74,16 +74,16 @@ public class StandardAddressImportRecordServiceImpl implements IStandardAddressI
      * 入参：批次ID。
      * 出参：无。
      * 关键约束：统计必须以导入行结果表聚合为准，不能依赖批次表历史快照。
-     * 异常与副作用：会更新 `address_standard_import_record` 的状态和数量字段。
+     * 异常与副作用：会更新 `address_standard_import_batch` 的状态和数量字段。
      */
     @Override
     public void refreshBatchSummary(Long batchId) {
-        StandardAddressImportRecord record = baseMapper.selectById(batchId);
+        StandardAddressImportBatch record = baseMapper.selectById(batchId);
         if (record == null) {
             return;
         }
         BatchSummary summary = buildBatchSummary(batchId, record);
-        StandardAddressImportRecord update = new StandardAddressImportRecord();
+        StandardAddressImportBatch update = new StandardAddressImportBatch();
         update.setId(batchId);
         update.setStatus(summary.status());
         update.setTotalCount(summary.totalCount());
@@ -92,7 +92,7 @@ public class StandardAddressImportRecordServiceImpl implements IStandardAddressI
         baseMapper.updateById(update);
     }
 
-    private BatchSummary buildBatchSummary(Long batchId, StandardAddressImportRecord record) {
+    private BatchSummary buildBatchSummary(Long batchId, StandardAddressImportBatch record) {
         Map<String, Integer> statusCountMap = summarizeStatusCount(batchId);
         if (statusCountMap.isEmpty()) {
             return new BatchSummary(
@@ -103,11 +103,11 @@ public class StandardAddressImportRecordServiceImpl implements IStandardAddressI
                 0
             );
         }
-        int pendingCount = statusCountMap.getOrDefault(StandardAddressImportFailDetail.STATUS_WAITING_APPROVAL, 0);
-        int successCount = statusCountMap.getOrDefault(StandardAddressImportFailDetail.STATUS_APPROVED_SUCCESS, 0);
-        int failCount = statusCountMap.getOrDefault(StandardAddressImportFailDetail.STATUS_VALIDATE_FAILED, 0)
-            + statusCountMap.getOrDefault(StandardAddressImportFailDetail.STATUS_REJECTED_FAILED, 0)
-            + statusCountMap.getOrDefault(StandardAddressImportFailDetail.STATUS_EXECUTE_FAILED, 0);
+        int pendingCount = statusCountMap.getOrDefault(StandardAddressImportDetail.STATUS_WAITING_APPROVAL, 0);
+        int successCount = statusCountMap.getOrDefault(StandardAddressImportDetail.STATUS_APPROVED_SUCCESS, 0);
+        int failCount = statusCountMap.getOrDefault(StandardAddressImportDetail.STATUS_VALIDATE_FAILED, 0)
+            + statusCountMap.getOrDefault(StandardAddressImportDetail.STATUS_REJECTED_FAILED, 0)
+            + statusCountMap.getOrDefault(StandardAddressImportDetail.STATUS_EXECUTE_FAILED, 0);
         int totalCount = statusCountMap.values().stream().mapToInt(Integer::intValue).sum();
         return new BatchSummary(resolveBatchStatus(totalCount, pendingCount, failCount, record.getStatus()),
             totalCount, successCount, failCount, pendingCount);
@@ -126,28 +126,28 @@ public class StandardAddressImportRecordServiceImpl implements IStandardAddressI
         return result;
     }
 
-    private void applyCompatibleStatus(StandardAddressImportRecordVo vo) {
+    private void applyCompatibleStatus(StandardAddressImportDetailVo vo) {
         vo.setStatus(resolveCompatibleRowStatus(vo.getRowStatus()));
     }
 
     private String resolveBatchStatus(int totalCount, int pendingCount, int failCount, String fallbackStatus) {
         if (pendingCount > 0) {
-            return StandardAddressImportRecord.STATUS_PENDING;
+            return StandardAddressImportBatch.STATUS_PENDING;
         }
         if (totalCount == 0) {
             return fallbackStatus;
         }
-        return failCount > 0 ? StandardAddressImportRecord.STATUS_FAIL : StandardAddressImportRecord.STATUS_SUCCESS;
+        return failCount > 0 ? StandardAddressImportBatch.STATUS_FAIL : StandardAddressImportBatch.STATUS_SUCCESS;
     }
 
     private String resolveCompatibleRowStatus(String rowStatus) {
-        if (StandardAddressImportFailDetail.STATUS_WAITING_APPROVAL.equals(rowStatus)) {
-            return StandardAddressImportRecord.STATUS_PENDING;
+        if (StandardAddressImportDetail.STATUS_WAITING_APPROVAL.equals(rowStatus)) {
+            return StandardAddressImportBatch.STATUS_PENDING;
         }
-        if (StandardAddressImportFailDetail.STATUS_APPROVED_SUCCESS.equals(rowStatus)) {
-            return StandardAddressImportRecord.STATUS_SUCCESS;
+        if (StandardAddressImportDetail.STATUS_APPROVED_SUCCESS.equals(rowStatus)) {
+            return StandardAddressImportBatch.STATUS_SUCCESS;
         }
-        return StandardAddressImportRecord.STATUS_FAIL;
+        return StandardAddressImportBatch.STATUS_FAIL;
     }
 
     private int valueOrZero(Integer value) {

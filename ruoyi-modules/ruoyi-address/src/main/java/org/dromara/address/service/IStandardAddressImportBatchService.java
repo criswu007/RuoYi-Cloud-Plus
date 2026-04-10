@@ -1,14 +1,14 @@
 package org.dromara.address.service;
 
-import org.dromara.address.domain.bo.StandardAddressImportRecordBo;
+import org.dromara.address.domain.bo.StandardAddressImportDetailBo;
 import org.dromara.address.domain.vo.StandardAddressImportBatchVo;
-import org.dromara.address.domain.vo.StandardAddressImportRecordVo;
+import org.dromara.address.domain.vo.StandardAddressImportDetailVo;
 import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 
 import java.util.List;
 
-public interface IStandardAddressImportRecordService {
+public interface IStandardAddressImportBatchService {
 
     /**
      * 根据批次ID查询导入批次摘要。
@@ -25,7 +25,7 @@ public interface IStandardAddressImportRecordService {
      * @param pageQuery 分页参数
      * @return 分页结果
      */
-    TableDataInfo<StandardAddressImportRecordVo> queryPageList(StandardAddressImportRecordBo bo, PageQuery pageQuery);
+    TableDataInfo<StandardAddressImportDetailVo> queryPageList(StandardAddressImportDetailBo bo, PageQuery pageQuery);
 
     /**
      * 查询指定批次失败明细。
@@ -33,7 +33,7 @@ public interface IStandardAddressImportRecordService {
      * @param batchId 批次ID
      * @return 失败明细列表
      */
-    List<StandardAddressImportRecordVo> listFailDetailsByBatchId(Long batchId);
+    List<StandardAddressImportDetailVo> listFailDetailsByBatchId(Long batchId);
 
     /**
      * 刷新导入批次聚合统计。

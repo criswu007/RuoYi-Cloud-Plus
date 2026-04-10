@@ -5,15 +5,15 @@ import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import org.dromara.address.domain.AddrSegm;
 import org.dromara.address.domain.SpcRegion;
-import org.dromara.address.domain.StandardAddressImportFailDetail;
-import org.dromara.address.domain.StandardAddressImportRecord;
+import org.dromara.address.domain.StandardAddressImportBatch;
+import org.dromara.address.domain.StandardAddressImportDetail;
 import org.dromara.address.domain.bo.StandardAddressBo;
 import org.dromara.address.domain.vo.StandardAddressImportResultVo;
 import org.dromara.address.domain.vo.StandardAddressImportVo;
 import org.dromara.address.mapper.AddrSegmMapper;
 import org.dromara.address.mapper.SpcRegionMapper;
-import org.dromara.address.mapper.StandardAddressImportFailDetailMapper;
-import org.dromara.address.mapper.StandardAddressImportRecordMapper;
+import org.dromara.address.mapper.StandardAddressImportBatchMapper;
+import org.dromara.address.mapper.StandardAddressImportDetailMapper;
 import org.dromara.address.support.StandardAddressOperationLogRecorder;
 import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.utils.StringUtils;
@@ -51,8 +51,8 @@ public class StandardAddressImportService {
     private final StandardAddressDictionaryService dictionaryService;
     private final AddrSegmMapper addrSegmMapper;
     private final SpcRegionMapper spcRegionMapper;
-    private final StandardAddressImportRecordMapper importRecordMapper;
-    private final StandardAddressImportFailDetailMapper importFailDetailMapper;
+    private final StandardAddressImportBatchMapper importBatchMapper;
+    private final StandardAddressImportDetailMapper importDetailMapper;
     private final StandardAddressOperationLogRecorder operationLogRecorder;
 
     /**
@@ -84,12 +84,12 @@ public class StandardAddressImportService {
                 } catch (Exception ex) {
                     failCount++;
                     batchErrorMsg = StringUtils.defaultIfBlank(batchErrorMsg, ex.getMessage());
-                    importFailDetailMapper.insert(buildFailDetail(batchId, index + 1, row, fileName, allowUpdate, ex.getMessage()));
+                    importDetailMapper.insert(buildFailDetail(batchId, index + 1, row, fileName, allowUpdate, ex.getMessage()));
                 }
             }
         }
-        StandardAddressImportRecord record = buildBatchRecord(batchId, batchNo, fileName, totalCount, successCount, failCount, batchErrorMsg, allowUpdate);
-        importRecordMapper.insert(record);
+        StandardAddressImportBatch record = buildBatchRecord(batchId, batchNo, fileName, totalCount, successCount, failCount, batchErrorMsg, allowUpdate);
+        importBatchMapper.insert(record);
         return buildResult(record);
     }
 
@@ -123,13 +123,13 @@ public class StandardAddressImportService {
      * 关键约束：上传阶段批次默认状态为进行中，最终状态由行结果聚合刷新。
      * 异常与副作用：仅构建内存对象，不直接写库。
      */
-    public StandardAddressImportRecord buildImportBatchRecord(int totalCount, Boolean updateSupport, String fileName) {
+    public StandardAddressImportBatch buildImportBatchRecord(int totalCount, Boolean updateSupport, String fileName) {
         long batchId = IdUtil.getSnowflakeNextId();
-        StandardAddressImportRecord record = new StandardAddressImportRecord();
+        StandardAddressImportBatch record = new StandardAddressImportBatch();
         record.setId(batchId);
         record.setBatchNo(buildBatchNo(batchId));
         record.setFileName(StringUtils.defaultIfBlank(fileName, "standard-address-import.xlsx"));
-        record.setStatus(StandardAddressImportRecord.STATUS_PENDING);
+        record.setStatus(StandardAddressImportBatch.STATUS_PENDING);
         record.setTotalCount(totalCount);
         record.setSuccessCount(0);
         record.setFailCount(0);
@@ -145,10 +145,10 @@ public class StandardAddressImportService {
      * 关键约束：`rawPayload` 必须保留原始导入快照，便于失败导出与审计回溯。
      * 异常与副作用：仅构建内存对象，不直接写库。
      */
-    public StandardAddressImportFailDetail buildImportRowDetail(Long batchId, Integer rowNum, StandardAddressImportVo row,
-                                                                String fileName, Boolean updateSupport, String status,
-                                                                String failReason) {
-        StandardAddressImportFailDetail detail = new StandardAddressImportFailDetail();
+    public StandardAddressImportDetail buildImportRowDetail(Long batchId, Integer rowNum, StandardAddressImportVo row,
+                                                            String fileName, Boolean updateSupport, String status,
+                                                            String failReason) {
+        StandardAddressImportDetail detail = new StandardAddressImportDetail();
         detail.setId(IdUtil.getSnowflakeNextId());
         detail.setBatchId(batchId);
         detail.setRowNum(rowNum);
@@ -250,10 +250,10 @@ public class StandardAddressImportService {
         return regionParent == null ? null : new ParentAddressContext(regionParent.getRegionId(), regionParent.getRegionId());
     }
 
-    private StandardAddressImportRecord buildBatchRecord(long batchId, String batchNo, String fileName, int totalCount,
-                                                         int successCount, int failCount, String errorMsg,
-                                                         boolean updateSupport) {
-        StandardAddressImportRecord record = new StandardAddressImportRecord();
+    private StandardAddressImportBatch buildBatchRecord(long batchId, String batchNo, String fileName, int totalCount,
+                                                        int successCount, int failCount, String errorMsg,
+                                                        boolean updateSupport) {
+        StandardAddressImportBatch record = new StandardAddressImportBatch();
         record.setId(batchId);
         record.setBatchNo(batchNo);
         record.setFileName(StringUtils.defaultIfBlank(fileName, "standard-address-import.xlsx"));
@@ -267,9 +267,9 @@ public class StandardAddressImportService {
         return record;
     }
 
-    private StandardAddressImportFailDetail buildFailDetail(long batchId, int rowNum, StandardAddressImportVo row,
-                                                            String fileName, boolean updateSupport, String failReason) {
-        StandardAddressImportFailDetail detail = new StandardAddressImportFailDetail();
+    private StandardAddressImportDetail buildFailDetail(long batchId, int rowNum, StandardAddressImportVo row,
+                                                        String fileName, boolean updateSupport, String failReason) {
+        StandardAddressImportDetail detail = new StandardAddressImportDetail();
         detail.setId(IdUtil.getSnowflakeNextId());
         detail.setBatchId(batchId);
         detail.setRowNum(rowNum);
@@ -280,14 +280,14 @@ public class StandardAddressImportService {
         String segmType = row == null ? null : dictionaryService.resolveSegmTypeByName(row.getSegmTypeName());
         detail.setSegmType(segmType);
         detail.setAddrLevel(segmType == null ? null : dictionaryService.resolveAddrLevel(segmType));
-        detail.setStatus(StandardAddressImportFailDetail.STATUS_VALIDATE_FAILED);
+        detail.setStatus(StandardAddressImportDetail.STATUS_VALIDATE_FAILED);
         detail.setFailReason(StringUtils.defaultIfBlank(failReason, "导入失败"));
         detail.setRawPayload(row == null ? "{}" : JSONUtil.toJsonStr(row));
         detail.setDelFlag("0");
         return detail;
     }
 
-    private StandardAddressImportResultVo buildResult(StandardAddressImportRecord record) {
+    private StandardAddressImportResultVo buildResult(StandardAddressImportBatch record) {
         StandardAddressImportResultVo result = new StandardAddressImportResultVo();
         result.setBatchId(record.getId());
         result.setBatchNo(record.getBatchNo());

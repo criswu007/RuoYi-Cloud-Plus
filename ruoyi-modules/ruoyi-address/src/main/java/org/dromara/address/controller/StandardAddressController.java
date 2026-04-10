@@ -300,7 +300,7 @@ public class StandardAddressController extends StandardAddressAdminApiSupport {
         FileUtils.setAttachmentResponseHeader(response, ExcelUtil.encodingFilename("标准地址导入模板"));
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8");
         List<DropDownOptions> options = addressStandardService.listStandardAddressImportTemplateOptions();
-        ExcelUtil.exportExcel(List.of(), "标准地址导入模板", StandardAddressImportVo.class, response.getOutputStream(), options, false);
+        ExcelUtil.exportExcel(List.<StandardAddressImportVo>of(), "标准地址导入模板", StandardAddressImportVo.class, response, options);
     }
 
     /**

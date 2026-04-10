@@ -2,12 +2,9 @@ package org.dromara.address.job;
 
 import com.aizuda.snailjob.client.job.core.annotation.JobExecutor;
 import com.baomidou.dynamic.datasource.annotation.DS;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.dromara.address.domain.StandardAddressMonitorRule;
-import org.dromara.address.mapper.StandardAddressMonitorRecordMapper;
-import org.dromara.address.mapper.StandardAddressMonitorRuleMapper;
+import org.dromara.address.monitor.MonitorExecutionService;
 import org.springframework.stereotype.Component;
 
 /**
@@ -22,8 +19,7 @@ import org.springframework.stereotype.Component;
 @DS("address")
 public class StandardAddressNonStandardMonitorJob {
 
-    private final StandardAddressMonitorRuleMapper ruleMapper;
-    private final StandardAddressMonitorRecordMapper recordMapper;
+    private final MonitorExecutionService monitorExecutionService;
 
     /**
      * 执行非标地址监控。
@@ -36,7 +32,7 @@ public class StandardAddressNonStandardMonitorJob {
     @JobExecutor(name = "StandardAddressNonStandardMonitorJob")
     public void execute(Object args) {
         log.info("开始执行非标地址监控任务");
-        int count = executeMonitor();
+        int count = monitorExecutionService.executeTask(parseTaskId(args), "SCHEDULE");
         log.info("非标地址监控任务执行完成，新增异常记录: {} 条", count);
     }
 
@@ -49,14 +45,24 @@ public class StandardAddressNonStandardMonitorJob {
      * 副作用：当前无数据写入。
      */
     public int executeMonitor() {
-        Long ruleCount = ruleMapper.selectCount(
-            Wrappers.<StandardAddressMonitorRule>lambdaQuery().eq(StandardAddressMonitorRule::getStatus, "0")
-        );
-        if (ruleCount == null || ruleCount <= 0) {
-            log.info("未找到启用的监控规则");
-            return 0;
+        return monitorExecutionService.executeTask(null, "MANUAL");
+    }
+
+    /**
+     * 目的：从 `snailjob` 任务参数中解析监控任务主键。
+     * 入参：任务参数对象。
+     * 出参：解析得到的任务主键，无法解析时返回 `null`。
+     * 关键约束：当前仅兼容数字或数字字符串参数。
+     * 异常与副作用：解析失败时仅记录调试日志，无写入副作用。
+     */
+    private Long parseTaskId(Object args) {
+        if (args instanceof Number number) {
+            return number.longValue();
         }
-        log.warn("非标地址监控任务尚未迁移到 segmId 体系，当前版本跳过执行以避免依赖旧标准地址表");
-        return 0;
+        if (args instanceof String value && value.matches("\\d+")) {
+            return Long.valueOf(value);
+        }
+        log.debug("未从任务参数中解析到监控任务ID, args={}", args);
+        return null;
     }
 }

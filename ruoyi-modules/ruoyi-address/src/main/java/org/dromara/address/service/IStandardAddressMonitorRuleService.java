@@ -52,6 +52,30 @@ public interface IStandardAddressMonitorRuleService {
     Boolean updateByBo(StandardAddressMonitorRuleBo bo);
 
     /**
+     * 批量启用监控规则。
+     *
+     * @param ids 规则ID集合
+     * @return 是否成功
+     *
+     * 目的：统一规则启用入口，供任务调度与管理端批量操作复用。
+     * 关键约束：重复启用应保持幂等，仅更新状态字段。
+     * 异常与副作用：成功后会批量更新规则状态。
+     */
+    Boolean enableByIds(List<Long> ids);
+
+    /**
+     * 批量禁用监控规则。
+     *
+     * @param ids 规则ID集合
+     * @return 是否成功
+     *
+     * 目的：统一规则禁用入口，供任务调度与管理端批量操作复用。
+     * 关键约束：禁用后规则不应再参与后续检测任务。
+     * 异常与副作用：成功后会批量更新规则状态。
+     */
+    Boolean disableByIds(List<Long> ids);
+
+    /**
      * 删除监控规则。
      *
      * @param ids 规则ID集合

@@ -1,0 +1,34 @@
+spring:
+  datasource:
+    dynamic:
+      primary: address
+      datasource:
+        address:
+          type: ${spring.datasource.type}
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          url: ${datasource.address-master.url}
+          username: ${datasource.address-master.username}
+          password: ${datasource.address-master.password}
+
+easy-es:
+  enable: true
+  compatible: true
+  address: 127.0.0.1:9200
+  schema: http
+
+address:
+  search:
+    enabled: true
+    kibana-url: http://127.0.0.1:5601
+    maintenance-lock-key: address:search:maintenance:running
+    refresh-policy: wait_for
+    rebuild-batch-size: 500
+    pit-keep-alive: 1m
+    standard:
+      alias: address_standard_search
+      read-enabled: true
+      write-enabled: true
+    installation:
+      alias: address_installation_search
+      read-enabled: true
+      write-enabled: true

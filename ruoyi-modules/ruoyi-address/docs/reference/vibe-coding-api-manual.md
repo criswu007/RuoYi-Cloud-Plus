@@ -1356,22 +1356,22 @@ Content-Type: multipart/form-data
 
 ## 4.3 导入记录与操作日志
 
-### 4.3.1 导入记录列表
+### 4.3.1 导入明细列表
 
-- 方法/路径：`POST /address/import-record/list`
+- 方法/路径：`POST /address/import/batch/list`
 - 请求格式：`application/x-www-form-urlencoded`
 - 功能描述：根据 `fileName`、`status`、`segmName`、`createBy` 和分页条件查询导入失败明细，返回批次号、文件名、行号、父级地址、当级名称、地址级别、失败原因和创建时间等字段。该列表默认按“单条失败明细”粒度展示，满足原型中的失败明细分页页需求。
 - 格式要求：必须依赖数据库真实分页；支持按导入文件、地址名称、操作时间、操作人等条件组合筛选；页面中的批次信息需通过联表回填 `batchNo/fileName`。
 
-### 4.3.2 导入批次详情
+### 4.3.2 导入批次摘要
 
-- 方法/路径：`POST /address/import-record/batch/{batchId}`
+- 方法/路径：`POST /address/import/batch/{batchId}`
 - 功能描述：根据导入批次主键查询批次摘要，主要用于导入结果弹窗、失败明细页顶部摘要和失败导出入口。
 - 格式要求：返回字段至少包含 `batchId/batchNo/fileName/status/totalCount/successCount/failCount/updateSupport/errorMsg/createBy/createTime`。
 
 ### 4.3.3 失败明细导出
 
-- 方法/路径：`POST /address/import-record/failure/export/{batchId}`
+- 方法/路径：`POST /address/import/batch/failure/export/{batchId}`
 - 请求格式：无请求体
 - 功能描述：导出指定导入批次下的失败明细 Excel，供用户修正后重新导入。
 - 格式要求：只导出当前批次失败数据；响应为 Excel 文件流；不得把成功数据或其他批次失败数据混入导出结果。

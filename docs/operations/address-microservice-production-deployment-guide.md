@@ -154,16 +154,28 @@ mkdir -p /opt/ruoyi-prod/{compose,nacos,nginx/html,nginx/conf,logs,mysql,redis,m
 1. 平台基础库用仓库脚本初始化。
 2. 地址业务库用本地现有数据整体导出后导入生产。
 
+### SQL 字符集防护
+
+所有手工执行的 MySQL 导入命令都必须显式追加 `--default-character-set=utf8mb4`。
+
+原因：MySQL 客户端在部分环境下默认仍会使用 `latin1` 连接字符集。即使目标库和表本身是 `utf8mb4`，只要导入连接不是 `utf8mb4`，带中文的表注释、字段注释和流程定义文本仍可能被写成乱码。
+
+统一要求：
+
+- 执行 `.sql` 文件时，命令行必须带 `--default-character-set=utf8mb4`
+- 地址模块仓库内的 SQL 脚本已补充 `SET NAMES utf8mb4;`，但执行命令仍保持显式字符集参数，不能省略
+- 如果上线后已出现中文注释乱码，先停止继续导入，再按专项修复脚本处理，避免二次覆盖
+
 ### 平台基础库初始化
 
 按以下顺序导入：
 
 ```bash
-mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> ry-config < script/sql/ry-config.sql
-mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> ry-cloud  < script/sql/ry-cloud.sql
-mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> ry-job    < script/sql/ry-job.sql
-mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> ry-seata  < script/sql/ry-seata.sql
-mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> ry-workflow < script/sql/ry-workflow.sql
+mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> --default-character-set=utf8mb4 ry-config < script/sql/ry-config.sql
+mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> --default-character-set=utf8mb4 ry-cloud  < script/sql/ry-cloud.sql
+mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> --default-character-set=utf8mb4 ry-job    < script/sql/ry-job.sql
+mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> --default-character-set=utf8mb4 ry-seata  < script/sql/ry-seata.sql
+mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> --default-character-set=utf8mb4 ry-workflow < script/sql/ry-workflow.sql
 ```
 
 ### 地址业务库迁移
@@ -182,6 +194,7 @@ docker exec mysql mysqldump \
 
 ```bash
 mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> \
+  --default-character-set=utf8mb4 \
   ftth_cloud_address < /opt/ruoyi-prod/backup/ftth_cloud_address.sql
 ```
 
@@ -206,9 +219,11 @@ mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> \
 
 ```bash
 mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> \
+  --default-character-set=utf8mb4 \
   ftth_cloud_address < ruoyi-modules/ruoyi-address/sql/address/address_search_support.sql
 
 mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> \
+  --default-character-set=utf8mb4 \
   ftth_cloud_address < ruoyi-modules/ruoyi-address/sql/address/address_standard_approval.sql
 ```
 

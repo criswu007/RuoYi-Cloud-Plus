@@ -3,11 +3,11 @@ package org.dromara.address.listener;
 import cn.hutool.extra.spring.SpringUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.dromara.address.domain.StandardAddressApproval;
-import org.dromara.address.domain.StandardAddressImportFailDetail;
+import org.dromara.address.domain.StandardAddressImportDetail;
 import org.dromara.address.mapper.StandardAddressApprovalMapper;
-import org.dromara.address.mapper.StandardAddressImportFailDetailMapper;
-import org.dromara.address.mapper.StandardAddressImportRecordMapper;
-import org.dromara.address.service.IStandardAddressImportRecordService;
+import org.dromara.address.mapper.StandardAddressImportBatchMapper;
+import org.dromara.address.mapper.StandardAddressImportDetailMapper;
+import org.dromara.address.service.IStandardAddressImportBatchService;
 import org.dromara.address.service.impl.StandardAddressApprovalExecutor;
 import org.dromara.address.service.impl.StandardAddressApprovalService;
 import org.dromara.address.domain.vo.StandardAddressImportVo;
@@ -47,13 +47,13 @@ class StandardAddressWorkflowListenerTest {
     private StandardAddressApprovalExecutor approvalExecutor;
 
     @Mock
-    private StandardAddressImportFailDetailMapper importFailDetailMapper;
+    private StandardAddressImportDetailMapper importDetailMapper;
 
     @Mock
-    private StandardAddressImportRecordMapper importRecordMapper;
+    private StandardAddressImportBatchMapper importBatchMapper;
 
     @Mock
-    private IStandardAddressImportRecordService importRecordService;
+    private IStandardAddressImportBatchService importBatchService;
 
     @InjectMocks
     private StandardAddressWorkflowListener workflowListener;
@@ -96,13 +96,13 @@ class StandardAddressWorkflowListenerTest {
         approval.setApplyNo("STDADDRAPP1002");
         approval.setApprovalStatus(StandardAddressApprovalService.APPROVAL_WAITING);
 
-        StandardAddressImportFailDetail detail = new StandardAddressImportFailDetail();
+        StandardAddressImportDetail detail = new StandardAddressImportDetail();
         detail.setId(8001L);
         detail.setBatchId(9001L);
-        detail.setStatus(StandardAddressImportFailDetail.STATUS_WAITING_APPROVAL);
+        detail.setStatus(StandardAddressImportDetail.STATUS_WAITING_APPROVAL);
 
         when(approvalMapper.selectById(1002L)).thenReturn(approval);
-        when(importFailDetailMapper.selectById(8001L)).thenReturn(detail);
+        when(importDetailMapper.selectById(8001L)).thenReturn(detail);
 
         try (MockedStatic<SpringUtil> springUtil = org.mockito.Mockito.mockStatic(SpringUtil.class)) {
             springUtil.when(SpringUtil::getApplicationName).thenReturn("ruoyi-address-test");
@@ -120,11 +120,11 @@ class StandardAddressWorkflowListenerTest {
             workflowListener.processHandler(processEvent);
         }
 
-        ArgumentCaptor<StandardAddressImportFailDetail> detailCaptor = ArgumentCaptor.forClass(StandardAddressImportFailDetail.class);
-        verify(importFailDetailMapper).updateById(detailCaptor.capture());
-        assertEquals(StandardAddressImportFailDetail.STATUS_REJECTED_FAILED, detailCaptor.getValue().getStatus());
+        ArgumentCaptor<StandardAddressImportDetail> detailCaptor = ArgumentCaptor.forClass(StandardAddressImportDetail.class);
+        verify(importDetailMapper).updateById(detailCaptor.capture());
+        assertEquals(StandardAddressImportDetail.STATUS_REJECTED_FAILED, detailCaptor.getValue().getStatus());
         assertEquals("父级地址信息有误", detailCaptor.getValue().getFailReason());
-        verify(importRecordService).refreshBatchSummary(9001L);
+        verify(importBatchService).refreshBatchSummary(9001L);
     }
 
     @Test
@@ -133,13 +133,13 @@ class StandardAddressWorkflowListenerTest {
         approval.setApplyNo("STDADDRAPP1003");
         approval.setApprovalStatus(StandardAddressApprovalService.APPROVAL_WAITING);
 
-        StandardAddressImportFailDetail detail = new StandardAddressImportFailDetail();
+        StandardAddressImportDetail detail = new StandardAddressImportDetail();
         detail.setId(8001L);
         detail.setBatchId(9001L);
-        detail.setStatus(StandardAddressImportFailDetail.STATUS_WAITING_APPROVAL);
+        detail.setStatus(StandardAddressImportDetail.STATUS_WAITING_APPROVAL);
 
         when(approvalMapper.selectById(1003L)).thenReturn(approval);
-        when(importFailDetailMapper.selectById(8001L)).thenReturn(detail);
+        when(importDetailMapper.selectById(8001L)).thenReturn(detail);
         doThrow(new ServiceException("正式写入失败")).when(approvalExecutor).execute(eq(approval));
 
         try (MockedStatic<SpringUtil> springUtil = org.mockito.Mockito.mockStatic(SpringUtil.class)) {
@@ -155,12 +155,12 @@ class StandardAddressWorkflowListenerTest {
             workflowListener.processHandler(processEvent);
         }
 
-        ArgumentCaptor<StandardAddressImportFailDetail> detailCaptor = ArgumentCaptor.forClass(StandardAddressImportFailDetail.class);
-        verify(importFailDetailMapper, org.mockito.Mockito.times(2)).updateById(detailCaptor.capture());
-        List<StandardAddressImportFailDetail> updates = detailCaptor.getAllValues();
-        assertEquals(StandardAddressImportFailDetail.STATUS_EXECUTE_FAILED, updates.get(updates.size() - 1).getStatus());
+        ArgumentCaptor<StandardAddressImportDetail> detailCaptor = ArgumentCaptor.forClass(StandardAddressImportDetail.class);
+        verify(importDetailMapper, org.mockito.Mockito.times(2)).updateById(detailCaptor.capture());
+        List<StandardAddressImportDetail> updates = detailCaptor.getAllValues();
+        assertEquals(StandardAddressImportDetail.STATUS_EXECUTE_FAILED, updates.get(updates.size() - 1).getStatus());
         assertEquals("正式写入失败", updates.get(updates.size() - 1).getFailReason());
-        verify(importRecordService, org.mockito.Mockito.times(2)).refreshBatchSummary(9001L);
+        verify(importBatchService, org.mockito.Mockito.times(2)).refreshBatchSummary(9001L);
     }
 
     private StandardAddressApproval buildImportApproval(Long approvalId) throws Exception {

@@ -13,6 +13,7 @@
 
 ## 编码风格与命名
 Java 遵循 Alibaba Java 规范，统一 4 空格缩进；包名小写，类名与模块职责对齐。配置文件放在 `src/main/resources`，按环境使用 `bootstrap-*.yml` 或 `application-*.yml`。说明与注释统一中文，命令和专有名词保留原文。项目已广泛使用 Lombok，除非必要不要手写样板代码。
+- 后端接口路径禁止使用中划线命名；优先采用多级路径（如 `/address/import/batch`），确需单段路径时使用驼峰命名。
 
 ## 注释与测试要求
 `ruoyi-modules/ruoyi-address` 下的类、接口、方法注释需写明目的、入参/出参、关键约束、异常与副作用；核心业务方法和对外接口必须写详细注释，DTO/VO 仅保留字段注释。后端测试优先使用 `spring-boot-starter-test`，测试类命名采用 `*Test` 或 `*Tests`；前端使用 Vitest。改动查询链路、跨库兼容或性能敏感逻辑时，必须补测试。

@@ -31,6 +31,51 @@ public class StandardAddressMonitorRecordVo implements Serializable {
     private Long ruleId;
 
     /**
+     * 标准地址名称快照
+     */
+    private String standNameSnapshot;
+
+    /**
+     * 区域快照
+     */
+    private String regionIdSnapshot;
+
+    /**
+     * 规则名称快照
+     */
+    private String ruleNameSnapshot;
+
+    /**
+     * 规则模板快照
+     */
+    private String ruleTemplateSnapshot;
+
+    /**
+     * 来源任务ID
+     */
+    private Long taskId;
+
+    /**
+     * 来源任务运行日志ID
+     */
+    private Long taskRunLogId;
+
+    /**
+     * 来源任务名称快照
+     */
+    private String taskNameSnapshot;
+
+    /**
+     * 严重等级
+     */
+    private String severity;
+
+    /**
+     * 命中详情JSON
+     */
+    private String hitDetailJson;
+
+    /**
      * 标准地址完整名称
      */
     private String standardAddressFullName;
@@ -49,6 +94,21 @@ public class StandardAddressMonitorRecordVo implements Serializable {
      * 备注
      */
     private String remark;
+
+    /**
+     * 首次发现时间
+     */
+    private Date firstDetectedTime;
+
+    /**
+     * 最近发现时间
+     */
+    private Date lastDetectedTime;
+
+    /**
+     * 命中次数
+     */
+    private Integer hitCount;
 
     /**
      * 创建时间

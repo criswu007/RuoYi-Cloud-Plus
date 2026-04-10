@@ -22,19 +22,39 @@ public class StandardAddressMonitorRuleBo extends BaseEntity {
     private String name;
 
     /**
-     * 规则类型（REGEX, DICT, CUSTOM）
+     * 规则编码
      */
-    private String ruleType;
+    private String ruleCode;
 
     /**
-     * 规则内容
+     * 规则模板
      */
-    private String ruleContent;
+    private String ruleTemplate;
 
     /**
      * 状态（0正常 1停用）
      */
     private String status;
+
+    /**
+     * 严重等级
+     */
+    private String severity;
+
+    /**
+     * 优先级
+     */
+    private Integer priority;
+
+    /**
+     * 去重窗口小时数
+     */
+    private Integer dedupHours;
+
+    /**
+     * 模板配置JSON
+     */
+    private String configJson;
 
     /**
      * 备注

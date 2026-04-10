@@ -98,13 +98,13 @@ export const getWorkflowHistory = businessId =>
   request.get(`/workflow/instance/flowHisTaskList/${businessId}`);
 
 export const getImportRecords = params =>
-  request.postForm('/address/import-record/list', params);
+  request.postForm('/address/import/batch/list', params);
 
 export const getImportBatchDetail = batchId =>
-  request.post(`/address/import-record/batch/${batchId}`);
+  request.post(`/address/import/batch/${batchId}`);
 
 export const exportImportFailDetails = batchId =>
-  request.postDownload(`/address/import-record/failure/export/${batchId}`);
+  request.postDownload(`/address/import/batch/failure/export/${batchId}`);
 
 export const getOperationLogs = params =>
   request.postForm('/address/operation-log/list', params);
@@ -167,34 +167,70 @@ export const deleteManagementStation = ids =>
   request.post(`/address/station/remove/${ids}`);
 
 export const getMonitorRules = params =>
-  request.get('/address/monitor/rule/list', { params });
+  request.postForm('/address/monitor/rule/list', params);
+
+export const getMonitorRuleDetail = id =>
+  request.post(`/address/monitor/rule/${id}`);
 
 export const createMonitorRule = data =>
   request.post('/address/monitor/rule', data);
 
 export const updateMonitorRule = data =>
-  request.put('/address/monitor/rule', data);
+  request.post('/address/monitor/rule/update', data);
 
 export const deleteMonitorRule = ids =>
-  request.delete(`/address/monitor/rule/${ids}`);
+  request.post(`/address/monitor/rule/remove/${ids}`);
+
+export const enableMonitorRule = ids =>
+  request.post(`/address/monitor/rule/enable/${ids}`);
+
+export const disableMonitorRule = ids =>
+  request.post(`/address/monitor/rule/disable/${ids}`);
 
 export const getMonitorRecords = params =>
-  request.get('/address/monitor/record/list', { params });
+  request.postForm('/address/monitor/record/list', params);
 
 export const getMonitorRecordDetail = id =>
-  request.get(`/address/monitor/record/${id}`);
+  request.post(`/address/monitor/record/${id}`);
 
 export const updateMonitorRecord = data =>
-  request.put('/address/monitor/record', data);
+  request.post('/address/monitor/record/update', data);
 
 export const deleteMonitorRecord = ids =>
-  request.delete(`/address/monitor/record/${ids}`);
+  request.post(`/address/monitor/record/remove/${ids}`);
+
+export const ignoreMonitorRecord = ids =>
+  request.post(`/address/monitor/record/ignore/${ids}`);
 
 export const getMonitorTaskSummary = () =>
-  request.get('/address/monitor/task/summary');
+  request.post('/address/monitor/task/summary');
 
 export const executeMonitorTask = () =>
   request.post('/address/monitor/task/execute');
+
+export const getMonitorTasks = params =>
+  request.postForm('/address/monitor/task/list', params);
+
+export const getMonitorTaskDetail = id =>
+  request.post(`/address/monitor/task/${id}`);
+
+export const getMonitorTaskRunLogs = (taskId, params) =>
+  request.postForm(`/address/monitor/task/runs/${taskId}`, params);
+
+export const createMonitorTask = data =>
+  request.post('/address/monitor/task', data);
+
+export const updateMonitorTask = data =>
+  request.post('/address/monitor/task/update', data);
+
+export const rerunMonitorTask = id =>
+  request.post(`/address/monitor/task/rerun/${id}`);
+
+export const pauseMonitorTask = id =>
+  request.post(`/address/monitor/task/pause/${id}`);
+
+export const terminateMonitorTask = id =>
+  request.post(`/address/monitor/task/terminate/${id}`);
 
 export const getSearchOpsOverview = () =>
   request.get('/address/search/ops/overview');

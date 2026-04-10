@@ -3,13 +3,13 @@ package org.dromara.address.domain.bo;
 import io.github.linpeilie.annotations.AutoMapper;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import org.dromara.address.domain.StandardAddressImportRecord;
+import org.dromara.address.domain.StandardAddressImportBatch;
 import org.dromara.common.mybatis.core.domain.BaseEntity;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-@AutoMapper(target = StandardAddressImportRecord.class, reverseConvertGenerate = false)
-public class StandardAddressImportRecordBo extends BaseEntity {
+@AutoMapper(target = StandardAddressImportBatch.class, reverseConvertGenerate = false)
+public class StandardAddressImportDetailBo extends BaseEntity {
 
     /**
      * 批次ID

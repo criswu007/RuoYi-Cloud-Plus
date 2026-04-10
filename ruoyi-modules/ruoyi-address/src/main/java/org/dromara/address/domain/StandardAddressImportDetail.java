@@ -14,12 +14,12 @@ import java.io.Serial;
  * 目的：按单条 Excel 记录粒度记录导入前置校验、审批流转和正式执行结果，支撑导入记录列表、批次统计与失败导出。
  * 入参/出参：入库时承载导入行结果快照，查询时输出给导入记录页面、批次详情和失败导出链路。
  * 关键约束：一条 Excel 行对应一条记录；`status` 表示行生命周期状态；删除采用逻辑删除。
- * 异常与副作用：持久化失败时回滚当前事务，会写入 `address_standard_import_fail_detail`。
+ * 异常与副作用：持久化失败时回滚当前事务，会写入 `address_standard_import_detail`。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("address_standard_import_fail_detail")
-public class StandardAddressImportFailDetail extends TenantEntity {
+@TableName("address_standard_import_detail")
+public class StandardAddressImportDetail extends TenantEntity {
 
     public static final String STATUS_VALIDATE_FAILED = "VALIDATE_FAILED";
     public static final String STATUS_WAITING_APPROVAL = "WAITING_APPROVAL";

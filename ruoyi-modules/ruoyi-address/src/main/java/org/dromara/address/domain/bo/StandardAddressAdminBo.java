@@ -66,6 +66,11 @@ public final class StandardAddressAdminBo {
         private List<Long> addressIds;
 
         /**
+         * 关联区域ID集合。
+         */
+        private List<String> regionIds;
+
+        /**
          * 任务说明。
          */
         private String taskDesc;
@@ -79,6 +84,11 @@ public final class StandardAddressAdminBo {
          * 失败原因。
          */
         private String failureReason;
+
+        /**
+         * snailjob任务ID。
+         */
+        private Long snailJobTaskId;
     }
 
     @Data

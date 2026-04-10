@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +77,8 @@ public class StandardAddressMonitorRecordServiceImpl implements IStandardAddress
         LambdaQueryWrapper<StandardAddressMonitorRecord> lqw = Wrappers.lambdaQuery();
         lqw.eq(bo.getStandardAddressId() != null, StandardAddressMonitorRecord::getStandardAddressId, bo.getStandardAddressId());
         lqw.eq(bo.getRuleId() != null, StandardAddressMonitorRecord::getRuleId, bo.getRuleId());
+        lqw.eq(bo.getTaskId() != null, StandardAddressMonitorRecord::getTaskId, bo.getTaskId());
+        lqw.eq(StringUtils.isNotBlank(bo.getSeverity()), StandardAddressMonitorRecord::getSeverity, bo.getSeverity());
         lqw.eq(StringUtils.isNotBlank(bo.getStatus()), StandardAddressMonitorRecord::getStatus, bo.getStatus());
         return lqw;
     }
@@ -87,6 +90,23 @@ public class StandardAddressMonitorRecordServiceImpl implements IStandardAddress
     public Boolean updateByBo(StandardAddressMonitorRecordBo bo) {
         StandardAddressMonitorRecord update = MapstructUtils.convert(bo, StandardAddressMonitorRecord.class);
         return baseMapper.updateById(update) > 0;
+    }
+
+    @Override
+    /**
+     * {@inheritDoc}
+     */
+    public Boolean ignoreByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return false;
+        }
+        return baseMapper.update(
+            null,
+            Wrappers.<StandardAddressMonitorRecord>lambdaUpdate()
+                .set(StandardAddressMonitorRecord::getStatus, "1")
+                .set(StandardAddressMonitorRecord::getProcessTime, new Date())
+                .in(StandardAddressMonitorRecord::getId, ids)
+        ) > 0;
     }
 
     @Override
@@ -112,11 +132,13 @@ public class StandardAddressMonitorRecordServiceImpl implements IStandardAddress
         }
 
         List<Long> standardAddressIds = list.stream()
+            .filter(item -> StringUtils.isBlank(item.getStandNameSnapshot()))
             .map(StandardAddressMonitorRecordVo::getStandardAddressId)
             .filter(Objects::nonNull)
             .distinct()
             .toList();
         List<Long> ruleIds = list.stream()
+            .filter(item -> StringUtils.isBlank(item.getRuleNameSnapshot()))
             .map(StandardAddressMonitorRecordVo::getRuleId)
             .filter(Objects::nonNull)
             .distinct()
@@ -134,8 +156,14 @@ public class StandardAddressMonitorRecordServiceImpl implements IStandardAddress
             if (item == null) {
                 continue;
             }
-            item.setStandardAddressFullName(addressNameMap.get(item.getStandardAddressId()));
-            item.setRuleName(ruleNameMap.get(item.getRuleId()));
+            item.setStandardAddressFullName(StringUtils.defaultIfBlank(
+                item.getStandNameSnapshot(),
+                addressNameMap.get(item.getStandardAddressId())
+            ));
+            item.setRuleName(StringUtils.defaultIfBlank(
+                item.getRuleNameSnapshot(),
+                ruleNameMap.get(item.getRuleId())
+            ));
         }
     }
 

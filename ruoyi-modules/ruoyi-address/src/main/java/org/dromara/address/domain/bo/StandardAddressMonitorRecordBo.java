@@ -27,6 +27,26 @@ public class StandardAddressMonitorRecordBo extends BaseEntity {
     private Long ruleId;
 
     /**
+     * 来源任务ID
+     */
+    private Long taskId;
+
+    /**
+     * 严重等级
+     */
+    private String severity;
+
+    /**
+     * 标准地址名称快照
+     */
+    private String standNameSnapshot;
+
+    /**
+     * 规则名称快照
+     */
+    private String ruleNameSnapshot;
+
+    /**
      * 状态（0待处理 1已忽略 2已处理）
      */
     private String status;

@@ -5,7 +5,7 @@ import org.dromara.address.domain.bo.InstallationAddressBo;
 import org.dromara.address.domain.bo.StandardAddressAdminBo;
 import org.dromara.address.domain.bo.StandardAddressBatchAddBo;
 import org.dromara.address.domain.bo.StandardAddressBo;
-import org.dromara.address.domain.bo.StandardAddressImportRecordBo;
+import org.dromara.address.domain.bo.StandardAddressImportDetailBo;
 import org.dromara.address.domain.bo.StandardAddressMergeBo;
 import org.dromara.address.domain.bo.StandardAddressMonitorRecordBo;
 import org.dromara.address.domain.bo.StandardAddressMonitorRuleBo;
@@ -17,7 +17,7 @@ import org.dromara.address.domain.bo.StandardAddressTagBo;
 import org.dromara.address.domain.vo.InstallationAddressVo;
 import org.dromara.address.domain.vo.StandardAddressAdminVo;
 import org.dromara.address.domain.vo.StandardAddressImportResultVo;
-import org.dromara.address.domain.vo.StandardAddressImportRecordVo;
+import org.dromara.address.domain.vo.StandardAddressImportDetailVo;
 import org.dromara.address.domain.vo.StandardAddressMonitorRecordVo;
 import org.dromara.address.domain.vo.StandardAddressMonitorRuleVo;
 import org.dromara.address.domain.vo.StandardAddressMonitorTaskSummaryVo;
@@ -162,12 +162,12 @@ public abstract class StandardAddressAdminApiSupport extends BaseController impl
     }
 
     @Override
-    public TableDataInfo<StandardAddressImportRecordVo> listImportRecords(StandardAddressImportRecordBo bo, PageQuery pageQuery) {
+    public TableDataInfo<StandardAddressImportDetailVo> listImportRecords(StandardAddressImportDetailBo bo, PageQuery pageQuery) {
         throw unsupportedOperation();
     }
 
     @Override
-    public R<StandardAddressImportRecordVo> getImportRecordInfo(Long id) {
+    public R<StandardAddressImportDetailVo> getImportRecordInfo(Long id) {
         throw unsupportedOperation();
     }
 
@@ -258,6 +258,11 @@ public abstract class StandardAddressAdminApiSupport extends BaseController impl
 
     @Override
     public R<StandardAddressAdminVo.MonitorTaskVo> getMonitorTaskInfo(Long id) {
+        throw unsupportedOperation();
+    }
+
+    @Override
+    public TableDataInfo<StandardAddressAdminVo.MonitorTaskRunLogVo> listMonitorTaskRunLogs(Long taskId, PageQuery pageQuery) {
         throw unsupportedOperation();
     }
 

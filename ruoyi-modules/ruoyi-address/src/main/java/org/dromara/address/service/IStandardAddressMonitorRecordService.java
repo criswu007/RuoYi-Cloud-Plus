@@ -44,6 +44,18 @@ public interface IStandardAddressMonitorRecordService {
     Boolean updateByBo(StandardAddressMonitorRecordBo bo);
 
     /**
+     * 批量忽略监控记录。
+     *
+     * @param ids 记录ID集合
+     * @return 是否成功
+     *
+     * 目的：为异常预警页面提供批量忽略入口。
+     * 关键约束：重复忽略需保持幂等，仅更新状态与处理时间等治理字段。
+     * 异常与副作用：成功后会批量更新异常记录状态。
+     */
+    Boolean ignoreByIds(List<Long> ids);
+
+    /**
      * 删除监控记录。
      *
      * @param ids 记录ID集合

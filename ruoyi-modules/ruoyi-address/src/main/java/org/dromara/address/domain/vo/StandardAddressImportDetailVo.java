@@ -11,7 +11,7 @@ import java.util.Date;
  * 标准地址导入行结果视图。
  */
 @Data
-public class StandardAddressImportRecordVo implements Serializable {
+public class StandardAddressImportDetailVo implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;

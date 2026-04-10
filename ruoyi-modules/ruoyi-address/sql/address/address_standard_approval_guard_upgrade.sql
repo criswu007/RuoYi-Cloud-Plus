@@ -1,3 +1,5 @@
+SET NAMES utf8mb4;
+
 ALTER TABLE `address_standard_approval`
     ADD COLUMN `submit_fingerprint` varchar(64) DEFAULT NULL COMMENT '提交内容指纹' AFTER `request_payload`,
     ADD COLUMN `submit_guard_key` varchar(64) NOT NULL DEFAULT 'ACTIVE' COMMENT '重复提交保护占位键' AFTER `submit_fingerprint`;

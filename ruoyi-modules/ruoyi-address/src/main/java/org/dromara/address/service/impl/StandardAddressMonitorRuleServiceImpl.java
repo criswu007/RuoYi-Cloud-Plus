@@ -60,8 +60,10 @@ public class StandardAddressMonitorRuleServiceImpl implements IStandardAddressMo
     private LambdaQueryWrapper<StandardAddressMonitorRule> buildQueryWrapper(StandardAddressMonitorRuleBo bo) {
         LambdaQueryWrapper<StandardAddressMonitorRule> lqw = Wrappers.lambdaQuery();
         lqw.like(StringUtils.isNotBlank(bo.getName()), StandardAddressMonitorRule::getName, bo.getName());
-        lqw.eq(StringUtils.isNotBlank(bo.getRuleType()), StandardAddressMonitorRule::getRuleType, bo.getRuleType());
+        lqw.eq(StringUtils.isNotBlank(bo.getRuleCode()), StandardAddressMonitorRule::getRuleCode, bo.getRuleCode());
+        lqw.eq(StringUtils.isNotBlank(bo.getRuleTemplate()), StandardAddressMonitorRule::getRuleTemplate, bo.getRuleTemplate());
         lqw.eq(StringUtils.isNotBlank(bo.getStatus()), StandardAddressMonitorRule::getStatus, bo.getStatus());
+        lqw.eq(StringUtils.isNotBlank(bo.getSeverity()), StandardAddressMonitorRule::getSeverity, bo.getSeverity());
         return lqw;
     }
 
@@ -85,6 +87,38 @@ public class StandardAddressMonitorRuleServiceImpl implements IStandardAddressMo
     public Boolean updateByBo(StandardAddressMonitorRuleBo bo) {
         StandardAddressMonitorRule update = MapstructUtils.convert(bo, StandardAddressMonitorRule.class);
         return baseMapper.updateById(update) > 0;
+    }
+
+    @Override
+    /**
+     * {@inheritDoc}
+     */
+    public Boolean enableByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return false;
+        }
+        return baseMapper.update(
+            null,
+            Wrappers.<StandardAddressMonitorRule>lambdaUpdate()
+                .set(StandardAddressMonitorRule::getStatus, "0")
+                .in(StandardAddressMonitorRule::getId, ids)
+        ) > 0;
+    }
+
+    @Override
+    /**
+     * {@inheritDoc}
+     */
+    public Boolean disableByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return false;
+        }
+        return baseMapper.update(
+            null,
+            Wrappers.<StandardAddressMonitorRule>lambdaUpdate()
+                .set(StandardAddressMonitorRule::getStatus, "1")
+                .in(StandardAddressMonitorRule::getId, ids)
+        ) > 0;
     }
 
     @Override

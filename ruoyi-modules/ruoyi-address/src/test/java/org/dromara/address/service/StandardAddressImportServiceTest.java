@@ -2,15 +2,15 @@ package org.dromara.address.service;
 
 import org.dromara.address.domain.AddrSegm;
 import org.dromara.address.domain.SpcRegion;
-import org.dromara.address.domain.StandardAddressImportFailDetail;
-import org.dromara.address.domain.StandardAddressImportRecord;
+import org.dromara.address.domain.StandardAddressImportBatch;
+import org.dromara.address.domain.StandardAddressImportDetail;
 import org.dromara.address.domain.bo.StandardAddressBo;
 import org.dromara.address.domain.vo.StandardAddressImportResultVo;
 import org.dromara.address.domain.vo.StandardAddressImportVo;
 import org.dromara.address.mapper.AddrSegmMapper;
 import org.dromara.address.mapper.SpcRegionMapper;
-import org.dromara.address.mapper.StandardAddressImportFailDetailMapper;
-import org.dromara.address.mapper.StandardAddressImportRecordMapper;
+import org.dromara.address.mapper.StandardAddressImportBatchMapper;
+import org.dromara.address.mapper.StandardAddressImportDetailMapper;
 import org.dromara.address.support.StandardAddressOperationLogRecorder;
 import org.dromara.address.service.impl.StandardAddressCommandService;
 import org.dromara.address.service.impl.StandardAddressDictionaryService;
@@ -52,10 +52,10 @@ class StandardAddressImportServiceTest {
     private SpcRegionMapper spcRegionMapper;
 
     @Mock
-    private StandardAddressImportRecordMapper importRecordMapper;
+    private StandardAddressImportBatchMapper importBatchMapper;
 
     @Mock
-    private StandardAddressImportFailDetailMapper importFailDetailMapper;
+    private StandardAddressImportDetailMapper importDetailMapper;
 
     @Mock
     private StandardAddressOperationLogRecorder operationLogRecorder;
@@ -92,8 +92,8 @@ class StandardAddressImportServiceTest {
             bo.setStandName("江苏省南京市鼓楼区中央路紫峰大厦");
             return true;
         });
-        when(importRecordMapper.insert(any(StandardAddressImportRecord.class))).thenReturn(1);
-        when(importFailDetailMapper.insert(any(StandardAddressImportFailDetail.class))).thenReturn(1);
+        when(importBatchMapper.insert(any(StandardAddressImportBatch.class))).thenReturn(1);
+        when(importDetailMapper.insert(any(StandardAddressImportDetail.class))).thenReturn(1);
 
         StandardAddressImportResultVo result = importService.importStandardAddressData(
             List.of(successRow, failRow), false, "tester", "demo.xlsx");
@@ -106,14 +106,14 @@ class StandardAddressImportServiceTest {
         assertEquals("2", result.getStatus());
         assertTrue(Boolean.TRUE.equals(result.getFailureExportable()));
 
-        ArgumentCaptor<StandardAddressImportRecord> recordCaptor = ArgumentCaptor.forClass(StandardAddressImportRecord.class);
-        verify(importRecordMapper).insert(recordCaptor.capture());
+        ArgumentCaptor<StandardAddressImportBatch> recordCaptor = ArgumentCaptor.forClass(StandardAddressImportBatch.class);
+        verify(importBatchMapper).insert(recordCaptor.capture());
         assertEquals(2, recordCaptor.getValue().getTotalCount());
         assertEquals(1, recordCaptor.getValue().getSuccessCount());
         assertEquals(1, recordCaptor.getValue().getFailCount());
 
-        ArgumentCaptor<StandardAddressImportFailDetail> failCaptor = ArgumentCaptor.forClass(StandardAddressImportFailDetail.class);
-        verify(importFailDetailMapper).insert(failCaptor.capture());
+        ArgumentCaptor<StandardAddressImportDetail> failCaptor = ArgumentCaptor.forClass(StandardAddressImportDetail.class);
+        verify(importDetailMapper).insert(failCaptor.capture());
         assertEquals(2, failCaptor.getValue().getRowNum());
         assertEquals("失败地址", failCaptor.getValue().getSegmName());
         verify(commandService).addStandardAddressForImport(any(StandardAddressBo.class));
@@ -155,7 +155,7 @@ class StandardAddressImportServiceTest {
             bo.setStandName("江苏省南京市鼓楼区中央路紫峰大厦");
             return true;
         });
-        when(importRecordMapper.insert(any(StandardAddressImportRecord.class))).thenReturn(1);
+        when(importBatchMapper.insert(any(StandardAddressImportBatch.class))).thenReturn(1);
 
         StandardAddressImportResultVo result = importService.importStandardAddressData(
             List.of(updateRow), true, "tester", "update.xlsx");
@@ -165,7 +165,7 @@ class StandardAddressImportServiceTest {
         assertEquals("1", result.getStatus());
         verify(commandService).updateStandardAddressForImport(any(StandardAddressBo.class));
         verify(commandService, never()).addStandardAddressForImport(any(StandardAddressBo.class));
-        verify(importFailDetailMapper, never()).insert(any(StandardAddressImportFailDetail.class));
+        verify(importDetailMapper, never()).insert(any(StandardAddressImportDetail.class));
         verify(addrSegmMapper).selectActiveByParentAndSegmName(eq("320100"), eq("紫峰大厦"));
         verify(operationLogRecorder).record(
             eq("segm-existing"),
@@ -215,7 +215,7 @@ class StandardAddressImportServiceTest {
             bo.setStandName("江苏省南京市鼓楼区中央路紫峰大厦");
             return true;
         });
-        when(importRecordMapper.insert(any(StandardAddressImportRecord.class))).thenReturn(1);
+        when(importBatchMapper.insert(any(StandardAddressImportBatch.class))).thenReturn(1);
 
         StandardAddressImportResultVo result = importService.importStandardAddressData(
             List.of(row), false, "tester", "latest-template.xlsx");
@@ -262,8 +262,8 @@ class StandardAddressImportServiceTest {
         when(dictionaryService.resolveSegmTypeByName("建筑、楼栋")).thenReturn("180005");
         when(dictionaryService.resolveAddrLevel("180005")).thenReturn(9);
         when(dictionaryService.resolveRestrictionValue("ADDR_IN_TYPE_FTTH", "LAN")).thenReturn(null);
-        when(importRecordMapper.insert(any(StandardAddressImportRecord.class))).thenReturn(1);
-        when(importFailDetailMapper.insert(any(StandardAddressImportFailDetail.class))).thenReturn(1);
+        when(importBatchMapper.insert(any(StandardAddressImportBatch.class))).thenReturn(1);
+        when(importDetailMapper.insert(any(StandardAddressImportDetail.class))).thenReturn(1);
 
         StandardAddressImportResultVo result = importService.importStandardAddressData(
             List.of(row), false, "tester", "lan-import.xlsx");
@@ -297,8 +297,8 @@ class StandardAddressImportServiceTest {
 
         verify(commandService, never()).addStandardAddressForImport(any(StandardAddressBo.class));
         verify(commandService, never()).updateStandardAddressForImport(any(StandardAddressBo.class));
-        verify(importRecordMapper, never()).insert(any(StandardAddressImportRecord.class));
-        verify(importFailDetailMapper, never()).insert(any(StandardAddressImportFailDetail.class));
+        verify(importBatchMapper, never()).insert(any(StandardAddressImportBatch.class));
+        verify(importDetailMapper, never()).insert(any(StandardAddressImportDetail.class));
         verify(operationLogRecorder, never()).record(any(), any(), any(), any());
     }
 
@@ -329,8 +329,8 @@ class StandardAddressImportServiceTest {
 
         verify(commandService).addStandardAddressForImport(any(StandardAddressBo.class));
         verify(commandService, never()).updateStandardAddressForImport(any(StandardAddressBo.class));
-        verify(importRecordMapper, never()).insert(any(StandardAddressImportRecord.class));
-        verify(importFailDetailMapper, never()).insert(any(StandardAddressImportFailDetail.class));
+        verify(importBatchMapper, never()).insert(any(StandardAddressImportBatch.class));
+        verify(importDetailMapper, never()).insert(any(StandardAddressImportDetail.class));
         verify(operationLogRecorder).record(
             eq("segm-new"),
             eq("IMPORT"),

@@ -252,6 +252,16 @@ public final class StandardAddressAdminVo {
         private Date executeTime;
 
         /**
+         * 最近执行时间。
+         */
+        private Date lastExecuteTime;
+
+        /**
+         * 最近成功时间。
+         */
+        private Date lastSuccessTime;
+
+        /**
          * 已处理数量。
          */
         private Integer processedCount;
@@ -282,6 +292,11 @@ public final class StandardAddressAdminVo {
         private List<Long> addressIds;
 
         /**
+         * 关联区域ID集合。
+         */
+        private List<String> regionIds;
+
+        /**
          * 任务说明。
          */
         private String taskDesc;
@@ -290,6 +305,73 @@ public final class StandardAddressAdminVo {
          * 失败原因。
          */
         private String failureReason;
+
+        /**
+         * 最近失败原因。
+         */
+        private String lastFailureReason;
+
+        /**
+         * snailjob任务ID。
+         */
+        private Long snailJobTaskId;
+    }
+
+    @Data
+    public static class MonitorTaskRunLogVo implements Serializable {
+
+        @Serial
+        private static final long serialVersionUID = 1L;
+
+        /**
+         * 主键ID。
+         */
+        private Long id;
+
+        /**
+         * 任务ID。
+         */
+        private Long taskId;
+
+        /**
+         * 触发方式。
+         */
+        private String triggerMode;
+
+        /**
+         * 执行状态。
+         */
+        private String executeStatus;
+
+        /**
+         * 执行消息。
+         */
+        private String executeMessage;
+
+        /**
+         * 扫描数量。
+         */
+        private Long scannedCount;
+
+        /**
+         * 命中数量。
+         */
+        private Long hitCount;
+
+        /**
+         * 新增异常数量。
+         */
+        private Long createdCount;
+
+        /**
+         * 开始时间。
+         */
+        private Date startedTime;
+
+        /**
+         * 结束时间。
+         */
+        private Date finishedTime;
     }
 
     @Data

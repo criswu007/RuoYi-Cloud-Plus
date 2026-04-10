@@ -12,10 +12,14 @@ import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.web.core.BaseController;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import java.util.List;
 
 /**
@@ -38,8 +42,8 @@ public class StandardAddressMonitorRuleController extends BaseController {
      * @return 分页结果
      */
     @SaCheckPermission("address:monitor:rule:list")
-    @GetMapping("/list")
-    public TableDataInfo<StandardAddressMonitorRuleVo> list(StandardAddressMonitorRuleBo bo, PageQuery pageQuery) {
+    @PostMapping("/list")
+    public TableDataInfo<StandardAddressMonitorRuleVo> listMonitorRules(StandardAddressMonitorRuleBo bo, PageQuery pageQuery) {
         return monitorRuleService.queryPageList(bo, pageQuery);
     }
 
@@ -50,8 +54,8 @@ public class StandardAddressMonitorRuleController extends BaseController {
      * @return 规则详情
      */
     @SaCheckPermission("address:monitor:rule:query")
-    @GetMapping("/{id}")
-    public R<StandardAddressMonitorRuleVo> getInfo(@NotNull(message = "主键不能为空") @PathVariable Long id) {
+    @PostMapping("/{id}")
+    public R<StandardAddressMonitorRuleVo> getMonitorRuleInfo(@NotNull(message = "主键不能为空") @PathVariable Long id) {
         return R.ok(monitorRuleService.queryById(id));
     }
 
@@ -64,7 +68,7 @@ public class StandardAddressMonitorRuleController extends BaseController {
     @SaCheckPermission("address:monitor:rule:add")
     @Log(title = "地址监控规则", businessType = BusinessType.INSERT)
     @PostMapping
-    public R<Void> add(@Validated @RequestBody StandardAddressMonitorRuleBo bo) {
+    public R<Void> addMonitorRule(@Validated @RequestBody StandardAddressMonitorRuleBo bo) {
         return toAjax(monitorRuleService.insertByBo(bo));
     }
 
@@ -76,8 +80,8 @@ public class StandardAddressMonitorRuleController extends BaseController {
      */
     @SaCheckPermission("address:monitor:rule:edit")
     @Log(title = "地址监控规则", businessType = BusinessType.UPDATE)
-    @PutMapping
-    public R<Void> edit(@Validated @RequestBody StandardAddressMonitorRuleBo bo) {
+    @PostMapping("/update")
+    public R<Void> editMonitorRule(@Validated @RequestBody StandardAddressMonitorRuleBo bo) {
         return toAjax(monitorRuleService.updateByBo(bo));
     }
 
@@ -89,8 +93,44 @@ public class StandardAddressMonitorRuleController extends BaseController {
      */
     @SaCheckPermission("address:monitor:rule:remove")
     @Log(title = "地址监控规则", businessType = BusinessType.DELETE)
-    @DeleteMapping("/{ids}")
-    public R<Void> remove(@NotEmpty(message = "主键不能为空") @PathVariable Long[] ids) {
+    @PostMapping("/remove/{ids}")
+    public R<Void> removeMonitorRule(@NotEmpty(message = "主键不能为空") @PathVariable Long[] ids) {
         return toAjax(monitorRuleService.deleteWithValidByIds(List.of(ids), true));
+    }
+
+    /**
+     * 批量启用监控规则。
+     *
+     * @param ids 规则主键集合
+     * @return 操作结果
+     *
+     * 目的：提供规则批量启用入口，支撑规则管理页批量操作。
+     * 入参/出参：入参为规则主键数组，出参为统一操作结果。
+     * 关键约束：重复启用需保持幂等，仅更新规则状态。
+     * 异常与副作用：成功后会批量更新规则状态。
+     */
+    @SaCheckPermission("address:monitor:rule:edit")
+    @Log(title = "地址监控规则", businessType = BusinessType.UPDATE)
+    @PostMapping("/enable/{ids}")
+    public R<Void> enableMonitorRule(@NotEmpty(message = "主键不能为空") @PathVariable Long[] ids) {
+        return toAjax(monitorRuleService.enableByIds(List.of(ids)));
+    }
+
+    /**
+     * 批量禁用监控规则。
+     *
+     * @param ids 规则主键集合
+     * @return 操作结果
+     *
+     * 目的：提供规则批量禁用入口，支撑规则管理页批量操作。
+     * 入参/出参：入参为规则主键数组，出参为统一操作结果。
+     * 关键约束：禁用后规则不应再参与后续任务扫描。
+     * 异常与副作用：成功后会批量更新规则状态。
+     */
+    @SaCheckPermission("address:monitor:rule:edit")
+    @Log(title = "地址监控规则", businessType = BusinessType.UPDATE)
+    @PostMapping("/disable/{ids}")
+    public R<Void> disableMonitorRule(@NotEmpty(message = "主键不能为空") @PathVariable Long[] ids) {
+        return toAjax(monitorRuleService.disableByIds(List.of(ids)));
     }
 }

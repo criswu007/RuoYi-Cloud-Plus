@@ -10,14 +10,14 @@ import org.dromara.common.tenant.core.TenantEntity;
 import java.io.Serial;
 
 /**
- * 标准地址导入记录表对象 address_standard_import_record
+ * 标准地址导入批次表对象 address_standard_import_batch
  *
  * @author Lion Li
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("address_standard_import_record")
-public class StandardAddressImportRecord extends TenantEntity {
+@TableName("address_standard_import_batch")
+public class StandardAddressImportBatch extends TenantEntity {
 
     public static final String STATUS_PENDING = "0";
     public static final String STATUS_SUCCESS = "1";

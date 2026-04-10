@@ -52,3 +52,5 @@ ruoyi-address-ui/node_modules/
 !*/build/*.xml
 
 .flattened-pom.xml
+
+script/docker

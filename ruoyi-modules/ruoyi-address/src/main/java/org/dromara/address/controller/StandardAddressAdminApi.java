@@ -9,7 +9,7 @@ import org.dromara.address.domain.bo.InstallationAddressBo;
 import org.dromara.address.domain.bo.StandardAddressAdminBo;
 import org.dromara.address.domain.bo.StandardAddressBatchAddBo;
 import org.dromara.address.domain.bo.StandardAddressBo;
-import org.dromara.address.domain.bo.StandardAddressImportRecordBo;
+import org.dromara.address.domain.bo.StandardAddressImportDetailBo;
 import org.dromara.address.domain.bo.StandardAddressMergeBo;
 import org.dromara.address.domain.bo.StandardAddressMonitorRecordBo;
 import org.dromara.address.domain.bo.StandardAddressMonitorRuleBo;
@@ -21,7 +21,7 @@ import org.dromara.address.domain.bo.StandardAddressTagBo;
 import org.dromara.address.domain.vo.InstallationAddressVo;
 import org.dromara.address.domain.vo.StandardAddressAdminVo;
 import org.dromara.address.domain.vo.StandardAddressImportResultVo;
-import org.dromara.address.domain.vo.StandardAddressImportRecordVo;
+import org.dromara.address.domain.vo.StandardAddressImportDetailVo;
 import org.dromara.address.domain.vo.StandardAddressMonitorRecordVo;
 import org.dromara.address.domain.vo.StandardAddressMonitorRuleVo;
 import org.dromara.address.domain.vo.StandardAddressMonitorTaskSummaryVo;
@@ -286,24 +286,24 @@ public interface StandardAddressAdminApi {
     R<Void> unbindTagsFromStandardAddresses(@Valid @RequestBody StandardAddressTagBindBo bo);
 
     /**
-     * 目的：分页查询导入记录。
-     * 入参：导入记录筛选条件与分页参数。
-     * 出参：导入记录分页列表。
+     * 目的：分页查询导入明细。
+     * 入参：导入明细筛选条件与分页参数。
+     * 出参：导入明细分页列表。
      * 关键约束：导入状态口径与导入实现保持一致。
      * 异常与副作用：查询条件非法时返回业务异常，无写入副作用。
      */
-    @PostMapping("/address/import-record/list")
-    TableDataInfo<StandardAddressImportRecordVo> listImportRecords(StandardAddressImportRecordBo bo, PageQuery pageQuery);
+    @PostMapping("/address/import/batch/list")
+    TableDataInfo<StandardAddressImportDetailVo> listImportRecords(StandardAddressImportDetailBo bo, PageQuery pageQuery);
 
     /**
-     * 目的：查询导入记录详情。
-     * 入参：导入记录主键。
-     * 出参：导入记录详情。
+     * 目的：查询导入明细详情。
+     * 入参：导入明细主键。
+     * 出参：导入明细详情。
      * 关键约束：详情需能支撑问题定位和撤回。
      * 异常与副作用：记录不存在时返回业务异常，无写入副作用。
      */
-    @PostMapping("/address/import-record/{id}")
-    R<StandardAddressImportRecordVo> getImportRecordInfo(@NotNull(message = "主键不能为空") @PathVariable Long id);
+    @PostMapping("/address/import/batch/{id}")
+    R<StandardAddressImportDetailVo> getImportRecordInfo(@NotNull(message = "主键不能为空") @PathVariable Long id);
 
     /**
      * 目的：分页查询地址操作日志。
@@ -458,9 +458,9 @@ public interface StandardAddressAdminApi {
     /**
      * 目的：手动立即执行一次监控扫描。
      * 入参：无。
-     * 出参：本次新增异常数量。
-     * 关键约束：需处理并发执行和重复触发。
-     * 异常与副作用：成功后会触发监控作业并新增异常记录。
+     * 出参：提交结果，`1` 表示已成功提交后台执行，`0` 表示已有巡检执行中。
+     * 关键约束：接口需快速返回，避免管理端因全量扫描耗时过长而超时。
+     * 异常与副作用：成功后会异步触发监控作业并新增异常记录。
      */
     @PostMapping("/address/monitor/task/execute")
     R<Integer> executeMonitorTask();
@@ -484,6 +484,18 @@ public interface StandardAddressAdminApi {
      */
     @PostMapping("/address/monitor/task/{id}")
     R<StandardAddressAdminVo.MonitorTaskVo> getMonitorTaskInfo(@NotNull(message = "主键不能为空") @PathVariable Long id);
+
+    /**
+     * 目的：查询指定监控任务的运行日志。
+     * 入参：任务主键与分页参数。
+     * 出参：运行日志分页列表。
+     * 关键约束：返回结果按最近开始时间倒序。
+     * 异常与副作用：无写入副作用。
+     */
+    @PostMapping("/address/monitor/task/runs/{taskId}")
+    TableDataInfo<StandardAddressAdminVo.MonitorTaskRunLogVo> listMonitorTaskRunLogs(
+        @NotNull(message = "主键不能为空") @PathVariable Long taskId,
+        PageQuery pageQuery);
 
     /**
      * 目的：新增监控任务。

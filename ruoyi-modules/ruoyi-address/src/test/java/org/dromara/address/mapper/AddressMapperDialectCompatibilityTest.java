@@ -23,7 +23,7 @@ class AddressMapperDialectCompatibilityTest {
         assertMapperDoesNotContainForbiddenSql("mapper/address/AddrSetSegmMapper.xml");
         assertMapperDoesNotContainForbiddenSql("mapper/address/SpcStationMapper.xml");
         assertMapperDoesNotContainForbiddenSql("mapper/address/PubRestrictionMapper.xml");
-        assertMapperDoesNotContainForbiddenSql("mapper/address/StandardAddressImportFailDetailMapper.xml");
+        assertMapperDoesNotContainForbiddenSql("mapper/address/StandardAddressImportDetailMapper.xml");
     }
 
     @Test
@@ -64,7 +64,7 @@ class AddressMapperDialectCompatibilityTest {
         assertMapperDoesNotContainSelectStar("mapper/address/AddrSetSegmMapper.xml");
         assertMapperDoesNotContainSelectStar("mapper/address/SpcStationMapper.xml");
         assertMapperDoesNotContainSelectStar("mapper/address/PubRestrictionMapper.xml");
-        assertMapperDoesNotContainSelectStar("mapper/address/StandardAddressImportFailDetailMapper.xml");
+        assertMapperDoesNotContainSelectStar("mapper/address/StandardAddressImportDetailMapper.xml");
     }
 
     @Test
@@ -74,7 +74,7 @@ class AddressMapperDialectCompatibilityTest {
         assertMapperDoesNotContainCaseWhen("mapper/address/AddrSetSegmMapper.xml");
         assertMapperDoesNotContainCaseWhen("mapper/address/SpcStationMapper.xml");
         assertMapperDoesNotContainCaseWhen("mapper/address/PubRestrictionMapper.xml");
-        assertMapperDoesNotContainCaseWhen("mapper/address/StandardAddressImportFailDetailMapper.xml");
+        assertMapperDoesNotContainCaseWhen("mapper/address/StandardAddressImportDetailMapper.xml");
     }
 
     @Test
@@ -84,7 +84,7 @@ class AddressMapperDialectCompatibilityTest {
         assertMapperDoesNotContainStandaloneSqlLineComment("mapper/address/AddrSetSegmMapper.xml");
         assertMapperDoesNotContainStandaloneSqlLineComment("mapper/address/SpcStationMapper.xml");
         assertMapperDoesNotContainStandaloneSqlLineComment("mapper/address/PubRestrictionMapper.xml");
-        assertMapperDoesNotContainStandaloneSqlLineComment("mapper/address/StandardAddressImportFailDetailMapper.xml");
+        assertMapperDoesNotContainStandaloneSqlLineComment("mapper/address/StandardAddressImportDetailMapper.xml");
     }
 
     private void assertMapperDoesNotContainForbiddenSql(String resourcePath) throws IOException {

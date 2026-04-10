@@ -3,8 +3,8 @@ package org.dromara.address.service.impl;
 import com.baomidou.dynamic.datasource.annotation.DS;
 import lombok.RequiredArgsConstructor;
 import org.dromara.address.domain.StandardAddressApproval;
-import org.dromara.address.domain.StandardAddressImportFailDetail;
-import org.dromara.address.domain.StandardAddressImportRecord;
+import org.dromara.address.domain.StandardAddressImportBatch;
+import org.dromara.address.domain.StandardAddressImportDetail;
 import org.dromara.address.domain.bo.StandardAddressAdminBo;
 import org.dromara.address.domain.bo.StandardAddressBatchAddBo;
 import org.dromara.address.domain.bo.StandardAddressBo;
@@ -14,10 +14,10 @@ import org.dromara.address.domain.vo.StandardAddressImportBatchVo;
 import org.dromara.address.domain.vo.StandardAddressImportResultVo;
 import org.dromara.address.domain.vo.StandardAddressImportVo;
 import org.dromara.address.domain.vo.StandardAddressVo;
-import org.dromara.address.mapper.StandardAddressImportFailDetailMapper;
-import org.dromara.address.mapper.StandardAddressImportRecordMapper;
+import org.dromara.address.mapper.StandardAddressImportBatchMapper;
+import org.dromara.address.mapper.StandardAddressImportDetailMapper;
 import org.dromara.address.service.IStandardAddressApprovalService;
-import org.dromara.address.service.IStandardAddressImportRecordService;
+import org.dromara.address.service.IStandardAddressImportBatchService;
 import org.dromara.address.service.IStandardAddressService;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.excel.core.DropDownOptions;
@@ -46,9 +46,9 @@ public class StandardAddressServiceImpl implements IStandardAddressService {
     private final StandardAddressDictionaryService dictionaryService;
     private final StandardAddressImportService importService;
     private final IStandardAddressApprovalService approvalService;
-    private final StandardAddressImportRecordMapper importRecordMapper;
-    private final StandardAddressImportFailDetailMapper importFailDetailMapper;
-    private final IStandardAddressImportRecordService importRecordService;
+    private final StandardAddressImportBatchMapper importBatchMapper;
+    private final StandardAddressImportDetailMapper importDetailMapper;
+    private final IStandardAddressImportBatchService importBatchService;
 
     /**
      * 目的：按线上 `segmId` 查询标准地址详情。
@@ -241,8 +241,8 @@ public class StandardAddressServiceImpl implements IStandardAddressService {
     public StandardAddressImportResultVo importStandardAddressData(List<StandardAddressImportVo> list, Boolean updateSupport, String operName, String fileName) {
         List<StandardAddressImportVo> rows = list == null ? List.of() : list;
         boolean allowUpdate = Boolean.TRUE.equals(updateSupport);
-        StandardAddressImportRecord batchRecord = importService.buildImportBatchRecord(rows.size(), allowUpdate, fileName);
-        importRecordMapper.insert(batchRecord);
+        StandardAddressImportBatch batchRecord = importService.buildImportBatchRecord(rows.size(), allowUpdate, fileName);
+        importBatchMapper.insert(batchRecord);
 
         int successCount = 0;
         int failCount = 0;
@@ -252,47 +252,47 @@ public class StandardAddressServiceImpl implements IStandardAddressService {
             StandardAddressImportVo row = rows.get(index);
             try {
                 importService.validateImportRow(row, allowUpdate);
-                StandardAddressImportFailDetail detail = importService.buildImportRowDetail(batchRecord.getId(), rowNum, row,
-                    fileName, allowUpdate, StandardAddressImportFailDetail.STATUS_WAITING_APPROVAL, null);
-                importFailDetailMapper.insert(detail);
+                StandardAddressImportDetail detail = importService.buildImportRowDetail(batchRecord.getId(), rowNum, row,
+                    fileName, allowUpdate, StandardAddressImportDetail.STATUS_WAITING_APPROVAL, null);
+                importDetailMapper.insert(detail);
                 try {
                     StandardAddressApproval approval = approvalService.submitImportRowApproval(row, batchRecord.getId(), detail.getId(),
                         rowNum, allowUpdate, operName, fileName);
                     detail.setApprovalId(approval.getId());
                     detail.setApprovalNo(approval.getApplyNo());
                     detail.setApprovalStatus(approval.getApprovalStatus());
-                    importFailDetailMapper.updateById(detail);
+                    importDetailMapper.updateById(detail);
                     successCount++;
                 } catch (Exception ex) {
                     failCount++;
                     firstErrorMsg = StringUtils.defaultIfBlank(firstErrorMsg, ex.getMessage());
-                    detail.setStatus(StandardAddressImportFailDetail.STATUS_EXECUTE_FAILED);
+                    detail.setStatus(StandardAddressImportDetail.STATUS_EXECUTE_FAILED);
                     detail.setFailReason(StringUtils.defaultIfBlank(ex.getMessage(), "发起审批失败"));
                     detail.setApprovalStatus(StandardAddressApprovalService.APPROVAL_EXECUTE_FAILED);
-                    importFailDetailMapper.updateById(detail);
+                    importDetailMapper.updateById(detail);
                 }
             } catch (Exception ex) {
                 failCount++;
                 firstErrorMsg = StringUtils.defaultIfBlank(firstErrorMsg, ex.getMessage());
-                importFailDetailMapper.insert(importService.buildImportRowDetail(batchRecord.getId(), rowNum, row,
-                    fileName, allowUpdate, StandardAddressImportFailDetail.STATUS_VALIDATE_FAILED,
+                importDetailMapper.insert(importService.buildImportRowDetail(batchRecord.getId(), rowNum, row,
+                    fileName, allowUpdate, StandardAddressImportDetail.STATUS_VALIDATE_FAILED,
                     StringUtils.defaultIfBlank(ex.getMessage(), "导入失败")));
             }
         }
         if (StringUtils.isNotBlank(firstErrorMsg)) {
-            StandardAddressImportRecord update = new StandardAddressImportRecord();
+            StandardAddressImportBatch update = new StandardAddressImportBatch();
             update.setId(batchRecord.getId());
             update.setErrorMsg(firstErrorMsg);
-            importRecordMapper.updateById(update);
+            importBatchMapper.updateById(update);
         }
-        importRecordService.refreshBatchSummary(batchRecord.getId());
-        StandardAddressImportBatchVo batchVo = importRecordService.queryBatchById(batchRecord.getId());
+        importBatchService.refreshBatchSummary(batchRecord.getId());
+        StandardAddressImportBatchVo batchVo = importBatchService.queryBatchById(batchRecord.getId());
 
         StandardAddressImportResultVo result = new StandardAddressImportResultVo();
         result.setBatchId(batchRecord.getId());
         result.setBatchNo(batchRecord.getBatchNo());
         result.setFileName(batchRecord.getFileName());
-        result.setStatus(batchVo == null ? StandardAddressImportRecord.STATUS_PENDING : batchVo.getStatus());
+        result.setStatus(batchVo == null ? StandardAddressImportBatch.STATUS_PENDING : batchVo.getStatus());
         result.setTotalCount(rows.size());
         result.setSuccessCount(successCount);
         result.setFailCount(failCount);

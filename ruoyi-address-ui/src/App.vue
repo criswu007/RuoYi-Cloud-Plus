@@ -24,9 +24,9 @@
         </el-submenu>
         <el-submenu index="monitor">
           <template slot="title">质量监控</template>
-          <el-menu-item index="/monitor/records">异常地址</el-menu-item>
-          <el-menu-item index="/monitor/rules">规则配置</el-menu-item>
-          <el-menu-item index="/monitor/task">监控任务</el-menu-item>
+          <el-menu-item index="/monitor/records">异常地址预警</el-menu-item>
+          <el-menu-item index="/monitor/rules">智能检测配置</el-menu-item>
+          <el-menu-item index="/monitor/task">监控任务管理</el-menu-item>
         </el-submenu>
         <el-submenu index="ops">
           <template slot="title">运维支持</template>
@@ -84,9 +84,9 @@ export default {
         '/installation/list': '安装地址列表',
         '/selection/tools': '选址平台',
         '/management/station': '管理站管理',
-        '/monitor/records': '异常地址治理',
-        '/monitor/rules': '非标监控规则',
-        '/monitor/task': '监控任务摘要',
+        '/monitor/records': '异常地址预警',
+        '/monitor/rules': '智能检测配置',
+        '/monitor/task': '监控任务管理',
         '/ops/search': 'ES 运维'
       }
     };

@@ -431,3 +431,377 @@ CREATE INDEX `IDX_ADDR_SET_SEGM_MODIRY_DATE` ON `ADDR_SET_SEGM` (`modiry_date`);
 CREATE INDEX `IDX_NEW_SEGM_ID` ON `sync_set_addr_info` (`new_segm_id`);
 CREATE INDEX `IDX_OLD_SEGM_ID` ON `sync_set_addr_info` (`old_segm_id`);
 CREATE INDEX `IDX_SET_SEGM_ID` ON `sync_set_addr_info` (`set_segm_id`);
+
+-- 三、地址模块附加业务表
+
+CREATE TABLE IF NOT EXISTS `address_search_sync_log` (
+    `id` bigint NOT NULL COMMENT '主键ID',
+    `business_type` varchar(32) NOT NULL COMMENT '业务类型',
+    `entity_type` varchar(32) NOT NULL COMMENT '实体类型',
+    `entity_id` varchar(32) NOT NULL COMMENT '实体ID',
+    `phase` varchar(32) NOT NULL COMMENT '同步阶段',
+    `success_flag` char(1) NOT NULL COMMENT '是否成功',
+    `error_message` varchar(1000) DEFAULT NULL COMMENT '错误信息',
+    `created_time` datetime NOT NULL COMMENT '创建时间',
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='地址搜索同步日志表';
+
+CREATE TABLE IF NOT EXISTS `address_search_repair_task` (
+    `id` bigint NOT NULL COMMENT '主键ID',
+    `entity_type` varchar(32) NOT NULL COMMENT '实体类型',
+    `entity_id` varchar(32) NOT NULL COMMENT '实体ID',
+    `repair_action` varchar(32) NOT NULL COMMENT '修复动作',
+    `payload_json` text COMMENT '修复参数JSON',
+    `status` varchar(32) NOT NULL COMMENT '任务状态',
+    `retry_count` int NOT NULL COMMENT '重试次数',
+    `created_time` datetime NOT NULL COMMENT '创建时间',
+    `updated_time` datetime NOT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='地址搜索修复任务表';
+
+CREATE TABLE IF NOT EXISTS `address_search_maintenance_task` (
+    `id` bigint NOT NULL COMMENT '主键ID',
+    `task_type` varchar(32) NOT NULL COMMENT '维护任务类型',
+    `target_alias` varchar(128) NOT NULL COMMENT '目标索引别名',
+    `physical_index_name` varchar(128) DEFAULT NULL COMMENT '物理索引名称',
+    `status` varchar(32) NOT NULL COMMENT '任务状态',
+    `current_phase` varchar(32) NOT NULL COMMENT '当前阶段',
+    `total_count` bigint NOT NULL DEFAULT 0 COMMENT '总记录数',
+    `processed_count` bigint NOT NULL DEFAULT 0 COMMENT '已处理数量',
+    `progress_percent` int NOT NULL DEFAULT 0 COMMENT '进度百分比',
+    `error_message` varchar(1000) DEFAULT NULL COMMENT '错误信息',
+    `trigger_by` varchar(64) DEFAULT NULL COMMENT '触发人',
+    `started_time` datetime DEFAULT NULL COMMENT '开始时间',
+    `finished_time` datetime DEFAULT NULL COMMENT '结束时间',
+    `created_time` datetime NOT NULL COMMENT '创建时间',
+    `updated_time` datetime NOT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='地址搜索维护任务表';
+
+CREATE TABLE IF NOT EXISTS `address_standard_import_batch` (
+    `id` bigint NOT NULL COMMENT '主键ID',
+    `batch_no` varchar(64) NOT NULL COMMENT '批次号',
+    `file_name` varchar(255) DEFAULT NULL COMMENT '导入文件名',
+    `status` char(1) NOT NULL DEFAULT '0' COMMENT '批次状态（0待处理 1成功 2失败）',
+    `total_count` int NOT NULL DEFAULT 0 COMMENT '总数量',
+    `success_count` int NOT NULL DEFAULT 0 COMMENT '成功数量',
+    `fail_count` int NOT NULL DEFAULT 0 COMMENT '失败数量',
+    `error_msg` varchar(1000) DEFAULT NULL COMMENT '错误信息',
+    `update_support` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否允许更新',
+    `tenant_id` varchar(20) DEFAULT '000000' COMMENT '租户ID',
+    `create_dept` bigint DEFAULT NULL COMMENT '创建部门',
+    `create_by` bigint DEFAULT NULL COMMENT '创建者',
+    `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+    `update_by` bigint DEFAULT NULL COMMENT '更新者',
+    `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+    `del_flag` char(1) DEFAULT '0' COMMENT '删除标志（0代表存在 1代表删除）',
+    PRIMARY KEY (`id`),
+    KEY `idx_address_standard_import_batch_batch_no` (`batch_no`),
+    KEY `idx_address_standard_import_batch_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='标准地址导入批次表';
+
+CREATE TABLE IF NOT EXISTS `address_standard_import_detail` (
+    `id` bigint NOT NULL COMMENT '主键ID',
+    `batch_id` bigint NOT NULL COMMENT '所属导入批次ID',
+    `approval_id` bigint DEFAULT NULL COMMENT '审批单ID',
+    `approval_no` varchar(64) DEFAULT NULL COMMENT '审批单号',
+    `approval_status` varchar(32) DEFAULT NULL COMMENT '审批状态',
+    `row_num` int NOT NULL COMMENT 'Excel 行号',
+    `file_name` varchar(255) DEFAULT NULL COMMENT '导入文件名',
+    `update_support` tinyint(1) DEFAULT 0 COMMENT '是否允许更新',
+    `parent_stand_name` varchar(500) DEFAULT NULL COMMENT '父级标准地址名称',
+    `segm_name` varchar(255) DEFAULT NULL COMMENT '当级名称',
+    `segm_type` varchar(24) DEFAULT NULL COMMENT '地址类型编码',
+    `addr_level` int DEFAULT NULL COMMENT '业务级别',
+    `status` varchar(32) DEFAULT 'VALIDATE_FAILED' COMMENT '导入行状态',
+    `fail_reason` varchar(1000) DEFAULT NULL COMMENT '失败原因',
+    `raw_payload` text COMMENT '原始导入数据快照',
+    `tenant_id` varchar(20) DEFAULT '000000' COMMENT '租户ID',
+    `create_dept` bigint DEFAULT NULL COMMENT '创建部门',
+    `create_by` bigint DEFAULT NULL COMMENT '创建者',
+    `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+    `update_by` bigint DEFAULT NULL COMMENT '更新者',
+    `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+    `del_flag` char(1) DEFAULT '0' COMMENT '删除标志（0代表存在 1代表删除）',
+    PRIMARY KEY (`id`),
+    KEY `idx_address_standard_import_detail_batch_id` (`batch_id`),
+    KEY `idx_address_standard_import_detail_create_time` (`create_time`),
+    KEY `idx_address_standard_import_detail_approval_id` (`approval_id`),
+    KEY `idx_address_standard_import_detail_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='标准地址导入明细表';
+
+CREATE TABLE IF NOT EXISTS `address_standard_approval` (
+    `id` bigint NOT NULL COMMENT '申请单ID',
+    `apply_no` varchar(64) NOT NULL COMMENT '申请单号',
+    `operation_type` varchar(32) NOT NULL COMMENT '操作类型',
+    `flow_code` varchar(64) NOT NULL COMMENT '流程编码',
+    `business_status` varchar(32) DEFAULT NULL COMMENT 'workflow业务状态',
+    `approval_status` varchar(32) DEFAULT NULL COMMENT '审批状态',
+    `instance_id` bigint DEFAULT NULL COMMENT '流程实例ID',
+    `current_task_id` bigint DEFAULT NULL COMMENT '当前任务ID',
+    `biz_title` varchar(255) DEFAULT NULL COMMENT '业务标题',
+    `source_summary` varchar(1000) DEFAULT NULL COMMENT '原地址摘要',
+    `target_summary` varchar(1000) DEFAULT NULL COMMENT '新地址摘要',
+    `source_snapshot` longtext COMMENT '原地址快照JSON',
+    `target_snapshot` longtext COMMENT '新地址快照JSON',
+    `request_payload` longtext COMMENT '请求参数JSON',
+    `submit_fingerprint` varchar(64) DEFAULT NULL COMMENT '提交内容指纹',
+    `submit_guard_key` varchar(64) NOT NULL DEFAULT 'ACTIVE' COMMENT '重复提交保护占位键',
+    `import_batch_payload` longtext COMMENT '导入批次JSON',
+    `submit_user_id` bigint DEFAULT NULL COMMENT '提交人ID',
+    `submit_user_name` varchar(64) DEFAULT NULL COMMENT '提交人账号',
+    `submit_dept_id` bigint DEFAULT NULL COMMENT '提交部门ID',
+    `submit_dept_name` varchar(128) DEFAULT NULL COMMENT '提交部门名称',
+    `approve_user_id` bigint DEFAULT NULL COMMENT '审批人ID',
+    `approve_user_name` varchar(64) DEFAULT NULL COMMENT '审批人名称',
+    `approve_time` datetime DEFAULT NULL COMMENT '审批时间',
+    `reject_reason` varchar(1000) DEFAULT NULL COMMENT '驳回原因',
+    `execute_message` varchar(1000) DEFAULT NULL COMMENT '执行信息',
+    `create_dept` bigint DEFAULT NULL COMMENT '创建部门',
+    `create_by` bigint DEFAULT NULL COMMENT '创建者',
+    `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+    `update_by` bigint DEFAULT NULL COMMENT '更新者',
+    `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+    `del_flag` char(1) DEFAULT '0' COMMENT '删除标志',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_addr_std_approval_submit_guard` (`submit_user_id`, `operation_type`, `submit_fingerprint`, `submit_guard_key`),
+    KEY `idx_addr_std_approval_submit_user` (`submit_user_id`),
+    KEY `idx_addr_std_approval_status` (`approval_status`),
+    KEY `idx_addr_std_approval_task` (`current_task_id`),
+    KEY `idx_addr_std_approval_instance` (`instance_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='标准地址审批申请单';
+
+CREATE TABLE IF NOT EXISTS `address_standard_monitor_rule` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `tenant_id` varchar(20) DEFAULT '000000' COMMENT '租户编号',
+    `name` varchar(128) NOT NULL COMMENT '规则名称',
+    `rule_code` varchar(64) DEFAULT NULL COMMENT '规则编码',
+    `rule_template` varchar(64) DEFAULT NULL COMMENT '规则模板',
+    `status` char(1) DEFAULT '0' COMMENT '状态（0正常 1停用）',
+    `severity` varchar(32) DEFAULT NULL COMMENT '严重等级',
+    `priority` int DEFAULT NULL COMMENT '优先级',
+    `dedup_hours` int DEFAULT NULL COMMENT '去重窗口小时数',
+    `config_json` longtext COMMENT '模板配置JSON',
+    `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+    `del_flag` char(1) DEFAULT '0' COMMENT '删除标志（0存在 1删除）',
+    `create_dept` bigint DEFAULT NULL COMMENT '创建部门',
+    `create_by` bigint DEFAULT NULL COMMENT '创建者',
+    `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+    `update_by` bigint DEFAULT NULL COMMENT '更新者',
+    `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_monitor_rule_code` (`rule_code`),
+    KEY `idx_monitor_rule_status` (`status`),
+    KEY `idx_monitor_rule_template` (`rule_template`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='标准地址监控规则表';
+
+CREATE TABLE IF NOT EXISTS `address_standard_monitor_task` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `tenant_id` varchar(20) DEFAULT '000000' COMMENT '租户编号',
+    `task_name` varchar(128) NOT NULL COMMENT '任务名称',
+    `task_type` varchar(32) DEFAULT NULL COMMENT '任务类型',
+    `execute_rule` varchar(128) DEFAULT NULL COMMENT '执行规则',
+    `monitor_scope` varchar(32) DEFAULT NULL COMMENT '监控范围',
+    `task_status` varchar(32) DEFAULT NULL COMMENT '任务状态',
+    `task_desc` varchar(500) DEFAULT NULL COMMENT '任务说明',
+    `snail_job_task_id` bigint DEFAULT NULL COMMENT 'snailjob任务ID',
+    `last_execute_time` datetime DEFAULT NULL COMMENT '最近执行时间',
+    `last_success_time` datetime DEFAULT NULL COMMENT '最近成功时间',
+    `last_failure_reason` varchar(500) DEFAULT NULL COMMENT '最近失败原因',
+    `del_flag` char(1) DEFAULT '0' COMMENT '删除标志（0存在 1删除）',
+    `create_dept` bigint DEFAULT NULL COMMENT '创建部门',
+    `create_by` bigint DEFAULT NULL COMMENT '创建者',
+    `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+    `update_by` bigint DEFAULT NULL COMMENT '更新者',
+    `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_monitor_task_status` (`task_status`),
+    KEY `idx_monitor_task_scope` (`monitor_scope`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='标准地址监控任务主表';
+
+CREATE TABLE IF NOT EXISTS `address_standard_monitor_task_rule_rel` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `tenant_id` varchar(20) DEFAULT '000000' COMMENT '租户编号',
+    `task_id` bigint NOT NULL COMMENT '任务ID',
+    `rule_id` bigint NOT NULL COMMENT '规则ID',
+    `del_flag` char(1) DEFAULT '0' COMMENT '删除标志（0存在 1删除）',
+    `create_dept` bigint DEFAULT NULL COMMENT '创建部门',
+    `create_by` bigint DEFAULT NULL COMMENT '创建者',
+    `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+    `update_by` bigint DEFAULT NULL COMMENT '更新者',
+    `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_monitor_task_rule` (`task_id`, `rule_id`, `del_flag`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='标准地址监控任务规则关系表';
+
+CREATE TABLE IF NOT EXISTS `address_standard_monitor_task_scope_rel` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `tenant_id` varchar(20) DEFAULT '000000' COMMENT '租户编号',
+    `task_id` bigint NOT NULL COMMENT '任务ID',
+    `scope_type` varchar(32) NOT NULL COMMENT '范围类型',
+    `scope_value` varchar(64) NOT NULL COMMENT '范围值',
+    `del_flag` char(1) DEFAULT '0' COMMENT '删除标志（0存在 1删除）',
+    `create_dept` bigint DEFAULT NULL COMMENT '创建部门',
+    `create_by` bigint DEFAULT NULL COMMENT '创建者',
+    `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+    `update_by` bigint DEFAULT NULL COMMENT '更新者',
+    `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_monitor_task_scope` (`task_id`, `scope_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='标准地址监控任务范围关系表';
+
+CREATE TABLE IF NOT EXISTS `address_standard_monitor_task_run_log` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `tenant_id` varchar(20) DEFAULT '000000' COMMENT '租户编号',
+    `task_id` bigint NOT NULL COMMENT '任务ID',
+    `trigger_mode` varchar(32) DEFAULT NULL COMMENT '触发方式',
+    `execute_status` varchar(32) DEFAULT NULL COMMENT '执行状态',
+    `execute_message` varchar(500) DEFAULT NULL COMMENT '执行消息',
+    `scanned_count` bigint DEFAULT 0 COMMENT '扫描数量',
+    `hit_count` bigint DEFAULT 0 COMMENT '命中数量',
+    `created_count` bigint DEFAULT 0 COMMENT '新增异常数量',
+    `started_time` datetime DEFAULT NULL COMMENT '开始时间',
+    `finished_time` datetime DEFAULT NULL COMMENT '结束时间',
+    `create_dept` bigint DEFAULT NULL COMMENT '创建部门',
+    `create_by` bigint DEFAULT NULL COMMENT '创建者',
+    `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+    `update_by` bigint DEFAULT NULL COMMENT '更新者',
+    `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_monitor_task_run_log` (`task_id`, `started_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='标准地址监控任务运行日志表';
+
+CREATE TABLE IF NOT EXISTS `address_standard_monitor_record` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `tenant_id` varchar(20) DEFAULT '000000' COMMENT '租户编号',
+    `standard_address_id` bigint DEFAULT NULL COMMENT '标准地址ID',
+    `rule_id` bigint DEFAULT NULL COMMENT '规则ID',
+    `stand_name_snapshot` varchar(500) DEFAULT NULL COMMENT '标准地址名称快照',
+    `region_id_snapshot` varchar(64) DEFAULT NULL COMMENT '区域快照',
+    `rule_name_snapshot` varchar(128) DEFAULT NULL COMMENT '规则名称快照',
+    `rule_template_snapshot` varchar(64) DEFAULT NULL COMMENT '规则模板快照',
+    `task_id` bigint DEFAULT NULL COMMENT '来源任务ID',
+    `task_run_log_id` bigint DEFAULT NULL COMMENT '来源任务运行日志ID',
+    `task_name_snapshot` varchar(128) DEFAULT NULL COMMENT '来源任务名称快照',
+    `severity` varchar(32) DEFAULT NULL COMMENT '严重等级',
+    `hit_detail_json` longtext COMMENT '命中详情JSON',
+    `dedup_key` varchar(256) DEFAULT NULL COMMENT '去重键',
+    `first_detected_time` datetime DEFAULT NULL COMMENT '首次发现时间',
+    `last_detected_time` datetime DEFAULT NULL COMMENT '最近发现时间',
+    `hit_count` int DEFAULT 1 COMMENT '命中次数',
+    `status` char(1) DEFAULT '0' COMMENT '状态（0待处理 1已忽略 2已处理）',
+    `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+    `process_by` varchar(64) DEFAULT NULL COMMENT '处理人',
+    `process_time` datetime DEFAULT NULL COMMENT '处理时间',
+    `del_flag` char(1) DEFAULT '0' COMMENT '删除标志（0存在 1删除）',
+    `create_dept` bigint DEFAULT NULL COMMENT '创建部门',
+    `create_by` bigint DEFAULT NULL COMMENT '创建者',
+    `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+    `update_by` bigint DEFAULT NULL COMMENT '更新者',
+    `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_monitor_record_status` (`status`),
+    KEY `idx_monitor_record_task` (`task_id`),
+    KEY `idx_monitor_record_rule` (`rule_id`),
+    KEY `idx_monitor_record_dedup` (`dedup_key`),
+    KEY `idx_monitor_record_region_status` (`region_id_snapshot`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='标准地址监控异常记录表';
+
+CREATE TABLE IF NOT EXISTS `address_standard_operation_log` (
+    `id` bigint NOT NULL COMMENT '主键ID',
+    `standard_address_id` varchar(24) DEFAULT NULL COMMENT '关联标准地址ID',
+    `operation_type` varchar(32) NOT NULL COMMENT '操作类型',
+    `operator` varchar(64) DEFAULT NULL COMMENT '操作人',
+    `operate_time` datetime DEFAULT NULL COMMENT '操作时间',
+    `details` varchar(2000) DEFAULT NULL COMMENT '操作详情',
+    `tenant_id` varchar(20) DEFAULT '000000' COMMENT '租户ID',
+    `del_flag` char(1) DEFAULT '0' COMMENT '删除标志（0代表存在 1代表删除）',
+    PRIMARY KEY (`id`),
+    KEY `idx_address_standard_operation_log_addr` (`standard_address_id`),
+    KEY `idx_address_standard_operation_log_type` (`operation_type`),
+    KEY `idx_address_standard_operation_log_time` (`operate_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='标准地址操作日志表';
+
+CREATE TABLE IF NOT EXISTS `address_standard_tag` (
+    `id` bigint NOT NULL COMMENT '主键ID',
+    `name` varchar(64) NOT NULL COMMENT '标签名称',
+    `code` varchar(64) DEFAULT NULL COMMENT '标签编码',
+    `color` varchar(32) DEFAULT NULL COMMENT '标签颜色',
+    `tenant_id` varchar(20) DEFAULT '000000' COMMENT '租户ID',
+    `create_dept` bigint DEFAULT NULL COMMENT '创建部门',
+    `create_by` bigint DEFAULT NULL COMMENT '创建者',
+    `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+    `update_by` bigint DEFAULT NULL COMMENT '更新者',
+    `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+    `del_flag` char(1) DEFAULT '0' COMMENT '删除标志（0代表存在 1代表删除）',
+    `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+    PRIMARY KEY (`id`),
+    KEY `idx_address_standard_tag_code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='标准地址标签表';
+
+CREATE TABLE IF NOT EXISTS `address_standard_tag_rel` (
+    `standard_address_id` varchar(24) NOT NULL COMMENT '标准地址ID',
+    `tag_id` bigint NOT NULL COMMENT '标签ID',
+    PRIMARY KEY (`standard_address_id`, `tag_id`),
+    KEY `idx_address_standard_tag_rel_tag` (`tag_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='标准地址标签关联表';
+
+CREATE TABLE IF NOT EXISTS `address_standard_management_station` (
+    `id` bigint NOT NULL COMMENT '主键ID',
+    `name` varchar(128) NOT NULL COMMENT '站点名称',
+    `type` varchar(32) DEFAULT NULL COMMENT '站点类型',
+    `contact_person` varchar(64) DEFAULT NULL COMMENT '联系人',
+    `contact_phone` varchar(32) DEFAULT NULL COMMENT '联系电话',
+    `address` varchar(255) DEFAULT NULL COMMENT '站点地址',
+    `tenant_id` varchar(20) DEFAULT '000000' COMMENT '租户ID',
+    `create_dept` bigint DEFAULT NULL COMMENT '创建部门',
+    `create_by` bigint DEFAULT NULL COMMENT '创建者',
+    `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+    `update_by` bigint DEFAULT NULL COMMENT '更新者',
+    `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+    `del_flag` char(1) DEFAULT '0' COMMENT '删除标志（0代表存在 1代表删除）',
+    `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='标准地址管理站点表';
+
+CREATE TABLE IF NOT EXISTS `address_standard_attribute` (
+    `id` bigint NOT NULL COMMENT '主键ID',
+    `standard_address_id` bigint NOT NULL COMMENT '标准地址ID',
+    `attr_key` varchar(64) NOT NULL COMMENT '属性键',
+    `attr_value` varchar(500) DEFAULT NULL COMMENT '属性值',
+    `tenant_id` varchar(20) DEFAULT '000000' COMMENT '租户ID',
+    `create_dept` bigint DEFAULT NULL COMMENT '创建部门',
+    `create_by` bigint DEFAULT NULL COMMENT '创建者',
+    `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+    `update_by` bigint DEFAULT NULL COMMENT '更新者',
+    `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+    `del_flag` char(1) DEFAULT '0' COMMENT '删除标志（0代表存在 1代表删除）',
+    PRIMARY KEY (`id`),
+    KEY `idx_address_standard_attribute_addr` (`standard_address_id`),
+    KEY `idx_address_standard_attribute_key` (`attr_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='标准地址属性扩展表';
+
+CREATE TABLE IF NOT EXISTS `address_standard_station_rel` (
+    `standard_address_id` bigint NOT NULL COMMENT '标准地址ID',
+    `station_id` bigint NOT NULL COMMENT '站点ID',
+    PRIMARY KEY (`standard_address_id`, `station_id`),
+    KEY `idx_address_standard_station_rel_station` (`station_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='标准地址站点关联表';
+
+CREATE TABLE IF NOT EXISTS `address_installation` (
+    `id` bigint NOT NULL COMMENT '主键ID',
+    `standard_address_id` bigint NOT NULL COMMENT '标准地址ID',
+    `install_name` varchar(255) DEFAULT NULL COMMENT '安装位置描述',
+    `resource_id` varchar(64) DEFAULT NULL COMMENT '关联资源ID',
+    `resource_type` varchar(32) DEFAULT NULL COMMENT '关联资源类型',
+    `tenant_id` varchar(20) DEFAULT '000000' COMMENT '租户ID',
+    `create_dept` bigint DEFAULT NULL COMMENT '创建部门',
+    `create_by` bigint DEFAULT NULL COMMENT '创建者',
+    `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+    `update_by` bigint DEFAULT NULL COMMENT '更新者',
+    `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+    `del_flag` char(1) DEFAULT '0' COMMENT '删除标志（0代表存在 1代表删除）',
+    `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+    PRIMARY KEY (`id`),
+    KEY `idx_address_installation_addr` (`standard_address_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='安装地址扩展表';

@@ -207,39 +207,44 @@ mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> \
 - `ry-seata`
 - `ftth_cloud_address`
 
-## 5.3 地址模块附加 SQL 执行顺序
+## 5.3 地址模块全量 SQL 执行顺序
 
-若地址业务库不是从本地整库恢复，而是基于已有生产事实库补表，则按以下顺序执行：
+当前地址模块不再保留历史增量补丁脚本。新环境安装或空库初始化时，只执行以下 3 份全量脚本：
 
-1. [address_search_support.sql](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-modules/ruoyi-address/sql/address/address_search_support.sql)
-2. [address_standard_approval.sql](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-modules/ruoyi-address/sql/address/address_standard_approval.sql)
-3. 若已存在旧版审批表，再执行 [address_standard_approval_guard_upgrade.sql](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-modules/ruoyi-address/sql/address/address_standard_approval_guard_upgrade.sql)
+1. [ftth_cloud_address_full_install.sql](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-modules/ruoyi-address/sql/address/ftth_cloud_address_full_install.sql)
+   - 目标库：`ftth_cloud_address`
+   - 作用：创建地址基础事实表、搜索支撑表、导入批次/明细表、审批表、监控表及项目自有扩展表
+2. [address_standard_approval_cloud_install.sql](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-modules/ruoyi-address/sql/workflow/address_standard_approval_cloud_install.sql)
+   - 目标库：`ry-cloud`
+   - 作用：初始化标准地址审批角色
+3. [address_standard_approval_workflow_install.sql](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-modules/ruoyi-address/sql/workflow/address_standard_approval_workflow_install.sql)
+   - 目标库：`ry-workflow`
+   - 作用：初始化标准地址审批流程定义、节点和流转关系
 
-执行目标库均为 `ftth_cloud_address`。
+执行命令示例：
 
 ```bash
 mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> \
   --default-character-set=utf8mb4 \
-  ftth_cloud_address < ruoyi-modules/ruoyi-address/sql/address/address_search_support.sql
+  ftth_cloud_address < ruoyi-modules/ruoyi-address/sql/address/ftth_cloud_address_full_install.sql
 
 mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> \
   --default-character-set=utf8mb4 \
-  ftth_cloud_address < ruoyi-modules/ruoyi-address/sql/address/address_standard_approval.sql
+  ry-cloud < ruoyi-modules/ruoyi-address/sql/workflow/address_standard_approval_cloud_install.sql
+
+mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> \
+  --default-character-set=utf8mb4 \
+  ry-workflow < ruoyi-modules/ruoyi-address/sql/workflow/address_standard_approval_workflow_install.sql
 ```
 
-## 5.4 审批流初始化注意事项
+## 5.4 存量环境迁移口径
 
-[address_standard_approve_v1.sql](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-modules/ruoyi-address/sql/workflow/address_standard_approve_v1.sql) 当前同时包含：
+如果生产库已经存在历史地址业务数据，不再通过旧版 `upgrade/rename/repair` 补丁脚本做在线拼装升级，建议采用以下两种方式之一：
 
-- `sys_role` 写入
-- `flow_definition / flow_node / flow_skip` 写入
+- 优先方案：从已验证的本地或预发环境整库导出 `ftth_cloud_address` 后导入生产
+- 备选方案：在新建空库执行全量安装脚本后，再按业务数据迁移方案导入正式数据
 
-在微服务拆库部署下，这个脚本不能直接对单个库整体执行，必须拆分：
-
-- `sys_role` 相关语句执行到 `ry-cloud`
-- `flow_definition / flow_node / flow_skip` 相关语句执行到 `ry-workflow`
-
-如果上线后出现流程中文乱码，再按需执行 [address_standard_approve_v1_repair_mojibake.sql](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-modules/ruoyi-address/sql/workflow/address_standard_approve_v1_repair_mojibake.sql)，执行目标库为 `ry-workflow`。
+当前仓库已移除历史增量脚本，部署手册不再提供旧库补丁升级链路。
 
 ## 6. Nacos 配置导入
 
@@ -667,7 +672,10 @@ curl -s http://<ES_HOST>:9200/address_installation_search/_count
 
 ### 12.5 审批流程初始化失败
 
-当前 `address_standard_approve_v1.sql` 不能直接整文件执行到单个库，必须按 `ry-cloud` 与 `ry-workflow` 拆分执行。
+检查是否已分别执行：
+
+- `address_standard_approval_cloud_install.sql` 到 `ry-cloud`
+- `address_standard_approval_workflow_install.sql` 到 `ry-workflow`
 
 ## 13. 上线核对表
 
@@ -679,8 +687,9 @@ curl -s http://<ES_HOST>:9200/address_installation_search/_count
 - 已补齐 `ruoyi-address` Dockerfile
 - 已构建并推送 `ruoyi-address` 镜像
 - 已导入 `ftth_cloud_address` 全量数据
-- 已执行地址模块附加 SQL
-- 已完成 workflow 审批定义初始化
+- 已执行 `ftth_cloud_address_full_install.sql`
+- 已执行 `address_standard_approval_cloud_install.sql`
+- 已执行 `address_standard_approval_workflow_install.sql`
 - 已完成 ES 全量重建与别名核验
 - 已完成前端 `dist` 发布
 - 已完成登录、地址列表、审批、ES 核验

@@ -30,6 +30,18 @@ mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> \
   ftth_cloud_address < <SQL_FILE>
 ```
 
+## 当前生效 SQL 安装口径
+
+- 地址业务库全量安装脚本：
+  - [ftth_cloud_address_full_install.sql](../sql/address/ftth_cloud_address_full_install.sql)
+- 审批初始化脚本：
+  - [address_standard_approval_cloud_install.sql](../sql/workflow/address_standard_approval_cloud_install.sql)
+  - [address_standard_approval_workflow_install.sql](../sql/workflow/address_standard_approval_workflow_install.sql)
+- 网格模块全量脚本：
+  - [grid_module_rebuild_initial.sql](../sql/grid/grid_module_rebuild_initial.sql)
+
+当前模块已移除历史 `upgrade`、`rename`、`repair` 类 SQL，新增环境统一执行全量安装脚本；存量环境迁移优先走整库导入，不再依赖补丁链升级。
+
 ## 程序设计前先看这 5 份
 
 1. [project-baseline.md](./project-baseline.md)：项目范围、阶段、风险、外部依赖总控入口。

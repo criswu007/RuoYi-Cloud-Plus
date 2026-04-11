@@ -1,5 +1,6 @@
 <template>
-  <el-container class="layout">
+  <router-view v-if="useBareLayout" />
+  <el-container v-else class="layout">
     <el-aside width="252px" class="aside">
       <div class="logo-wrap">
         <div class="logo-mark">A</div>
@@ -62,16 +63,32 @@
 </template>
 
 <script>
+import { clearAuthSession } from './utils/auth-session';
+import {
+  normalizeTokenValue,
+  resolveInitialToken,
+  writeAddressToken
+} from './utils/token-bridge';
+
 const storage = typeof localStorage === 'undefined'
   ? null
   : localStorage;
+const browserDocument = typeof document === 'undefined'
+  ? null
+  : document;
+const runtimeMode = import.meta.env.VITE_ADDRESS_RUNTIME_MODE || 'standalone';
+const apiBase = import.meta.env.VITE_API_BASE
+  || (runtimeMode === 'microservice' ? '/prod-api' : '代理 /address');
 
 export default {
   data() {
     return {
-      token: storage ? storage.getItem('AUTH_TOKEN') || '' : '',
-      runtimeMode: import.meta.env.VITE_ADDRESS_RUNTIME_MODE || 'standalone',
-      apiBase: import.meta.env.VITE_API_BASE || '代理 /address',
+      token: resolveInitialToken({
+        storage,
+        cookieString: browserDocument ? browserDocument.cookie : ''
+      }),
+      runtimeMode,
+      apiBase,
       titleMap: {
         '/standard/list': '标准地址列表',
         '/standard/detail': '标准地址详情',
@@ -92,6 +109,10 @@ export default {
     };
   },
   computed: {
+    useBareLayout() {
+      return Array.isArray(this.$route?.matched)
+        && this.$route.matched.some(route => route?.meta?.bareLayout);
+    },
     pageTitle() {
       if (this.$route.path.startsWith('/standard/detail/')) {
         return this.titleMap['/standard/detail'];
@@ -100,16 +121,28 @@ export default {
     }
   },
   methods: {
-    saveToken() {
+    persistToken(message = 'Token 已保存') {
+      this.token = normalizeTokenValue(this.token);
       if (storage) {
-        storage.setItem('AUTH_TOKEN', this.token || '');
+        writeAddressToken(storage, this.token || '');
       }
-      this.$message.success('Token 已保存');
+      this.$message.success(message);
+    },
+    saveToken() {
+      this.persistToken();
     },
     clearToken() {
       this.token = '';
       if (storage) {
-        storage.removeItem('AUTH_TOKEN');
+        clearAuthSession(storage);
+      }
+      if (this.$route?.path !== '/login') {
+        this.$router.push({
+          path: '/login',
+          query: {
+            redirect: this.$route?.fullPath || '/standard/list'
+          }
+        }).catch(() => {});
       }
       this.$message.success('Token 已清除');
     }

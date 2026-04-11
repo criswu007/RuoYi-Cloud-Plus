@@ -3,7 +3,7 @@ server:
 
 address:
   runtime:
-    mode: standalone
+    mode: microservice
 
 spring:
   config:

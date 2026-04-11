@@ -36,20 +36,20 @@
 
 生产迁移直接基于以下仓库资产执行：
 
-- 编排基线：[script/docker/docker-compose.yml](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/script/docker/docker-compose.yml)
-- Nacos 配置基线：[script/config/nacos](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/script/config/nacos)
-- 平台基础库脚本：[script/sql](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/script/sql)
-- 地址模块补充脚本：[ruoyi-modules/ruoyi-address/sql](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-modules/ruoyi-address/sql)
-- 前端构建入口：[ruoyi-address-ui/package.json](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-address-ui/package.json)
-- 前端开发代理基线：[ruoyi-address-ui/vite.config.js](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-address-ui/vite.config.js)
-- nginx 静态站点与反向代理基线：[script/docker/nginx/conf/nginx.conf](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/script/docker/nginx/conf/nginx.conf)
+- 编排基线：[script/docker/docker-compose.yml](/Users/criswu/IdeaProjects/RuoYi-Cloud-Plus/script/docker/docker-compose.yml)
+- Nacos 配置基线：[script/config/nacos](/Users/criswu/IdeaProjects/RuoYi-Cloud-Plus/script/config/nacos)
+- 平台基础库脚本：[script/sql](/Users/criswu/IdeaProjects/RuoYi-Cloud-Plus/script/sql)
+- 地址模块补充脚本：[ruoyi-modules/ruoyi-address/sql](/Users/criswu/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-modules/ruoyi-address/sql)
+- 前端构建入口：[ruoyi-address-ui/package.json](/Users/criswu/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-address-ui/package.json)
+- 前端开发代理基线：[ruoyi-address-ui/vite.config.js](/Users/criswu/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-address-ui/vite.config.js)
+- nginx 静态站点与反向代理基线：[script/docker/nginx/conf/nginx.conf](/Users/criswu/IdeaProjects/RuoYi-Cloud-Plus/script/docker/nginx/conf/nginx.conf)
 
 上线前必须注意以下现状差异：
 
 1. 当前 Compose 文件偏本地联调，内含固定 IP、默认密码和大量 `host` 网络配置，不能直接原样上生产。
 2. 当前 `datasource.yml` 的 `address-master` 指向 `ry-address` 示例库；标准地址项目生产必须改为 `ftth_cloud_address`。
-3. [ruoyi-modules/ruoyi-address/Dockerfile](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-modules/ruoyi-address/Dockerfile) 已补齐，但镜像构建前仍需确认目标 jar 与 JVM 参数符合生产要求。
-4. [script/config/nacos/ruoyi-address.yml](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/script/config/nacos/ruoyi-address.yml) 已补齐为基线模板，导入 `prod` namespace 前仍需替换 ES、Kibana 与数据库真实配置。
+3. [ruoyi-modules/ruoyi-address/Dockerfile](/Users/criswu/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-modules/ruoyi-address/Dockerfile) 已补齐，但镜像构建前仍需确认目标 jar 与 JVM 参数符合生产要求。
+4. [script/config/nacos/ruoyi-address.yml](/Users/criswu/IdeaProjects/RuoYi-Cloud-Plus/script/config/nacos/ruoyi-address.yml) 已补齐为基线模板，导入 `prod` namespace 前仍需替换 ES、Kibana 与数据库真实配置。
 
 ## 3. 推荐生产拓扑
 
@@ -211,15 +211,18 @@ mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> \
 
 当前地址模块不再保留历史增量补丁脚本。新环境安装或空库初始化时，只执行以下 3 份全量脚本：
 
-1. [ftth_cloud_address_full_install.sql](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-modules/ruoyi-address/sql/address/ftth_cloud_address_full_install.sql)
+1. [ftth_cloud_address_full_install.sql](../../ruoyi-modules/ruoyi-address/sql/address/ftth_cloud_address_full_install.sql)
    - 目标库：`ftth_cloud_address`
    - 作用：创建地址基础事实表、搜索支撑表、导入批次/明细表、审批表、监控表及项目自有扩展表
-2. [address_standard_approval_cloud_install.sql](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-modules/ruoyi-address/sql/workflow/address_standard_approval_cloud_install.sql)
+2. [address_standard_approval_cloud_install.sql](../../ruoyi-modules/ruoyi-address/sql/workflow/address_standard_approval_cloud_install.sql)
    - 目标库：`ry-cloud`
    - 作用：初始化标准地址审批角色
-3. [address_standard_approval_workflow_install.sql](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-modules/ruoyi-address/sql/workflow/address_standard_approval_workflow_install.sql)
+3. [address_standard_approval_workflow_install.sql](../../ruoyi-modules/ruoyi-address/sql/workflow/address_standard_approval_workflow_install.sql)
    - 目标库：`ry-workflow`
    - 作用：初始化标准地址审批流程定义、节点和流转关系
+4. [address_normal_user_full_link_bootstrap.sql](../../ruoyi-modules/ruoyi-address/sql/workflow/address_normal_user_full_link_bootstrap.sql)
+   - 目标库：`ry-cloud`
+   - 作用：初始化地址模块普通录入员/审批员角色、`address:*` 权限菜单、角色菜单绑定，以及联调示例用户绑定
 
 执行命令示例：
 
@@ -235,7 +238,32 @@ mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> \
 mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> \
   --default-character-set=utf8mb4 \
   ry-workflow < ruoyi-modules/ruoyi-address/sql/workflow/address_standard_approval_workflow_install.sql
+
+mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> \
+  --default-character-set=utf8mb4 \
+  ry-cloud < ruoyi-modules/ruoyi-address/sql/workflow/address_normal_user_full_link_bootstrap.sql
 ```
+
+### 5.3.1 普通用户角色与权限初始化要求
+
+标准地址微服务上线后，如果要让“非超级管理员”的普通用户正常走通登录、列表、提审、审批链路，不能只依赖已有 `admin/superadmin` 账号，还必须补齐以下对象：
+
+- 业务角色：
+  - `address_operator`：标准地址录入员
+  - `address_approver`：标准地址审批员
+- 权限菜单：
+  - 需要补齐地址模块全部 `address:*` 权限点，并绑定到上述角色
+- 用户角色关系：
+  - 录入人员必须绑定 `address_operator`
+  - 审批人员必须绑定 `address_approver`
+- 审批流角色依赖：
+  - 标准地址审批流程 `address_standard_approve_v1` 的审批节点按角色 `address_approver` 选人；若生产未绑定该角色，待审批页面会无任务或无法办理
+
+执行建议：
+
+1. 若生产环境要完整继承当前本地已验证的普通用户链路，可直接执行 [address_normal_user_full_link_bootstrap.sql](../../ruoyi-modules/ruoyi-address/sql/workflow/address_normal_user_full_link_bootstrap.sql)。
+2. 若生产已有正式业务账号，不建议直接保留脚本里的示例用户 `test` / `test1`；应以该脚本为模板，将真实业务用户绑定到 `address_operator` / `address_approver`。
+3. 若生产仅迁移数据、不迁移现成 `ry-cloud` 权限数据，上线前必须人工核对 `sys_role`、`sys_menu`、`sys_role_menu`、`sys_user_role` 四类表，确保普通用户不再依赖超级管理员兜底权限。
 
 ## 5.4 存量环境迁移口径
 
@@ -270,7 +298,7 @@ mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> \
 - `ruoyi-snailjob-server.yml`
 - `seata-server.properties`
 
-导入基线目录见：[script/config/nacos](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/script/config/nacos)
+导入基线目录见：[script/config/nacos](/Users/criswu/IdeaProjects/RuoYi-Cloud-Plus/script/config/nacos)
 
 ## 6.2 必改配置
 
@@ -291,7 +319,7 @@ mysql -h <MYSQL_HOST> -P 3306 -u <MYSQL_USER> -p<MYSQL_PASSWORD> \
 
 ```yaml
 datasource:
-  address-master:
+  address:
     url: jdbc:mysql://<MYSQL_HOST>:3306/ftth_cloud_address?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8&rewriteBatchedStatements=true&allowPublicKeyRetrieval=true
     username: <ADDRESS_DB_USER>
     password: <ADDRESS_DB_PASSWORD>
@@ -299,7 +327,7 @@ datasource:
 
 ### `ruoyi-address.yml`
 
-仓库已提供基线文件 [ruoyi-address.yml](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/script/config/nacos/ruoyi-address.yml)，生产 namespace 中导入前建议按以下内容核对：
+仓库已提供基线文件 [ruoyi-address.yml](/Users/criswu/IdeaProjects/RuoYi-Cloud-Plus/script/config/nacos/ruoyi-address.yml)，生产 namespace 中导入前建议按以下内容核对：
 
 ```yaml
 spring:
@@ -310,9 +338,9 @@ spring:
         address:
           type: ${spring.datasource.type}
           driver-class-name: com.mysql.cj.jdbc.Driver
-          url: ${datasource.address-master.url}
-          username: ${datasource.address-master.username}
-          password: ${datasource.address-master.password}
+          url: ${datasource.address.url}
+          username: ${datasource.address.username}
+          password: ${datasource.address.password}
 
 easy-es:
   enable: true
@@ -427,7 +455,7 @@ mvn -T1C -DskipTests package
 
 ## 7.2 `ruoyi-address` Dockerfile
 
-仓库已提供基线文件 [Dockerfile](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-modules/ruoyi-address/Dockerfile)，镜像制作前可按下述内容核对：
+仓库已提供基线文件 [Dockerfile](/Users/criswu/IdeaProjects/RuoYi-Cloud-Plus/ruoyi-modules/ruoyi-address/Dockerfile)，镜像制作前可按下述内容核对：
 
 ```dockerfile
 FROM bellsoft/liberica-openjdk-rocky:17.0.16-cds
@@ -512,14 +540,14 @@ npm run build
 rsync -av --delete ruoyi-address-ui/dist/ /opt/ruoyi-prod/nginx/html/
 ```
 
-nginx 反向代理可基于 [script/docker/nginx/conf/nginx.conf](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/script/docker/nginx/conf/nginx.conf) 调整，关键是保留：
+nginx 反向代理可基于 [script/docker/nginx/conf/nginx.conf](/Users/criswu/IdeaProjects/RuoYi-Cloud-Plus/script/docker/nginx/conf/nginx.conf) 调整，关键是保留：
 
 - `/` 指向静态前端
 - `/prod-api/` 代理到 gateway `8080`
 
 ## 9. Compose 文件改造要点
 
-不要直接在生产使用 [script/docker/docker-compose.yml](/Users/yuantiansheng/IdeaProjects/RuoYi-Cloud-Plus/script/docker/docker-compose.yml) 原文件，建议复制为独立生产文件，例如 `/opt/ruoyi-prod/compose/docker-compose.prod.yml`，并完成以下改造：
+不要直接在生产使用 [script/docker/docker-compose.yml](/Users/criswu/IdeaProjects/RuoYi-Cloud-Plus/script/docker/docker-compose.yml) 原文件，建议复制为独立生产文件，例如 `/opt/ruoyi-prod/compose/docker-compose.prod.yml`，并完成以下改造：
 
 1. 所有硬编码 IP 改为生产 IP 或域名。
 2. 所有默认密码改为生产密钥。
@@ -630,9 +658,11 @@ curl -s http://<ES_HOST>:9200/address_installation_search/_count
 ### 11.5 前端与业务核验
 
 - 打开前端首页，确认可正常加载。
-- 登录后确认能打开“标准地址列表”。
+- 使用普通录入员登录后确认能打开“标准地址列表”。
 - 验证 `/address/standard/list` 分页查询正常。
-- 验证“待审批地址管理”页面可打开，并能读取 workflow 待办。
+- 使用普通录入员验证“我提交的”分页查询正常，并可提交新增/修改/删除审批。
+- 使用普通审批员验证“待审批地址管理”页面可打开，并能读取 workflow 待办。
+- 使用普通审批员验证审批“通过/驳回”按钮可正常办理，不依赖超级管理员角色。
 - 验证 ES 运维页能读取索引状态。
 - 验证导出接口在大数据量下可正常返回。
 
@@ -676,6 +706,18 @@ curl -s http://<ES_HOST>:9200/address_installation_search/_count
 
 - `address_standard_approval_cloud_install.sql` 到 `ry-cloud`
 - `address_standard_approval_workflow_install.sql` 到 `ry-workflow`
+- `address_normal_user_full_link_bootstrap.sql` 到 `ry-cloud`
+
+### 12.6 普通用户登录后仍提示无权限
+
+优先检查：
+
+- `sys_role` 中是否存在 `address_operator`、`address_approver`
+- `sys_menu` 中是否已补齐 `address:*` 权限点
+- `sys_role_menu` 是否已把地址权限绑定给上述角色
+- `sys_user_role` 是否已把真实业务用户绑定到对应角色
+- 当前登录用户是否误用了历史普通角色，但未绑定地址业务角色
+- 审批用户是否确实具备 `address_approver`，否则 workflow 审批节点不会命中该人
 
 ## 13. 上线核对表
 
@@ -690,6 +732,8 @@ curl -s http://<ES_HOST>:9200/address_installation_search/_count
 - 已执行 `ftth_cloud_address_full_install.sql`
 - 已执行 `address_standard_approval_cloud_install.sql`
 - 已执行 `address_standard_approval_workflow_install.sql`
+- 已执行或按正式账号改写 `address_normal_user_full_link_bootstrap.sql`
+- 已核对普通录入员与普通审批员的角色、菜单、用户绑定关系
 - 已完成 ES 全量重建与别名核验
 - 已完成前端 `dist` 发布
-- 已完成登录、地址列表、审批、ES 核验
+- 已完成普通录入员登录、地址列表、提审、普通审批员审批、ES 核验

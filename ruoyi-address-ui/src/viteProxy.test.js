@@ -3,7 +3,21 @@ import { describe, expect, it } from 'vitest';
 import createConfig from '../vite.config.js';
 
 describe('vite 代理配置', () => {
+  it('microservice 模式应统一通过 prod-api 代理到本地 nginx 80 端口', () => {
+    process.env.VITE_ADDRESS_RUNTIME_MODE = 'microservice';
+
+    const config = createConfig({ mode: 'test' });
+    const prodApiProxy = config.server.proxy['/prod-api'];
+
+    expect(prodApiProxy).toBeTruthy();
+    expect(prodApiProxy.target).toBe('http://127.0.0.1:80');
+    expect(config.server.proxy['/address']).toBeUndefined();
+    expect(config.server.proxy['/workflow']).toBeUndefined();
+  });
+
   it('应将 workflow 代理前缀重写为后端原始路径', () => {
+    process.env.VITE_ADDRESS_RUNTIME_MODE = 'standalone';
+
     const config = createConfig({ mode: 'test' });
     const workflowProxy = config.server.proxy['/workflow'];
 
@@ -14,6 +28,8 @@ describe('vite 代理配置', () => {
   });
 
   it('应保留 address 代理前缀不变', () => {
+    process.env.VITE_ADDRESS_RUNTIME_MODE = 'standalone';
+
     const config = createConfig({ mode: 'test' });
     const addressProxy = config.server.proxy['/address'];
 
@@ -43,11 +59,9 @@ describe('vite 代理配置', () => {
     process.env.VITE_GATEWAY_BASE = 'http://127.0.0.1:8080';
 
     const config = createConfig({ mode: 'test' });
-    const addressProxy = config.server.proxy['/address'];
-    const workflowProxy = config.server.proxy['/workflow'];
+    const prodApiProxy = config.server.proxy['/prod-api'];
 
-    expect(addressProxy.target).toBe('http://127.0.0.1:8080');
-    expect(workflowProxy.target).toBe('http://127.0.0.1:8080');
-    expect(workflowProxy.rewrite).toBeUndefined();
+    expect(prodApiProxy.target).toBe('http://127.0.0.1:80');
+    expect(prodApiProxy.rewrite).toBeUndefined();
   });
 });

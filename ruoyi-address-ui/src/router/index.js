@@ -1,6 +1,8 @@
 import Vue from 'vue';
 import Router from 'vue-router';
 
+import { registerAuthGuard } from './auth-guard';
+import Login from '../views/Login.vue';
 import StandardDetail from '../views/StandardDetail.vue';
 import StandardList from '../views/StandardList.vue';
 import StandardMerge from '../views/StandardMerge.vue';
@@ -19,9 +21,17 @@ import SearchOpsConsole from '../views/SearchOpsConsole.vue';
 
 Vue.use(Router);
 
-export default new Router({
+const router = new Router({
   mode: 'history',
   routes: [
+    {
+      path: '/login',
+      component: Login,
+      meta: {
+        public: true,
+        bareLayout: true
+      }
+    },
     { path: '/', redirect: '/standard/list' },
     { path: '/standard/list', component: StandardList },
     { path: '/standard/detail/:segmId', component: StandardDetail },
@@ -40,3 +50,7 @@ export default new Router({
     { path: '/ops/search', component: SearchOpsConsole }
   ]
 });
+
+registerAuthGuard(router);
+
+export default router;

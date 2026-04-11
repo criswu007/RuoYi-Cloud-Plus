@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.apache.dubbo.config.annotation.DubboReference;
 import org.dromara.address.domain.AddrSegm;
 import org.dromara.address.domain.SpcRegion;
 import org.dromara.address.domain.StandardAddressApproval;
@@ -81,6 +82,7 @@ public class StandardAddressApprovalService implements IStandardAddressApprovalS
     private final AddrSegmMapper addrSegmMapper;
     private final AddrSetSegmMapper addrSetSegmMapper;
     private final SpcRegionMapper spcRegionMapper;
+    @DubboReference
     private final RemoteWorkflowService remoteWorkflowService;
     private final AddressWorkflowHttpClient workflowHttpClient;
     private final StandardAddressApprovalExecutor approvalExecutor;

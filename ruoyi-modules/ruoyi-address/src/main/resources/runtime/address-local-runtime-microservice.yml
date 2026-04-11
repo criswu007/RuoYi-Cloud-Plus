@@ -1,9 +1,4 @@
 spring:
-  config:
-    import:
-      - optional:nacos:application-common.yml
-      - optional:nacos:datasource.yml
-      - optional:nacos:${spring.application.name}.yml
   cloud:
     nacos:
       server-addr: @nacos.server@
@@ -12,13 +7,18 @@ spring:
       discovery:
         enabled: true
         group: @nacos.discovery.group@
-        namespace: ${address.runtime.microservice.namespace:dev}
+        namespace: ${address.runtime.microservice.namespace}
       config:
         enabled: true
         group: @nacos.config.group@
-        namespace: ${address.runtime.microservice.namespace:dev}
+        namespace: ${address.runtime.microservice.namespace}
+  config:
+    import:
+      - optional:nacos:application-common.yml
+      - optional:nacos:datasource.yml
+      - optional:nacos:${spring.application.name}.yml
 
 address:
   runtime:
     microservice:
-      namespace: dev
+      namespace: @profiles.active@

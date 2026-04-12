@@ -202,6 +202,21 @@ export const deleteMonitorRecord = ids =>
 export const ignoreMonitorRecord = ids =>
   request.post(`/address/monitor/record/ignore/${ids}`);
 
+export const getMonitorWorkOrders = params =>
+  request.postForm('/address/work-order/list', params);
+
+export const getMonitorWorkOrderDetail = id =>
+  request.post(`/address/work-order/${id}`);
+
+export const createMonitorWorkOrder = data =>
+  request.post('/address/work-order', data);
+
+export const correctMonitorWorkOrder = (id, data) =>
+  request.post(`/address/work-order/correct/${id}`, data);
+
+export const rejectMonitorWorkOrder = (id, data) =>
+  request.post(`/address/work-order/reject/${id}`, data);
+
 export const getMonitorTaskSummary = () =>
   request.post('/address/monitor/task/summary');
 

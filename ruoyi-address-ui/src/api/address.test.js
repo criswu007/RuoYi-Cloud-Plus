@@ -248,6 +248,38 @@ describe('标准地址 API 契约', () => {
     expect(mockRequest.post).toHaveBeenNthCalledWith(3, '/address/search/repair/88/execute', { confirmationCode: 'REPLAY_REPAIR' });
   });
 
+  it('应暴露非标地址工单查询与处理接口', () => {
+    const pageParams = {
+      abnormalAddress: '中央路88号',
+      workOrderStatus: 'PENDING',
+      pageNum: 1,
+      pageSize: 10
+    };
+    const createPayload = {
+      abnormalWarningIds: [9101, 9102]
+    };
+    const correctPayload = {
+      detailAddress: '中央路88号1单元101室',
+      correctedAddress: '江苏省南京市鼓楼区中央路88号1单元101室',
+      gridId: 3001
+    };
+    const rejectPayload = {
+      reason: '原始信息不足'
+    };
+
+    addressApi.getMonitorWorkOrders(pageParams);
+    addressApi.getMonitorWorkOrderDetail(9301);
+    addressApi.createMonitorWorkOrder(createPayload);
+    addressApi.correctMonitorWorkOrder(9301, correctPayload);
+    addressApi.rejectMonitorWorkOrder(9301, rejectPayload);
+
+    expect(mockRequest.postForm).toHaveBeenCalledWith('/address/work-order/list', pageParams);
+    expect(mockRequest.post).toHaveBeenCalledWith('/address/work-order/9301');
+    expect(mockRequest.post).toHaveBeenCalledWith('/address/work-order', createPayload);
+    expect(mockRequest.post).toHaveBeenCalledWith('/address/work-order/correct/9301', correctPayload);
+    expect(mockRequest.post).toHaveBeenCalledWith('/address/work-order/reject/9301', rejectPayload);
+  });
+
   it('应暴露标准地址审批记录与 workflow 审批接口', () => {
     const pageParams = {
       keyword: '莲花新城南苑',

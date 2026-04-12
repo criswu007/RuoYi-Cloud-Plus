@@ -33,16 +33,14 @@ describe('登录路由守卫', () => {
     }, createStorage())).toBeNull();
   });
 
-  it('已登录用户访问登录页时应回到标准地址列表', () => {
+  it('已登录用户访问登录页时仍应允许停留在登录页', () => {
     expect(resolveAuthRedirect({
       path: '/login',
       fullPath: '/login',
       matched: [{ meta: { public: true } }]
     }, createStorage({
       AUTH_TOKEN: 'active-token'
-    }))).toEqual({
-      path: '/standard/list'
-    });
+    }))).toBeNull();
   });
 
   it('已登录用户访问业务页面时应直接放行', () => {

@@ -17,6 +17,7 @@ import ManagementStation from '../views/ManagementStation.vue';
 import MonitorRecords from '../views/MonitorRecords.vue';
 import MonitorRules from '../views/MonitorRules.vue';
 import MonitorTask from '../views/MonitorTask.vue';
+import MonitorWorkOrders from '../views/MonitorWorkOrders.vue';
 import SearchOpsConsole from '../views/SearchOpsConsole.vue';
 
 Vue.use(Router);
@@ -32,7 +33,7 @@ const router = new Router({
         bareLayout: true
       }
     },
-    { path: '/', redirect: '/standard/list' },
+    { path: '/', redirect: '/login' },
     { path: '/standard/list', component: StandardList },
     { path: '/standard/detail/:segmId', component: StandardDetail },
     { path: '/standard/approvals', component: StandardApprovalRecords },
@@ -47,6 +48,7 @@ const router = new Router({
     { path: '/monitor/records', component: MonitorRecords },
     { path: '/monitor/rules', component: MonitorRules },
     { path: '/monitor/task', component: MonitorTask },
+    { path: '/monitor/work-orders', component: MonitorWorkOrders },
     { path: '/ops/search', component: SearchOpsConsole }
   ]
 });

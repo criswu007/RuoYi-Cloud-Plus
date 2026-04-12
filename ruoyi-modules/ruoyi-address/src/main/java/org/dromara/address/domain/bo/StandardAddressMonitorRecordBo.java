@@ -52,6 +52,11 @@ public class StandardAddressMonitorRecordBo extends BaseEntity {
     private String status;
 
     /**
+     * 工单状态
+     */
+    private String workOrderStatus;
+
+    /**
      * 备注
      */
     private String remark;

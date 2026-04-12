@@ -17,11 +17,6 @@ function isPublicRoute(route) {
 
 export function resolveAuthRedirect(to, storage) {
   const token = readAddressToken(resolveStorage(storage));
-  if (token && to?.path === '/login') {
-    return {
-      path: '/standard/list'
-    };
-  }
   if (isPublicRoute(to)) {
     return null;
   }

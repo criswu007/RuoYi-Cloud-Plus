@@ -136,7 +136,12 @@ INSERT IGNORE INTO `sys_menu` (
     (2026041102402, '监控任务修改', 2026041102400, 2, '', '', '', 1, 1, 'F', '1', '0', 'address:monitor:task:edit', '#', 103, 1, NOW(), NULL, NULL, ''),
     (2026041102403, '监控任务执行', 2026041102400, 3, '', '', '', 1, 1, 'F', '1', '0', 'address:monitor:task:execute', '#', 103, 1, NOW(), NULL, NULL, ''),
 
-    (2026041102500, 'ES 运维', 2026041101000, 15, 'ops/search', 'address/ops/search', '', 1, 1, 'C', '1', '0', 'address:search:maintain', '#', 103, 1, NOW(), NULL, NULL, 'ES 运维页入口');
+    (2026041102450, '标准地址工单', 2026041101000, 15, 'monitor/work-orders', 'address/monitor/work-orders', '', 1, 1, 'C', '1', '0', 'address:monitor:workOrder:list', '#', 103, 1, NOW(), NULL, NULL, '标准地址工单页入口'),
+    (2026041102451, '标准地址工单详情', 2026041102450, 1, '', '', '', 1, 1, 'F', '1', '0', 'address:monitor:workOrder:query', '#', 103, 1, NOW(), NULL, NULL, ''),
+    (2026041102452, '标准地址工单新增', 2026041102450, 2, '', '', '', 1, 1, 'F', '1', '0', 'address:monitor:workOrder:add', '#', 103, 1, NOW(), NULL, NULL, ''),
+    (2026041102453, '标准地址工单处理', 2026041102450, 3, '', '', '', 1, 1, 'F', '1', '0', 'address:monitor:workOrder:edit', '#', 103, 1, NOW(), NULL, NULL, ''),
+
+    (2026041102500, 'ES 运维', 2026041101000, 16, 'ops/search', 'address/ops/search', '', 1, 1, 'C', '1', '0', 'address:search:maintain', '#', 103, 1, NOW(), NULL, NULL, 'ES 运维页入口');
 
 -- 三、绑定角色与菜单
 -- 录入员：覆盖当前地址模块所有权限点，便于直接联调地址 UI 全量页面。
@@ -204,6 +209,10 @@ JOIN (
     UNION ALL SELECT 2026041102401
     UNION ALL SELECT 2026041102402
     UNION ALL SELECT 2026041102403
+    UNION ALL SELECT 2026041102450
+    UNION ALL SELECT 2026041102451
+    UNION ALL SELECT 2026041102452
+    UNION ALL SELECT 2026041102453
     UNION ALL SELECT 2026041102500
 ) menu_ids;
 
@@ -272,6 +281,10 @@ JOIN (
     UNION ALL SELECT 2026041102401
     UNION ALL SELECT 2026041102402
     UNION ALL SELECT 2026041102403
+    UNION ALL SELECT 2026041102450
+    UNION ALL SELECT 2026041102451
+    UNION ALL SELECT 2026041102452
+    UNION ALL SELECT 2026041102453
     UNION ALL SELECT 2026041102500
 ) menu_ids;
 

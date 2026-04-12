@@ -106,7 +106,22 @@ public class StandardAddressMonitorRecord extends TenantEntity {
     private Integer hitCount;
 
     /**
-     * 状态（0待处理 1已忽略 2已处理）
+     * 工单ID
+     */
+    private Long workOrderId;
+
+    /**
+     * 工单号
+     */
+    private String workOrderNo;
+
+    /**
+     * 工单状态
+     */
+    private String workOrderStatus;
+
+    /**
+     * 状态（0待处理 1已忽略 2已生成工单 3已修正 4已驳回）
      */
     private String status;
 

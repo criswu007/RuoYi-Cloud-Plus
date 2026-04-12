@@ -36,3 +36,14 @@ spring:
       - optional:nacos:application-common.yml
       - optional:nacos:datasource.yml
       - optional:nacos:${spring.application.name}.yml
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+
+logging:
+  level:
+    org.springframework: warn
+    org.apache.dubbo: error
+    org.mybatis.spring.mapper: error
+    org.dromara.address.mapper: debug

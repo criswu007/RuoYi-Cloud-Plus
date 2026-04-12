@@ -8,6 +8,12 @@ describe('应用导航', () => {
     expect(state.titleMap['/ops/search']).toBe('ES 运维');
   });
 
+  it('应提供标准地址工单页标题映射', () => {
+    const state = App.data();
+
+    expect(state.titleMap['/monitor/work-orders']).toBe('标准地址工单');
+  });
+
   it('不应再提供刷新 Token 的页面方法', () => {
     expect(App.methods.refreshToken).toBeUndefined();
   });

@@ -80,6 +80,7 @@ public class StandardAddressMonitorRecordServiceImpl implements IStandardAddress
         lqw.eq(bo.getTaskId() != null, StandardAddressMonitorRecord::getTaskId, bo.getTaskId());
         lqw.eq(StringUtils.isNotBlank(bo.getSeverity()), StandardAddressMonitorRecord::getSeverity, bo.getSeverity());
         lqw.eq(StringUtils.isNotBlank(bo.getStatus()), StandardAddressMonitorRecord::getStatus, bo.getStatus());
+        lqw.eq(StringUtils.isNotBlank(bo.getWorkOrderStatus()), StandardAddressMonitorRecord::getWorkOrderStatus, bo.getWorkOrderStatus());
         return lqw;
     }
 

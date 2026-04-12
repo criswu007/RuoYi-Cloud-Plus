@@ -25,4 +25,10 @@ describe('标准地址路由', () => {
 
     expect(route).toBeTruthy();
   });
+
+  it('应提供标准地址工单页路由', () => {
+    const route = router.options.routes.find(item => item.path === '/monitor/work-orders');
+
+    expect(route).toBeTruthy();
+  });
 });

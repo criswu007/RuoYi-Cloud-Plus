@@ -99,6 +99,10 @@ public class StandaloneLocalDevelopmentConfiguration {
         "address:monitor:record:query",
         "address:monitor:record:edit",
         "address:monitor:record:remove",
+        "address:monitor:workOrder:list",
+        "address:monitor:workOrder:query",
+        "address:monitor:workOrder:add",
+        "address:monitor:workOrder:edit",
         "address:search:maintain",
         "address:operation:log:list",
         "address:operation:log:query"

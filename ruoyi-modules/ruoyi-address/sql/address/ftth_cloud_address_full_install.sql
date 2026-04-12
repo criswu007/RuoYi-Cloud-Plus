@@ -689,7 +689,10 @@ CREATE TABLE IF NOT EXISTS `address_standard_monitor_record` (
     `first_detected_time` datetime DEFAULT NULL COMMENT '首次发现时间',
     `last_detected_time` datetime DEFAULT NULL COMMENT '最近发现时间',
     `hit_count` int DEFAULT 1 COMMENT '命中次数',
-    `status` char(1) DEFAULT '0' COMMENT '状态（0待处理 1已忽略 2已处理）',
+    `work_order_id` bigint DEFAULT NULL COMMENT '工单ID',
+    `work_order_no` varchar(64) DEFAULT NULL COMMENT '工单号',
+    `work_order_status` varchar(32) DEFAULT NULL COMMENT '工单状态',
+    `status` char(1) DEFAULT '0' COMMENT '状态（0待处理 1已忽略 2已生成工单 3已修正 4已驳回）',
     `remark` varchar(500) DEFAULT NULL COMMENT '备注',
     `process_by` varchar(64) DEFAULT NULL COMMENT '处理人',
     `process_time` datetime DEFAULT NULL COMMENT '处理时间',
@@ -703,9 +706,67 @@ CREATE TABLE IF NOT EXISTS `address_standard_monitor_record` (
     KEY `idx_monitor_record_status` (`status`),
     KEY `idx_monitor_record_task` (`task_id`),
     KEY `idx_monitor_record_rule` (`rule_id`),
+    KEY `idx_monitor_record_work_order` (`work_order_id`),
     KEY `idx_monitor_record_dedup` (`dedup_key`),
     KEY `idx_monitor_record_region_status` (`region_id_snapshot`, `status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='标准地址监控异常记录表';
+
+CREATE TABLE IF NOT EXISTS `address_standard_monitor_work_order` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `tenant_id` varchar(20) DEFAULT '000000' COMMENT '租户编号',
+    `work_order_no` varchar(64) NOT NULL COMMENT '工单号',
+    `abnormal_address` varchar(500) DEFAULT NULL COMMENT '异常地址',
+    `work_order_status` varchar(32) DEFAULT NULL COMMENT '工单状态',
+    `original_address` varchar(500) DEFAULT NULL COMMENT '原始地址',
+    `detail_address` varchar(500) DEFAULT NULL COMMENT '修正明细地址',
+    `corrected_address` varchar(500) DEFAULT NULL COMMENT '修正完整地址',
+    `grid_id` bigint DEFAULT NULL COMMENT '网格ID',
+    `reject_reason` varchar(500) DEFAULT NULL COMMENT '驳回原因',
+    `processed_by` varchar(64) DEFAULT NULL COMMENT '处理人',
+    `processed_time` datetime DEFAULT NULL COMMENT '处理时间',
+    `del_flag` char(1) DEFAULT '0' COMMENT '删除标志（0存在 1删除）',
+    `create_dept` bigint DEFAULT NULL COMMENT '创建部门',
+    `create_by` bigint DEFAULT NULL COMMENT '创建者',
+    `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+    `update_by` bigint DEFAULT NULL COMMENT '更新者',
+    `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_monitor_work_order_no` (`work_order_no`),
+    KEY `idx_monitor_work_order_status` (`work_order_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='标准地址监控工单主表';
+
+CREATE TABLE IF NOT EXISTS `address_standard_monitor_work_order_record_rel` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `tenant_id` varchar(20) DEFAULT '000000' COMMENT '租户编号',
+    `work_order_id` bigint NOT NULL COMMENT '工单ID',
+    `record_id` bigint NOT NULL COMMENT '异常记录ID',
+    `del_flag` char(1) DEFAULT '0' COMMENT '删除标志（0存在 1删除）',
+    `create_dept` bigint DEFAULT NULL COMMENT '创建部门',
+    `create_by` bigint DEFAULT NULL COMMENT '创建者',
+    `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+    `update_by` bigint DEFAULT NULL COMMENT '更新者',
+    `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_monitor_work_order_record` (`work_order_id`, `record_id`, `del_flag`),
+    KEY `idx_monitor_work_order_record_rel_record` (`record_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='标准地址监控工单与异常记录关系表';
+
+CREATE TABLE IF NOT EXISTS `address_standard_monitor_work_order_log` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `tenant_id` varchar(20) DEFAULT '000000' COMMENT '租户编号',
+    `work_order_id` bigint NOT NULL COMMENT '工单ID',
+    `action_type` varchar(32) DEFAULT NULL COMMENT '动作类型',
+    `operator` varchar(64) DEFAULT NULL COMMENT '操作人',
+    `operation_content` varchar(500) DEFAULT NULL COMMENT '操作内容',
+    `operation_time` datetime DEFAULT NULL COMMENT '操作时间',
+    `create_dept` bigint DEFAULT NULL COMMENT '创建部门',
+    `create_by` bigint DEFAULT NULL COMMENT '创建者',
+    `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+    `update_by` bigint DEFAULT NULL COMMENT '更新者',
+    `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_monitor_work_order_log_order` (`work_order_id`, `operation_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='标准地址监控工单操作日志表';
 
 CREATE TABLE IF NOT EXISTS `address_standard_operation_log` (
     `id` bigint NOT NULL COMMENT '主键ID',

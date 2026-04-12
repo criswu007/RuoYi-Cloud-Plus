@@ -45,6 +45,15 @@ class StandardAddressMonitorControllerMappingTest {
         assertHasPostMapping(StandardAddressMonitorRecordController.class, "ignoreMonitorRecord");
     }
 
+    @Test
+    void shouldUsePostMappingsForMonitorWorkOrderEndpoints() throws Exception {
+        assertHasPostMapping(StandardAddressMonitorWorkOrderController.class, "listWorkOrders");
+        assertHasPostMapping(StandardAddressMonitorWorkOrderController.class, "getWorkOrderInfo");
+        assertHasPostMapping(StandardAddressMonitorWorkOrderController.class, "createWorkOrder");
+        assertHasPostMapping(StandardAddressMonitorWorkOrderController.class, "correctWorkOrder");
+        assertHasPostMapping(StandardAddressMonitorWorkOrderController.class, "rejectWorkOrder");
+    }
+
     private void assertHasPostMapping(Class<?> controllerClass, String methodName) throws Exception {
         Method method = findMethod(controllerClass, methodName);
         assertNotNull(method.getAnnotation(PostMapping.class), () -> controllerClass.getSimpleName() + "#" + methodName + " 应改为 PostMapping");

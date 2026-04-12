@@ -28,6 +28,7 @@
           <el-menu-item index="/monitor/records">异常地址预警</el-menu-item>
           <el-menu-item index="/monitor/rules">智能检测配置</el-menu-item>
           <el-menu-item index="/monitor/task">监控任务管理</el-menu-item>
+          <el-menu-item index="/monitor/work-orders">标准地址工单</el-menu-item>
         </el-submenu>
         <el-submenu index="ops">
           <template slot="title">运维支持</template>
@@ -104,6 +105,7 @@ export default {
         '/monitor/records': '异常地址预警',
         '/monitor/rules': '智能检测配置',
         '/monitor/task': '监控任务管理',
+        '/monitor/work-orders': '标准地址工单',
         '/ops/search': 'ES 运维'
       }
     };

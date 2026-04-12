@@ -72,12 +72,12 @@
             <properties>
                 <!-- 环境标识，需要与配置文件的名称相对应 -->
                 <profiles.active>dev</profiles.active>
-                <nacos.server>172.16.207.108:8848</nacos.server>
+                <nacos.server>172.16.206.106:8848</nacos.server>
                 <nacos.discovery.group>DEFAULT_GROUP</nacos.discovery.group>
                 <nacos.config.group>DEFAULT_GROUP</nacos.config.group>
                 <nacos.username>nacos</nacos.username>
                 <nacos.password>nacos</nacos.password>
-                <logstash.address>172.16.207.108:4560</logstash.address>
+                <logstash.address>172.16.206.106:4560</logstash.address>
             </properties>
             <activation>
                 <!-- 默认环境 -->
@@ -88,12 +88,12 @@
             <id>prod</id>
             <properties>
                 <profiles.active>prod</profiles.active>
-                <nacos.server>172.16.207.108:8848</nacos.server>
+                <nacos.server>172.16.206.106:8848</nacos.server>
                 <nacos.discovery.group>DEFAULT_GROUP</nacos.discovery.group>
                 <nacos.config.group>DEFAULT_GROUP</nacos.config.group>
                 <nacos.username>nacos</nacos.username>
                 <nacos.password>nacos</nacos.password>
-                <logstash.address>172.16.207.108:4560</logstash.address>
+                <logstash.address>172.16.206.106:4560</logstash.address>
             </properties>
         </profile>
     </profiles>
@@ -498,6 +498,7 @@
                     <include>application*</include>
                     <include>bootstrap*</include>
                     <include>logback*</include>
+                    <include>runtime/*.yml</include>
                 </includes>
                 <!-- 启用过滤 即该资源中的变量将会被过滤器中的值替换 -->
                 <filtering>true</filtering>
